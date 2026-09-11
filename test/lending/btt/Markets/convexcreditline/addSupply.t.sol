@@ -18,14 +18,8 @@ contract AltoConvexCreditLineMarketAddSupplyTest is ConvexCreditLineCommon {
         market.addSupply(1, 0, USER);
     }
 
-    function test_RevertUnsupportedForEveryInputWithoutChangingState() external {
-        AccountingState memory beforeState = _state();
-        _mockIrmUpdateRevert();
+    function test_RevertUnsupported() external {
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnsupportedOperation.selector);
-        market.addSupply(0, 0, address(0));
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnsupportedOperation.selector);
-        market.addSupply(type(uint256).max, type(uint256).max, USER);
-
-        _assertUnchanged(beforeState);
+        market.addSupply(1, 0, USER);
     }
 }

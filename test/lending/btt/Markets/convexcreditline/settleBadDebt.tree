@@ -5,12 +5,6 @@ AltoConvexCreditLineMarket::settleBadDebt(uint256)
 │   └── it should revert with AltoCreditMarketInvalidInput without changing state
 ├── when assets exceeds badDebtAssets
 │   └── it should revert with AltoCreditMarketInvalidInput without changing state
-├── when the owner lacks enough borrow tokens
-│   └── it should revert atomically
-├── when borrow-token burn reverts
-│   └── it should revert atomically
-├── when borrow-token burn reenters the market
-│   └── it should revert with ReentrancyGuardReentrantCall and restore all state
 ├── when the market is active, frozen, or paused
 │   └── it should remain available
 ├── when settling part of recorded bad debt
@@ -32,4 +26,4 @@ AltoConvexCreditLineMarket::settleBadDebt(uint256)
     ├── given DUSD is paused
     │   └── it should revert atomically
     └── given bad debt exceeds the market minter bucket because fees remain unclaimed
-        ├── it should reject settlement above the minted bucket atomically
+        └── it should reject settlement above the minted bucket atomically

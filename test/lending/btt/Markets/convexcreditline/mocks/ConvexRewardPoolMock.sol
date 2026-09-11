@@ -2,10 +2,9 @@
 pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20Mock} from "morpho-blue/src/mocks/ERC20Mock.sol";
 
 import {IConvexRewardPool} from "@alto/lending/interfaces/vendor/IConvexRewardPool.sol";
-
-import {CreditLineMarketCollateralTokenMock} from "./CreditLineMarketCollateralTokenMock.sol";
 
 contract ConvexRewardPoolMock is IConvexRewardPool {
     uint256 public override pid;
@@ -81,6 +80,8 @@ contract ConvexRewardPoolMock is IConvexRewardPool {
         for (uint256 i; i < tokens.length; ++i) {
             _distributedTokens.push(tokens[i]);
             _distributedAmounts.push(amounts[i]);
+            ERC20Mock token = ERC20Mock(tokens[i]);
+            token.setBalance(address(this), token.balanceOf(address(this)) + amounts[i]);
         }
     }
 
@@ -114,7 +115,7 @@ contract ConvexRewardPoolMock is IConvexRewardPool {
         if (!getRewardResult) return false;
 
         for (uint256 i; i < _distributedTokens.length; ++i) {
-            CreditLineMarketCollateralTokenMock(_distributedTokens[i]).mint(account, _distributedAmounts[i]);
+            require(IERC20(_distributedTokens[i]).transfer(account, _distributedAmounts[i]));
         }
         if (callbackOnReward) _callback();
         return true;

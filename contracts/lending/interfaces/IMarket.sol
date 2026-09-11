@@ -9,8 +9,7 @@ enum MarketType {
     BORROW, // AltoBorrowMarket
     MINT, // AltoMintMarket
     DAO_MINT, // AltoDaoMintMarket
-    // AltoConvexCreditLineMarket
-    CREDIT_MINT
+    CREDIT_MINT // AltoConvexCreditLineMarket
 }
 
 /// @notice Struct that represents the balance of a token

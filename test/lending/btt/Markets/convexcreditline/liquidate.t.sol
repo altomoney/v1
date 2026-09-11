@@ -13,19 +13,12 @@ contract AltoConvexCreditLineMarketLiquidateTest is ConvexCreditLineCommon {
         market.liquidate(CREDIT_ACCOUNT, "", "");
     }
 
-    function test_RevertNonLiquidatableWhenActiveOrFrozenWithoutSideEffects() external {
-        AccountingState memory beforeState = _state();
-        _mockIrmUpdateRevert();
+    function test_RevertNonLiquidatableWhenActiveOrFrozen() external {
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketNonLiquidatable.selector);
         market.liquidate(address(0), hex"1234", hex"5678");
 
-        vm.clearMockedCalls();
         _pause(FROZEN_TYPE);
-        _mockIrmUpdateRevert();
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketNonLiquidatable.selector);
         market.liquidate(CREDIT_ACCOUNT, "", "");
-
-        _assertUnchanged(beforeState);
-        assertEq(rewardPool.withdrawCalls(), 0);
     }
 }

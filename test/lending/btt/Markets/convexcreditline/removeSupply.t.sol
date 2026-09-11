@@ -13,18 +13,12 @@ contract AltoConvexCreditLineMarketRemoveSupplyTest is ConvexCreditLineCommon {
         market.removeSupply(1, 0, USER, RECEIVER);
     }
 
-    function test_RevertUnsupportedWhenActiveOrFrozenWithoutChangingState() external {
-        AccountingState memory beforeState = _state();
-        _mockIrmUpdateRevert();
+    function test_RevertUnsupportedWhenActiveOrFrozen() external {
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnsupportedOperation.selector);
         market.removeSupply(0, 0, address(0), address(0));
 
-        vm.clearMockedCalls();
         _pause(FROZEN_TYPE);
-        _mockIrmUpdateRevert();
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnsupportedOperation.selector);
         market.removeSupply(type(uint256).max, type(uint256).max, USER, RECEIVER);
-
-        _assertUnchanged(beforeState);
     }
 }

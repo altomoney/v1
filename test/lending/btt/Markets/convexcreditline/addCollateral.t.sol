@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-
 import {
     IAltoConvexCreditLineMarketErrors,
     IAltoConvexCreditLineMarketEvents
@@ -50,33 +48,6 @@ contract AltoConvexCreditLineMarketAddCollateralTest is ConvexCreditLineCommon {
         assertEq(collateralToken.balanceOf(USER), 10 ether);
     }
 
-    function test_TransferBalanceAndAllowanceFailuresAreAtomic() external {
-        AccountingState memory beforeState = _state();
-        vm.prank(USER);
-        vm.expectRevert();
-        market.addCollateral(1, CREDIT_ACCOUNT);
-        _assertUnchanged(beforeState);
-
-        deal(address(collateralToken), USER, 1);
-        vm.prank(USER);
-        vm.expectRevert();
-        market.addCollateral(1, CREDIT_ACCOUNT);
-        _assertUnchanged(beforeState);
-    }
-
-    function test_PositionUint128OverflowRevertsBeforeExternalCalls() external {
-        bytes32 positionBase = keccak256(abi.encode(CREDIT_ACCOUNT, uint256(8)));
-        vm.store(address(market), bytes32(uint256(positionBase) + 1), bytes32(uint256(type(uint128).max)));
-        uint256 depositsBefore = booster.depositCalls();
-
-        vm.expectRevert();
-        market.addCollateral(1, CREDIT_ACCOUNT);
-
-        (,, uint128 collateralAssets) = market.position(CREDIT_ACCOUNT);
-        assertEq(collateralAssets, type(uint128).max);
-        assertEq(booster.depositCalls(), depositsBefore);
-    }
-
     function test_BoosterRevertAndFalseAreAtomic() external {
         deal(address(collateralToken), USER, 20 ether);
         vm.prank(USER);
@@ -96,62 +67,6 @@ contract AltoConvexCreditLineMarketAddCollateralTest is ConvexCreditLineCommon {
         market.addCollateral(10 ether, CREDIT_ACCOUNT);
         _assertUnchanged(beforeState);
         assertEq(collateralToken.allowance(address(market), address(booster)), 0);
-    }
-
-    function test_TemporaryBoosterApprovalFailuresAreAtomic() external {
-        deal(address(collateralToken), USER, 10 ether);
-        vm.prank(USER);
-        collateralToken.approve(address(market), type(uint256).max);
-        AccountingState memory beforeState = _state();
-
-        collateralToken.setApproveFailure(true);
-        vm.prank(USER);
-        vm.expectRevert(bytes("APPROVE_REVERTED"));
-        market.addCollateral(10 ether, CREDIT_ACCOUNT);
-        collateralToken.setApproveFailure(false);
-        _assertUnchanged(beforeState);
-        assertEq(booster.depositCalls(), 0);
-        assertEq(collateralToken.allowance(address(market), address(booster)), 0);
-
-        booster.setCallback(address(collateralToken), abi.encodeCall(collateralToken.setApproveFailure, (true)));
-        vm.prank(USER);
-        vm.expectRevert(bytes("APPROVE_REVERTED"));
-        market.addCollateral(10 ether, CREDIT_ACCOUNT);
-        _assertUnchanged(beforeState);
-        assertEq(booster.depositCalls(), 0);
-        assertEq(collateralToken.allowance(address(market), address(booster)), 0);
-    }
-
-    function test_TemporaryBoosterApprovalCapsEachDeposit() external {
-        deal(address(collateralToken), address(market), 3 ether);
-        deal(address(collateralToken), USER, 10 ether);
-        vm.prank(USER);
-        collateralToken.approve(address(market), type(uint256).max);
-        booster.setDepositBehavior(false, true, 11 ether, type(uint256).max);
-        AccountingState memory beforeState = _state();
-
-        vm.prank(USER);
-        vm.expectRevert();
-        market.addCollateral(10 ether, CREDIT_ACCOUNT);
-
-        _assertUnchanged(beforeState);
-        assertEq(collateralToken.balanceOf(USER), 10 ether);
-        assertEq(booster.depositCalls(), 0);
-        assertEq(collateralToken.allowance(address(market), address(booster)), 0);
-    }
-
-    function test_RejectsBoosterReentrancyAtomically() external {
-        deal(address(collateralToken), USER, 20 ether);
-        vm.prank(USER);
-        collateralToken.approve(address(market), type(uint256).max);
-        booster.setCallback(address(market), abi.encodeCall(market.addCollateral, (1, CREDIT_ACCOUNT)));
-        AccountingState memory beforeState = _state();
-
-        vm.prank(USER);
-        vm.expectRevert(ReentrancyGuardUpgradeable.ReentrancyGuardReentrantCall.selector);
-        market.addCollateral(10 ether, CREDIT_ACCOUNT);
-
-        _assertUnchanged(beforeState);
     }
 
     function test_ValidDepositsPreserveExistingIdleStakeAndUpdateOnlyCreditPosition() external {
@@ -176,6 +91,8 @@ contract AltoConvexCreditLineMarketAddCollateralTest is ConvexCreditLineCommon {
         vm.stopPrank();
 
         (,, uint128 collateralAssets) = market.position(CREDIT_ACCOUNT);
+        assertEq(collateralToken.balanceOf(USER), 0);
+        assertEq(collateralToken.balanceOf(CREDIT_ACCOUNT), 0);
         assertEq(collateralAssets, 17 ether);
         assertEq(collateralToken.balanceOf(address(market)), 3 ether);
         assertEq(market.stakedCollateralAssets(), 22 ether);

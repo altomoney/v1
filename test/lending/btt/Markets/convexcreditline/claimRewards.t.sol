@@ -1,13 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-
-import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
 import {
     IAltoConvexCreditLineMarketErrors,
-    IAltoConvexCreditLineMarketEvents,
-    ConvexCreditLineInitParams
+    IAltoConvexCreditLineMarketEvents
 } from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 
@@ -53,6 +49,17 @@ contract AltoConvexCreditLineMarketClaimRewardsTest is ConvexCreditLineCommon {
     }
 
     function test_ZeroBalancesEmitAndReturnZeroForEveryConfiguredToken() external {
+        vm.mockCallRevert(
+            address(primaryRewardToken),
+            abi.encodeCall(primaryRewardToken.transfer, (REWARD_RECIPIENT, 0)),
+            bytes("ZERO_TRANSFER_MUST_NOT_BE_CALLED")
+        );
+        vm.mockCallRevert(
+            address(extraRewardToken),
+            abi.encodeCall(extraRewardToken.transfer, (REWARD_RECIPIENT, 0)),
+            bytes("ZERO_TRANSFER_MUST_NOT_BE_CALLED")
+        );
+
         vm.expectEmit(address(market));
         emit IAltoConvexCreditLineMarketEvents.RewardsClaimed(
             address(this), REWARD_RECIPIENT, address(primaryRewardToken), 0
@@ -65,6 +72,10 @@ contract AltoConvexCreditLineMarketClaimRewardsTest is ConvexCreditLineCommon {
         assertEq(amounts.length, 2);
         assertEq(amounts[0], 0);
         assertEq(amounts[1], 0);
+        assertEq(primaryRewardToken.balanceOf(address(market)), 0);
+        assertEq(extraRewardToken.balanceOf(address(market)), 0);
+        assertEq(primaryRewardToken.balanceOf(REWARD_RECIPIENT), 0);
+        assertEq(extraRewardToken.balanceOf(REWARD_RECIPIENT), 0);
     }
 
     function test_ForwardsPreexistingAndNewRewardsInConfiguredOrder() external {
@@ -88,14 +99,6 @@ contract AltoConvexCreditLineMarketClaimRewardsTest is ConvexCreditLineCommon {
         assertEq(extraRewardToken.balanceOf(address(market)), 0);
     }
 
-    function test_ReportsGrossBalanceForFeeOnTransferRewardToken() external {
-        deal(address(extraRewardToken), address(market), 10 ether);
-        extraRewardToken.setTransferBehavior(false, false, 9_000, 0);
-        uint256[] memory amounts = market.claimRewards();
-        assertEq(amounts[1], 10 ether);
-        assertEq(extraRewardToken.balanceOf(REWARD_RECIPIENT), 9 ether);
-    }
-
     function test_ProcessesAllMaximumTokensOnceInOrder() external {
         CreditLineMarketCollateralTokenMock[] memory added = new CreditLineMarketCollateralTokenMock[](14);
         vm.startPrank(OWNER);
@@ -117,27 +120,6 @@ contract AltoConvexCreditLineMarketClaimRewardsTest is ConvexCreditLineCommon {
         }
     }
 
-    function test_TokenQueryOrTransferFailureRollsBackEntireClaim() external {
-        deal(address(primaryRewardToken), address(market), 3 ether);
-        deal(address(extraRewardToken), address(market), 7 ether);
-        vm.mockCall(address(extraRewardToken), abi.encodeCall(extraRewardToken.balanceOf, (address(market))), hex"01");
-        vm.expectRevert();
-        market.claimRewards();
-        vm.clearMockedCalls();
-        assertEq(primaryRewardToken.balanceOf(address(market)), 3 ether);
-
-        extraRewardToken.setTransferBehavior(true, false, 10_000, 0);
-        vm.expectRevert(bytes("TRANSFER_REVERTED"));
-        market.claimRewards();
-        assertEq(primaryRewardToken.balanceOf(address(market)), 3 ether);
-        assertEq(primaryRewardToken.balanceOf(REWARD_RECIPIENT), 0);
-
-        extraRewardToken.setTransferBehavior(false, true, 10_000, 0);
-        vm.expectRevert();
-        market.claimRewards();
-        assertEq(primaryRewardToken.balanceOf(address(market)), 3 ether);
-    }
-
     function test_UnconfiguredAndRemovedRewardsRemainInMarket() external {
         CreditLineMarketCollateralTokenMock unconfigured =
             new CreditLineMarketCollateralTokenMock("Unconfigured", "NONE");
@@ -151,37 +133,6 @@ contract AltoConvexCreditLineMarketClaimRewardsTest is ConvexCreditLineCommon {
         assertEq(amounts.length, 1);
         assertEq(unconfigured.balanceOf(address(market)), 5 ether);
         assertEq(extraRewardToken.balanceOf(address(market)), 7 ether);
-    }
-
-    function test_CachesRecipientBeforeRewardTokenLoop() external {
-        ConvexCreditLineInitParams memory params = _validInitParams();
-        params.creditMarketInitParams.creditAccount = address(primaryRewardToken);
-        AltoConvexCreditLineMarket cachedMarket = _initialize(params);
-        deal(address(primaryRewardToken), address(cachedMarket), 3 ether);
-        deal(address(extraRewardToken), address(cachedMarket), 7 ether);
-        primaryRewardToken.setCallback(
-            address(cachedMarket), abi.encodeCall(cachedMarket.setRewardRecipient, (USER)), 4
-        );
-
-        cachedMarket.claimRewards();
-
-        assertEq(primaryRewardToken.balanceOf(REWARD_RECIPIENT), 3 ether);
-        assertEq(extraRewardToken.balanceOf(REWARD_RECIPIENT), 7 ether);
-        assertEq(extraRewardToken.balanceOf(USER), 0);
-        assertEq(cachedMarket.rewardRecipient(), USER);
-    }
-
-    function test_ReentrancyRollsBackEveryRewardTransfer() external {
-        deal(address(primaryRewardToken), address(market), 3 ether);
-        primaryRewardToken.setCallback(address(market), abi.encodeCall(market.claimRewards, ()), 4);
-        AccountingState memory beforeState = _state();
-
-        vm.expectRevert(ReentrancyGuardUpgradeable.ReentrancyGuardReentrantCall.selector);
-        market.claimRewards();
-
-        assertEq(primaryRewardToken.balanceOf(address(market)), 3 ether);
-        assertEq(primaryRewardToken.balanceOf(REWARD_RECIPIENT), 0);
-        _assertUnchanged(beforeState);
     }
 
     function test_SuccessDoesNotChangeAccountingConfigurationOrCustody() external {

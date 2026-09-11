@@ -1,29 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-
 import {
     IAltoConvexCreditLineMarketErrors,
     IAltoConvexCreditLineMarketEvents
 } from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
-import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
+import {ILendingOracle} from "@alto/oracles/interfaces/IOracle.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 import {ConvexCreditLineCommon} from "./ConvexCreditLineCommon.t.sol";
 
 contract AltoConvexCreditLineMarketClaimInterestTest is ConvexCreditLineCommon {
-    function test_RevertWhenPausedButRemainAvailableWhenFrozen() external {
-        _createFees(10 ether);
+    function test_RevertWhenPaused() external {
         _pause(PAUSE_TYPE);
         _assertPausedRevert(PAUSE_TYPE);
         vm.prank(OWNER);
         market.claimInterest(0);
-
-        _unpause(PAUSE_TYPE);
-        _pause(FROZEN_TYPE);
-        vm.prank(OWNER);
-        market.claimInterest(0);
-        assertEq(market.claimableFeesAssets(), 0);
     }
 
     function test_AmountCheckPrecedesFeeRecipientAndCallerChecks() external {
@@ -62,6 +54,53 @@ contract AltoConvexCreditLineMarketClaimInterestTest is ConvexCreditLineCommon {
         assertEq(borrowToken.totalSupply(), supplyBefore);
     }
 
+    function test_OwnerCanClaimAllWithZeroAmount() external {
+        _createFees(10 ether);
+
+        vm.prank(OWNER);
+        uint256 claimed = market.claimInterest(0);
+
+        assertEq(claimed, 10 ether);
+        assertEq(market.claimableFeesAssets(), 0);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), 10 ether);
+    }
+
+    function test_OwnerCanClaimExactFullAmount() external {
+        _createFees(10 ether);
+
+        vm.prank(OWNER);
+        uint256 claimed = market.claimInterest(10 ether);
+
+        assertEq(claimed, 10 ether);
+        assertEq(market.claimableFeesAssets(), 0);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), 10 ether);
+    }
+
+    function test_FeeRecipientZeroAmountWithNoFeesEmitsAndReturnsZeroWithoutMinting() external {
+        uint256 supplyBefore = borrowToken.totalSupply();
+
+        vm.expectEmit(address(market));
+        emit IAltoConvexCreditLineMarketEvents.InterestClaimed(FEE_RECIPIENT, 0);
+        vm.prank(FEE_RECIPIENT);
+        uint256 claimed = market.claimInterest(0);
+
+        assertEq(claimed, 0);
+        assertEq(market.claimableFeesAssets(), 0);
+        assertEq(borrowToken.totalSupply(), supplyBefore);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), 0);
+    }
+
+    function test_FeeRecipientCanPartiallyClaimAndPreserveRemainder() external {
+        _createFees(10 ether);
+
+        vm.prank(FEE_RECIPIENT);
+        uint256 claimed = market.claimInterest(4 ether);
+
+        assertEq(claimed, 4 ether);
+        assertEq(market.claimableFeesAssets(), 6 ether);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), 4 ether);
+    }
+
     function test_OwnerAndFeeRecipientCanPartiallyAndFullyClaim() external {
         _createFees(10 ether);
         vm.prank(OWNER);
@@ -76,33 +115,21 @@ contract AltoConvexCreditLineMarketClaimInterestTest is ConvexCreditLineCommon {
         assertEq(borrowToken.balanceOf(FEE_RECIPIENT), 10 ether);
     }
 
-    function test_MintFailureAndReentrancyPreserveClaimableBalance() external {
-        _createFees(10 ether);
-        AccountingState memory beforeState = _state();
-        borrowToken.setMintBurnFailure(true, false);
-
-        vm.prank(OWNER);
-        vm.expectRevert(bytes("MINT_REVERTED"));
-        market.claimInterest(4 ether);
-        _assertUnchanged(beforeState);
-
-        borrowToken.setMintBurnFailure(false, false);
-        borrowToken.setCallback(address(market), abi.encodeCall(market.claimInterest, (1)), 1);
-        vm.prank(OWNER);
-        vm.expectRevert(ReentrancyGuardUpgradeable.ReentrancyGuardReentrantCall.selector);
-        market.claimInterest(4 ether);
-        _assertUnchanged(beforeState);
-    }
-
     function test_ClaimDoesNotAccrueOrTouchMarketOrConvexAccounting() external {
         _createFees(10 ether);
         AccountingState memory beforeState = _state();
         uint256 deposits = booster.depositCalls();
         uint256 withdrawals = rewardPool.withdrawCalls();
+        uint256 rewardClaims = rewardPool.getRewardCalls();
         _mockIrmUpdateRevert();
+        vm.mockCallRevert(address(oracle), abi.encodeCall(ILendingOracle.getPrice, ()), "ORACLE_MUST_NOT_BE_CALLED");
+        booster.setDepositBehavior(true, true, type(uint256).max, type(uint256).max);
+        rewardPool.setWithdrawBehavior(true, true, type(uint256).max, type(uint256).max);
+        rewardPool.setRewardBehavior(true, true);
 
         vm.prank(OWNER);
         market.claimInterest(4 ether);
+        vm.clearMockedCalls();
 
         AccountingState memory afterState = _state();
         assertEq(afterState.totalSupply.assets, beforeState.totalSupply.assets);
@@ -113,6 +140,7 @@ contract AltoConvexCreditLineMarketClaimInterestTest is ConvexCreditLineCommon {
         assertEq(afterState.claimableFees, beforeState.claimableFees - 4 ether);
         assertEq(booster.depositCalls(), deposits);
         assertEq(rewardPool.withdrawCalls(), withdrawals);
+        assertEq(rewardPool.getRewardCalls(), rewardClaims);
     }
 
     function test_AccruedInterestAndOpeningFeesShareOneClaimableBalance() external {

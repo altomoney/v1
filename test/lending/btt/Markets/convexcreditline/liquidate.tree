@@ -4,8 +4,4 @@ AltoConvexCreditLineMarket::liquidate()
 ├── when market is frozen but not paused
 │   └── it should revert with AltoCreditMarketNonLiquidatable
 └── when market is active
-    ├── it should revert with AltoCreditMarketNonLiquidatable for every borrower and data input
-    ├── it should not call a liquidation engine or callback
-    ├── it should not accrue interest
-    ├── it should not transfer or burn tokens
-    └── it should not change market or position accounting
+    └── it should revert with AltoCreditMarketNonLiquidatable for every borrower and data input

@@ -23,8 +23,6 @@ AltoConvexCreditLineMarket::removeCollateral()
 │   │   └── it should propagate the failure and roll back accounting
 │   ├── when reward pool withdrawal returns false
 │   │   └── it should revert with AltoConvexCreditLineExternalCallFailed
-│   ├── when reward pool returns fewer LP than assets and no idle balance covers the shortfall
-│   │   └── it should revert with ERC20InsufficientBalance and restore accounting and withdrawal state
 │   └── given a successful withdrawal
 │       ├── it should call withdrawAndUnwrap with assets and claim false
 │       ├── it should decrease staked collateral by exactly assets

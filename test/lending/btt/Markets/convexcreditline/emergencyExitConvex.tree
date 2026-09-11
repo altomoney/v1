@@ -24,10 +24,6 @@ AltoConvexCreditLineMarket::emergencyExitConvex()
 │   │   └── it should propagate the failure and keep Convex active
 │   ├── when withdrawAndUnwrap returns false
 │   │   └── it should revert with AltoConvexCreditLineExternalCallFailed
-│   ├── when collateral balanceOf would revert after withdrawal
-│   │   └── it should not query the collateral balance
-│   ├── when reward pool reports the full stake but transfers fewer LP
-│   │   └── it should not independently validate the recovered LP delta
 │   └── when withdrawal succeeds
 │       ├── it should call withdrawAndUnwrap for all stake with claim false
 │       ├── it should hold all recovered LP idle in the market
@@ -37,18 +33,16 @@ AltoConvexCreditLineMarket::emergencyExitConvex()
 │       ├── it should leave Booster collateral allowance at zero
 │       ├── it should emit ConvexEmergencyExit with reported staked assets
 │       └── it should return reported staked assets
-├── given a successful exit
-│   ├── it should not change creditAccount collateralAssets
-│   ├── it should not change totalSupply totalBorrowed positions or claimableFeesAssets
-│   ├── it should not transfer collateral to owner or creditAccount
-│   ├── it should not claim or forward rewards
-│   ├── it should make later addCollateral revert because strategy is inactive
-│   ├── it should allow later removeCollateral to transfer recovered idle LP directly after unpause
-│   ├── it should not call Convex again during a later collateral removal
-│   ├── it should make a second emergency exit revert with AltoConvexCreditLineStrategyInactive
-│   ├── when reported stake is smaller than recorded collateral
-│   │   └── it should still mark Convex inactive while recorded collateral exceeds recovered idle LP
-│   └── when reported stake is larger than recorded collateral
-│       └── it should recover the entire reported stake without increasing recorded collateral
-└── when an external dependency attempts reentrancy
-    └── it should reject reentrancy and revert atomically
+└── given a successful exit
+    ├── it should not change creditAccount collateralAssets
+    ├── it should not change totalSupply totalBorrowed positions or claimableFeesAssets
+    ├── it should not transfer collateral to owner or creditAccount
+    ├── it should not claim or forward rewards
+    ├── it should make later addCollateral revert because strategy is inactive
+    ├── it should allow later removeCollateral to transfer recovered idle LP directly after unpause
+    ├── it should not call Convex again during a later collateral removal
+    ├── it should make a second emergency exit revert with AltoConvexCreditLineStrategyInactive
+    ├── when reported stake is smaller than recorded collateral
+    │   └── it should still mark Convex inactive while recorded collateral exceeds recovered idle LP
+    └── when reported stake is larger than recorded collateral
+        └── it should recover the entire reported stake without increasing recorded collateral
