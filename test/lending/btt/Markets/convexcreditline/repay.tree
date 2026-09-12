@@ -5,11 +5,11 @@ AltoConvexCreditLineMarket::repay()
 │   └── it should remain available
 ├── given invalid inputs
 │   ├── when assets and shares are both zero
-│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   │   └── it should revert with AltoBaseMarketInvalidInput from inherited validation
 │   ├── when assets and shares are both nonzero
-│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   │   └── it should revert with AltoBaseMarketInvalidInput from inherited validation
 │   ├── when amount selection is invalid and onBehalf is also invalid
-│   │   └── it should revert with AltoCreditMarketInvalidInput before checking creditAccount
+│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount before inherited amount validation
 │   ├── when onBehalf is not creditAccount
 │   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
 │   ├── when onBehalf is zero address
@@ -30,10 +30,8 @@ AltoConvexCreditLineMarket::repay()
 ├── given borrow token burn failure
 │   ├── when caller balance is insufficient
 │   │   └── it should revert atomically
-│   ├── when market lacks burner permission or borrow token is paused
-│   │   └── it should revert atomically
-│   └── when the token attempts reentrancy
-│       └── it should reject reentrancy and revert atomically
+│   └── when market lacks burner permission or borrow token is paused
+│       └── it should revert atomically
 ├── given automatic fee claiming
 │   ├── it should accrue interest before determining the fees to claim
 │   ├── it should claim all opening fees and the first interest accrual before burning repayment assets
@@ -44,10 +42,8 @@ AltoConvexCreditLineMarket::repay()
 │   ├── it should allow all shares to be repaid with DUSD after updating the market's minted amount
 │   ├── when fee minting fails
 │   │   └── it should revert the fee claim and repayment atomically
-│   ├── when DUSD minter permission or ceiling headroom is missing
-│   │   └── it should revert the fee claim and repayment atomically
-│   └── when fee minting attempts reentrancy
-│       └── it should reject reentrancy and revert atomically
+│   └── when DUSD minter permission or ceiling headroom is missing
+│       └── it should revert the fee claim and repayment atomically
 └── given a valid repayment
     ├── when caller is creditAccount
     │   └── it should succeed

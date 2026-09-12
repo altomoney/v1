@@ -32,7 +32,6 @@ AltoConvexCreditLineMarket::removeCollateral()
 │   ├── when recovered idle LP covers assets
 │   │   ├── it should transfer exactly the removed collateral to receiver
 │   │   ├── it should decrease recorded collateral without calling Booster or reward pool
-│   │   ├── it should not emit CollateralUnstaked because no Convex unstake occurs
 │   │   └── it should preserve unrelated surplus LP held by the market
 │   └── when recovered idle LP is insufficient
 │       └── it should revert with ERC20InsufficientBalance and preserve collateral accounting
@@ -63,6 +62,6 @@ AltoConvexCreditLineMarket::removeCollateral()
     │   └── it should set collateralAssets to zero and return all corresponding LP
     ├── it should transfer assets of raw LP to receiver
     ├── it should not change totalSupply totalBorrowed or claimable fees
-    ├── it should emit AccrueInterest CollateralUnstaked and RemoveCollateral in order
+    ├── it should emit AccrueInterest and RemoveCollateral in order
     ├── it should include caller creditAccount receiver and assets in RemoveCollateral
     └── it should return assets

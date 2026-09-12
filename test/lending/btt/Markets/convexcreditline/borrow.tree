@@ -73,8 +73,6 @@ AltoConvexCreditLineMarket::borrow()
 │   │   └── it should revert atomically
 │   ├── when mint succeeds but the later oracle or solvency check fails
 │   │   └── it should roll back receiver balance and token minter accounting
-│   ├── when borrow token attempts reentrancy
-│   │   └── it should reject reentrancy and revert atomically
 │   └── when receiver is any nonzero address
 │       └── it should mint net assets to that receiver
 └── given a successful draw

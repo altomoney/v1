@@ -7,7 +7,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
 import {
     ConvexCreditLineInitParams,
-    IAltoConvexCreditLineMarketErrors,
     IAltoConvexCreditLineMarketEvents
 } from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
@@ -19,32 +18,11 @@ import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {ConvexCreditLineCommon} from "./ConvexCreditLineCommon.t.sol";
 
 contract AltoConvexCreditLineMarketSettleBadDebtTest is ConvexCreditLineCommon {
-    function test_RevertWhenCallerIsNotOwnerBeforeAmountValidationOrBurn() external {
+    function test_RevertWhenCallerIsNotOwnerBeforeBurn() external {
         vm.mockCallRevert(address(borrowToken), borrowToken.burn.selector, bytes("BURN_MUST_NOT_BE_CALLED"));
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this)));
         market.settleBadDebt(0);
-    }
-
-    function test_RejectsZeroAndAmountAboveBadDebtWithoutBurning() external {
-        vm.prank(OWNER);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
-        market.settleBadDebt(0);
-
-        _createBadDebt(100 ether);
-        AccountingState memory beforeState = _state();
-        uint256 supplyBefore = borrowToken.totalSupply();
-        vm.mockCallRevert(address(borrowToken), borrowToken.burn.selector, bytes("BURN_MUST_NOT_BE_CALLED"));
-
-        vm.startPrank(OWNER);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
-        market.settleBadDebt(0);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
-        market.settleBadDebt(100 ether + 1);
-        vm.stopPrank();
-
-        _assertUnchanged(beforeState);
-        assertEq(borrowToken.totalSupply(), supplyBefore);
     }
 
     function test_AvailableWhenActiveFrozenOrPaused() external {

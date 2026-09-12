@@ -95,7 +95,7 @@ contract AltoConvexCreditLineMarketAddCollateralTest is ConvexCreditLineCommon {
         assertEq(collateralToken.balanceOf(CREDIT_ACCOUNT), 0);
         assertEq(collateralAssets, 17 ether);
         assertEq(collateralToken.balanceOf(address(market)), 3 ether);
-        assertEq(market.stakedCollateralAssets(), 22 ether);
+        assertEq(_stakedCollateralAssets(), 22 ether);
         assertEq(rewardPool.balanceOf(address(market)), 22 ether);
         assertEq(booster.depositCalls(), 2);
         assertEq(booster.lastPid(), POOL_ID);

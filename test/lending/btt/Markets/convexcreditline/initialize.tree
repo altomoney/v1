@@ -111,10 +111,10 @@ AltoConvexCreditLineMarket::initialize()
     ├── it should leave claimableFeesAssets at zero
     ├── it should leave badDebtAssets at zero
     ├── it should store the validated Convex configuration and mark it active
-    ├── it should preserve initial reward token order and membership
+    ├── it should preserve initial reward token order
     ├── it should not emit RewardTokenAdded for initial reward tokens
     ├── it should allow exactly MAX_REWARD_TOKENS including the primary reward token
     ├── it should leave the Booster collateral allowance at zero
     ├── it should leave idle and staked collateral at zero without calling Booster deposit
-    ├── it should emit Base Credit and Convex configuration events in initialization order
+    ├── it should emit Base and Credit configuration events in initialization order
     └── it should initialize authorization reentrancy ownership and UUPS state

@@ -21,12 +21,18 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
         market.setCreditLimit(1);
     }
 
-    function test_RevertZeroBeforeAccrual() external {
-        _mockIrmUpdateRevert();
+    function test_AllowsZeroWhenNoDebtExistsAndAccruesFirst() external {
+        _mockAccrual(0, 123);
+
+        vm.expectCall(address(irm), abi.encodeCall(IIrm.updateInterestRate, (CREDIT_LIMIT, 0)));
+        vm.expectEmit(address(market));
+        emit IMarketEvents.AccrueInterest(123, 0, 0, uint128(CREDIT_LIMIT));
+        vm.expectEmit(address(market));
+        emit IAltoConvexCreditLineMarketEvents.SetCreditLimit(CREDIT_LIMIT, 0);
         vm.prank(OWNER);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.setCreditLimit(0);
-        assertEq(market.creditLimit(), CREDIT_LIMIT);
+
+        assertEq(_creditLimit(), 0);
     }
 
     function test_RevertOversizedLimitAtCheckedConversionAfterAccrual() external {
@@ -70,7 +76,7 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
         vm.prank(OWNER);
         market.setCreditLimit(500 ether);
 
-        assertEq(market.creditLimit(), 500 ether);
+        assertEq(_creditLimit(), 500 ether);
     }
 
     function test_PausedLimitBoundaryIncludesRecordedBadDebtWithoutAccruing() external {
@@ -92,7 +98,7 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
 
         vm.prank(OWNER);
         market.setCreditLimit(150 ether);
-        assertEq(market.creditLimit(), 150 ether);
+        assertEq(_creditLimit(), 150 ether);
         assertEq(market.badDebtAssets(), 100 ether);
     }
 
@@ -121,7 +127,7 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
         vm.prank(OWNER);
         market.setCreditLimit(150 ether);
 
-        assertEq(market.creditLimit(), 150 ether);
+        assertEq(_creditLimit(), 150 ether);
         assertEq(market.badDebtAssets(), 100 ether);
         (uint128 debtAssets,) = market.totalBorrowed();
         assertEq(debtAssets, 50 ether);
@@ -149,7 +155,7 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
         (uint128 activeDebt,) = market.totalBorrowed();
         assertEq(activeDebt, 50 ether);
         assertEq(market.badDebtAssets(), 100 ether);
-        assertEq(uint256(activeDebt) + market.badDebtAssets(), market.creditLimit());
+        assertEq(uint256(activeDebt) + market.badDebtAssets(), _creditLimit());
     }
 
     function test_ValidIncreaseDecreaseMaximumAndUnchangedValue() external {
@@ -162,7 +168,7 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
         market.setCreditLimit(type(uint128).max);
         vm.stopPrank();
 
-        assertEq(market.creditLimit(), type(uint128).max);
+        assertEq(_creditLimit(), type(uint128).max);
         (, uint128 supplyShares) = market.totalSupply();
         assertEq(supplyShares, 0);
         (, uint128 borrowShares) = market.totalBorrowed();

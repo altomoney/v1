@@ -142,31 +142,107 @@ library AltoConvexCreditLineLib {
                 revert IAltoConvexCreditLineMarketErrors.AltoConvexCreditLineExternalCallFailed();
             }
         }
+
+        emit IAltoConvexCreditLineMarketEvents.ConvexEmergencyExit(assets);
     }
 
-    /// @notice Validates a token before it is added to the reward forwarding list.
-    /// @dev Rejects zero addresses, non-contracts, duplicates, reserved market tokens and additions beyond the list
-    /// limit.
-    /// @param rewardTokenCount The current number of configured reward tokens.
-    /// @param tokenAlreadyAdded Whether the token is already present in the reward-token mapping.
+    /// @notice Initializes the reward-token list and verifies that it contains the primary Convex reward token.
+    /// @dev Validates and stores every initial token without emitting `RewardTokenAdded`. Reverts if the reward pool
+    ///      primary reward token is absent after initialization.
+    /// @param rewardTokens The market reward-token storage list to initialize.
+    /// @param isRewardToken The mapping that records whether a token is configured.
+    /// @param initialRewardTokens The ordered reward-token addresses supplied during market initialization.
+    /// @param collateralToken The market collateral token, which cannot be configured as a reward token.
+    /// @param borrowToken The market borrow token, which cannot be configured as a reward token.
+    /// @param convexDepositToken The Convex deposit token, which cannot be configured as a reward token.
+    /// @param convexRewardPool The reward pool used to identify the required primary reward token.
+    function initializeRewardTokens(
+        address[] storage rewardTokens,
+        mapping(address => bool) storage isRewardToken,
+        address[] memory initialRewardTokens,
+        address collateralToken,
+        address borrowToken,
+        address convexDepositToken,
+        address convexRewardPool
+    ) external {
+        uint256 tokenCount = initialRewardTokens.length;
+        for (uint256 i; i < tokenCount; ++i) {
+            _addRewardToken(
+                rewardTokens, isRewardToken, initialRewardTokens[i], collateralToken, borrowToken, convexDepositToken
+            );
+        }
+
+        if (!isRewardToken[IConvexRewardPool(convexRewardPool).rewardToken()]) {
+            revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput();
+        }
+    }
+
+    /// @notice Validates and appends a token to the market reward-token list.
+    /// @dev Updates the membership mapping and emits `RewardTokenAdded` after the token is stored.
+    /// @param rewardTokens The market reward-token list to append to.
+    /// @param isRewardToken The mapping that records whether a token is configured.
     /// @param token The candidate reward-token address.
-    /// @param collateralToken The market collateral token, which cannot be added as a reward token.
-    /// @param borrowToken The market borrow token, which cannot be added as a reward token.
-    /// @param convexDepositToken The Convex deposit token, which cannot be added as a reward token.
-    function validateRewardTokenAddition(
-        uint256 rewardTokenCount,
-        bool tokenAlreadyAdded,
+    /// @param collateralToken The market collateral token, which cannot be configured as a reward token.
+    /// @param borrowToken The market borrow token, which cannot be configured as a reward token.
+    /// @param convexDepositToken The Convex deposit token, which cannot be configured as a reward token.
+    function addRewardToken(
+        address[] storage rewardTokens,
+        mapping(address => bool) storage isRewardToken,
         address token,
         address collateralToken,
         address borrowToken,
         address convexDepositToken
-    ) external view {
+    ) external {
+        _addRewardToken(rewardTokens, isRewardToken, token, collateralToken, borrowToken, convexDepositToken);
+        emit IAltoConvexCreditLineMarketEvents.RewardTokenAdded(token);
+    }
+
+    /// @notice Validates and appends a reward token without emitting a market event.
+    /// @dev Updates both the membership mapping and the ordered reward-token list.
+    /// @param rewardTokens The market reward-token list to append to.
+    /// @param isRewardToken The mapping that records whether a token is configured.
+    /// @param token The candidate reward-token address.
+    /// @param collateralToken The market collateral token, which cannot be configured as a reward token.
+    /// @param borrowToken The market borrow token, which cannot be configured as a reward token.
+    /// @param convexDepositToken The Convex deposit token, which cannot be configured as a reward token.
+    function _addRewardToken(
+        address[] storage rewardTokens,
+        mapping(address => bool) storage isRewardToken,
+        address token,
+        address collateralToken,
+        address borrowToken,
+        address convexDepositToken
+    ) private {
+        _validateRewardTokenAddition(
+            rewardTokens, isRewardToken, token, collateralToken, borrowToken, convexDepositToken
+        );
+
+        isRewardToken[token] = true;
+        rewardTokens.push(token);
+    }
+
+    /// @notice Validates whether a token can be configured as a market reward token.
+    /// @dev Rejects zero addresses, non-contracts, duplicates, reserved tokens, and additions beyond the list limit.
+    /// @param rewardTokens The market reward-token list used to enforce the maximum token count.
+    /// @param isRewardToken The mapping used to reject tokens that are already configured.
+    /// @param token The candidate reward-token address.
+    /// @param collateralToken The market collateral token, which cannot be configured as a reward token.
+    /// @param borrowToken The market borrow token, which cannot be configured as a reward token.
+    /// @param convexDepositToken The Convex deposit token, which cannot be configured as a reward token.
+    function _validateRewardTokenAddition(
+        address[] storage rewardTokens,
+        mapping(address => bool) storage isRewardToken,
+        address token,
+        address collateralToken,
+        address borrowToken,
+        address convexDepositToken
+    ) private view {
         if (token == address(0)) {
             revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress();
         }
         if (
-            token.code.length == 0 || rewardTokenCount >= MAX_REWARD_TOKENS || token == collateralToken
-                || token == borrowToken || token == convexDepositToken || tokenAlreadyAdded
+            token.code.length == 0 || rewardTokens.length >= MAX_REWARD_TOKENS || token == collateralToken
+                || token == borrowToken || token == convexDepositToken || isRewardToken[token]
         ) {
             revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput();
         }
@@ -212,5 +288,7 @@ library AltoConvexCreditLineLib {
         }
         rewardTokens.pop();
         delete isRewardToken[token];
+
+        emit IAltoConvexCreditLineMarketEvents.RewardTokenRemoved(token);
     }
 }

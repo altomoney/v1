@@ -25,24 +25,6 @@ import {ConvexBoosterMock} from "./mocks/ConvexBoosterMock.sol";
 import {ConvexRewardPoolMock} from "./mocks/ConvexRewardPoolMock.sol";
 import {CreditLineMarketCollateralTokenMock} from "./mocks/CreditLineMarketCollateralTokenMock.sol";
 
-contract BorrowTokenReentrantCallMock {
-    AltoConvexCreditLineMarket internal immutable MARKET;
-    address internal immutable CREDIT_ACCOUNT;
-
-    constructor(AltoConvexCreditLineMarket market, address creditAccount) {
-        MARKET = market;
-        CREDIT_ACCOUNT = creditAccount;
-    }
-
-    function mint(address, uint256) external {
-        MARKET.repay(1, 0, CREDIT_ACCOUNT);
-    }
-
-    function burn(address, uint256) external {
-        MARKET.repay(1, 0, CREDIT_ACCOUNT);
-    }
-}
-
 abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCreditLineMarketEvents {
     uint256 internal constant POOL_ID = 7;
     uint256 internal constant MAX_LTV = 0.75 ether;
@@ -184,11 +166,6 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
         );
     }
 
-    function _mockBorrowTokenReentrancy(bytes4 selector) internal {
-        BorrowTokenReentrantCallMock callback = new BorrowTokenReentrantCallMock(market, CREDIT_ACCOUNT);
-        vm.mockFunction(address(borrowToken), address(callback), abi.encodeWithSelector(selector));
-    }
-
     function _addCollateral(uint256 assets) internal {
         _addCollateralFrom(CREDIT_ACCOUNT, assets);
     }
@@ -243,6 +220,14 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
         return market.emergencyExitConvex();
     }
 
+    function _creditLimit() internal view returns (uint256 assets) {
+        (assets,) = market.totalSupply();
+    }
+
+    function _stakedCollateralAssets() internal view returns (uint256) {
+        return rewardPool.balanceOf(address(market));
+    }
+
     function _state() internal view returns (AccountingState memory state) {
         (state.totalSupply.assets, state.totalSupply.shares) = market.totalSupply();
         (state.totalBorrowed.assets, state.totalBorrowed.shares) = market.totalBorrowed();
@@ -253,7 +238,7 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
         state.creditBalance = borrowToken.balanceOf(CREDIT_ACCOUNT);
         state.receiverBorrowBalance = borrowToken.balanceOf(RECEIVER);
         state.idleCollateral = collateralToken.balanceOf(address(market));
-        state.stakedCollateral = market.stakedCollateralAssets();
+        state.stakedCollateral = _stakedCollateralAssets();
     }
 
     function _assertStateEq(AccountingState memory actual, AccountingState memory expected) internal pure {
@@ -295,7 +280,6 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
     function _assertRewardList(address[] memory expected) internal {
         for (uint256 i; i < expected.length; ++i) {
             assertEq(market.rewardToken(i), expected[i]);
-            assertTrue(market.isRewardToken(expected[i]));
         }
         _assertRewardTokenCount(expected.length);
     }
@@ -306,18 +290,6 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
         }
         vm.expectRevert();
         market.rewardToken(expectedCount);
-    }
-
-    function _assertNoCollateralUnstakedEvent() internal {
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        for (uint256 i; i < logs.length; ++i) {
-            if (
-                logs[i].emitter == address(market) && logs[i].topics.length != 0
-                    && logs[i].topics[0] == IAltoConvexCreditLineMarketEvents.CollateralUnstaked.selector
-            ) {
-                fail("CollateralUnstaked emitted");
-            }
-        }
     }
 
     function _assertPausedRevert(bytes32 pauseType) internal {

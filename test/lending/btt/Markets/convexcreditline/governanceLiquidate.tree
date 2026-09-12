@@ -42,7 +42,6 @@ AltoConvexCreditLineMarket::governanceLiquidate()
 │   ├── when recovered idle LP covers recorded collateral
 │   │   ├── it should transfer all recorded collateral to owner without calling Booster or reward pool
 │   │   ├── it should clear debt and collateral and accrue bad debt normally
-│   │   ├── it should not emit CollateralUnstaked because no Convex unstake occurs
 │   │   └── it should preserve unrelated surplus LP held by the market
 │   └── when recovered idle LP is insufficient
 │       └── it should revert with ERC20InsufficientBalance and preserve foreclosure accounting
@@ -67,6 +66,5 @@ AltoConvexCreditLineMarket::governanceLiquidate()
     ├── when accumulated bad debt equals creditLimit
     │   └── it should prevent every positive new draw even after new collateral is deposited
     ├── it should leave previously minted bad-debt borrow tokens and token minter accounting outstanding
-    ├── it should emit BadDebtAccrued before CollateralUnstaked and GovernanceLiquidation
     ├── it should emit GovernanceLiquidation with owner collateral bad debt assets and shares
     └── it should return collateral amount and the entire debt assets used for foreclosure

@@ -20,8 +20,6 @@ AltoConvexCreditLineMarket::removeRewardToken()
 │   ├── when token is the first or middle list element
 │   │   └── it should move the prior last token into the removed index and pop the list
 │   ├── it should decrease the reward-token array length
-│   ├── it should set isRewardToken for the removed token to false
-│   ├── it should preserve membership for every remaining token
 │   ├── it should emit RewardTokenRemoved
 │   ├── it should not transfer or claim any token
 │   ├── it should allow the removed token to be added again later

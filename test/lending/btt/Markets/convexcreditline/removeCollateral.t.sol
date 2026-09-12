@@ -77,7 +77,6 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
         deal(address(collateralToken), address(market), 13 ether);
         uint256 callsBefore = rewardPool.withdrawCalls();
 
-        vm.recordLogs();
         vm.prank(CREDIT_ACCOUNT);
         uint256 assets = market.removeCollateral(10 ether, CREDIT_ACCOUNT, RECEIVER, "");
 
@@ -86,9 +85,8 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
         assertEq(collateralAfter, 0);
         assertEq(collateralToken.balanceOf(RECEIVER), 10 ether);
         assertEq(collateralToken.balanceOf(address(market)), 3 ether);
-        assertEq(market.stakedCollateralAssets(), 0);
+        assertEq(_stakedCollateralAssets(), 0);
         assertEq(rewardPool.withdrawCalls(), callsBefore);
-        _assertNoCollateralUnstakedEvent();
     }
 
     function test_InactiveWithdrawalWithInsufficientIdleCollateralRevertsAtomically() external {
@@ -138,8 +136,6 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
         vm.expectEmit(address(market));
         emit IMarketEvents.AccrueInterest(29, 0, 0, uint128(CREDIT_LIMIT));
         vm.expectEmit(address(market));
-        emit IAltoConvexCreditLineMarketEvents.CollateralUnstaked(RECEIVER, 10 ether);
-        vm.expectEmit(address(market));
         emit IMarketEvents.RemoveCollateral(CREDIT_ACCOUNT, CREDIT_ACCOUNT, RECEIVER, 10 ether);
         vm.prank(CREDIT_ACCOUNT);
         uint256 assets = market.removeCollateral(10 ether, CREDIT_ACCOUNT, RECEIVER, "");
@@ -149,7 +145,7 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
         (,, uint128 collateralAfter) = market.position(CREDIT_ACCOUNT);
         assertEq(collateralAfter, 0);
         assertEq(collateralToken.balanceOf(RECEIVER), 10 ether);
-        assertEq(market.stakedCollateralAssets(), 0);
+        assertEq(_stakedCollateralAssets(), 0);
         assertEq(rewardPool.balanceOf(address(market)), 0);
         assertEq(rewardPool.lastWithdrawAmount(), 10 ether);
         assertFalse(rewardPool.lastWithdrawClaim());
@@ -181,7 +177,7 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
         assertEq(debtAssetsAfter, debtAssetsBefore);
         assertEq(debtSharesAfter, debtSharesBefore);
         assertEq(collateralToken.balanceOf(RECEIVER), 20 ether);
-        assertEq(market.stakedCollateralAssets(), 80 ether);
+        assertEq(_stakedCollateralAssets(), 80 ether);
         assertEq(rewardPool.balanceOf(address(market)), 80 ether);
     }
 
@@ -200,7 +196,7 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
         assertEq(uint256(collateralAfter) * MAX_LTV / 1 ether, debtAssets);
         assertEq(positionShares, debtShares);
         assertEq(collateralToken.balanceOf(RECEIVER), 20 ether);
-        assertEq(market.stakedCollateralAssets(), 80 ether);
+        assertEq(_stakedCollateralAssets(), 80 ether);
     }
 
     function test_PartialWithdrawalThatWouldMakePositionInsolventRevertsAtomically() external {

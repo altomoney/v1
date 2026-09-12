@@ -67,7 +67,6 @@ contract AltoConvexCreditLineMarketAddRewardTokenTest is ConvexCreditLineCommon 
 
         _assertRewardTokenCount(3);
         assertEq(market.rewardToken(2), token);
-        assertTrue(market.isRewardToken(token));
         _assertUnchanged(beforeState);
     }
 
@@ -96,8 +95,9 @@ contract AltoConvexCreditLineMarketAddRewardTokenTest is ConvexCreditLineCommon 
         vm.prank(OWNER);
         market.addRewardToken(address(third));
 
-        assertTrue(market.isRewardToken(address(first)));
-        assertTrue(market.isRewardToken(address(second)));
-        assertTrue(market.isRewardToken(address(third)));
+        _assertRewardTokenCount(5);
+        assertEq(market.rewardToken(2), address(first));
+        assertEq(market.rewardToken(3), address(second));
+        assertEq(market.rewardToken(4), address(third));
     }
 }

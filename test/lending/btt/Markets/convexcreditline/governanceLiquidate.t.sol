@@ -135,7 +135,6 @@ contract AltoConvexCreditLineMarketGovernanceLiquidateTest is ConvexCreditLineCo
         uint256 ownerBalanceBefore = collateralToken.balanceOf(OWNER);
         uint256 withdrawalsBefore = rewardPool.withdrawCalls();
 
-        vm.recordLogs();
         vm.prank(OWNER);
         (uint256 collateral, uint256 badDebt) = market.governanceLiquidate(CREDIT_ACCOUNT, false);
 
@@ -152,7 +151,6 @@ contract AltoConvexCreditLineMarketGovernanceLiquidateTest is ConvexCreditLineCo
         assertEq(collateralToken.balanceOf(address(market)), 3 ether);
         assertFalse(market.convexActive());
         assertEq(rewardPool.withdrawCalls(), withdrawalsBefore);
-        _assertNoCollateralUnstakedEvent();
     }
 
     function test_InactiveStrategyWithInsufficientIdleCollateralRevertsForeclosureAtomically() external {
@@ -216,16 +214,12 @@ contract AltoConvexCreditLineMarketGovernanceLiquidateTest is ConvexCreditLineCo
         _mockAccrual(5 ether, 37);
         uint256 tokenSupplyBefore = borrowToken.totalSupply();
         (uint128 supplyAssetsBefore, uint128 supplySharesBefore) = market.totalSupply();
-        uint256 creditLimitBefore = market.creditLimit();
+        uint256 creditLimitBefore = supplyAssetsBefore;
         uint256 claimableBefore = market.claimableFeesAssets();
         (, uint128 sharesBefore,) = market.position(CREDIT_ACCOUNT);
 
         vm.expectEmit(address(market));
         emit IMarketEvents.AccrueInterest(37, 5 ether, 115 ether, uint128(CREDIT_LIMIT));
-        vm.expectEmit(address(market));
-        emit IAltoConvexCreditLineMarketEvents.BadDebtAccrued(115 ether);
-        vm.expectEmit(address(market));
-        emit IAltoConvexCreditLineMarketEvents.CollateralUnstaked(OWNER, 1_000 ether);
         vm.expectEmit(address(market));
         emit IMarketEvents.GovernanceLiquidation(CREDIT_ACCOUNT, OWNER, 1_000 ether, 115 ether, sharesBefore);
         vm.prank(OWNER);
@@ -239,8 +233,8 @@ contract AltoConvexCreditLineMarketGovernanceLiquidateTest is ConvexCreditLineCo
         (, uint128 positionShares, uint128 positionCollateral) = market.position(CREDIT_ACCOUNT);
         assertEq(positionShares, 0);
         assertEq(positionCollateral, 0);
-        assertEq(market.creditLimit(), creditLimitBefore);
         (uint128 supplyAssetsAfter, uint128 supplySharesAfter) = market.totalSupply();
+        assertEq(supplyAssetsAfter, creditLimitBefore);
         assertEq(supplyAssetsAfter, supplyAssetsBefore);
         assertEq(supplySharesAfter, supplySharesBefore);
         assertEq(market.claimableFeesAssets(), claimableBefore + 5 ether);

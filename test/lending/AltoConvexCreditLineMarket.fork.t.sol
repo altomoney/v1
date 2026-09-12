@@ -154,7 +154,8 @@ contract AltoConvexCreditLineMarketForkTest is Test {
         assertEq(market.feeRecipient(), FEE_RECIPIENT);
         assertEq(market.maxLtv(), MAX_LTV);
         assertEq(market.foreclosureLtv(), FORECLOSURE_LTV);
-        assertEq(market.creditLimit(), CREDIT_LIMIT);
+        (uint128 creditLimit,) = market.totalSupply();
+        assertEq(creditLimit, CREDIT_LIMIT);
         assertEq(market.borrowOpeningFee(), 0);
         assertEq(market.badDebtAssets(), 0);
         assertEq(market.liquidationEngine(), address(0));
@@ -162,7 +163,6 @@ contract AltoConvexCreditLineMarketForkTest is Test {
         assertEq(market.convexBooster(), CONVEX_BOOSTER_ADDRESS);
         assertEq(market.convexPoolId(), CONVEX_POOL_ID);
         assertEq(market.convexRewardPool(), CONVEX_REWARD_POOL_ADDRESS);
-        assertEq(market.convexDepositToken(), CONVEX_DEPOSIT_TOKEN_ADDRESS);
         assertEq(market.rewardRecipient(), CREDIT_ACCOUNT);
         assertTrue(market.convexActive());
         assertEq(market.rewardToken(0), CRV_ADDRESS);
@@ -187,7 +187,7 @@ contract AltoConvexCreditLineMarketForkTest is Test {
         Position memory creditPosition = _creditPosition();
         assertEq(addedAssets, collateralAmount);
         assertEq(creditPosition.collateralAssets, collateralAmount);
-        assertEq(market.stakedCollateralAssets(), collateralAmount);
+        assertEq(_stakedCollateralAssets(), collateralAmount);
         assertEq(CONVEX_REWARD_POOL.balanceOf(address(market)), collateralAmount);
         assertEq(CURVE_LP.balanceOf(address(market)), 0);
         assertEq(CURVE_LP.balanceOf(address(market)), 0);
@@ -206,7 +206,7 @@ contract AltoConvexCreditLineMarketForkTest is Test {
         assertEq(removedAssets, assetsToRemove);
         assertEq(CURVE_LP.balanceOf(collateralReceiver) - receiverBalanceBefore, assetsToRemove);
         assertEq(creditPosition.collateralAssets, collateralAmount - assetsToRemove);
-        assertEq(market.stakedCollateralAssets(), collateralAmount - assetsToRemove);
+        assertEq(_stakedCollateralAssets(), collateralAmount - assetsToRemove);
         assertEq(CONVEX_REWARD_POOL.balanceOf(address(market)), collateralAmount - assetsToRemove);
         assertEq(CURVE_LP.balanceOf(address(market)), 0);
         assertEq(CONVEX_DEPOSIT_TOKEN.balanceOf(address(market)), 0);
@@ -259,14 +259,14 @@ contract AltoConvexCreditLineMarketForkTest is Test {
         creditPosition = _creditPosition();
         assertEq(creditPosition.collateralAssets, 0);
         assertEq(CURVE_LP.balanceOf(CREDIT_ACCOUNT), collateralAmount);
-        assertEq(market.stakedCollateralAssets(), 0);
+        assertEq(_stakedCollateralAssets(), 0);
         assertEq(CURVE_LP.balanceOf(address(market)), 0);
     }
 
     function testFork_ClaimRewardsForwardsConfiguredTokens() external {
         _addAllCollateral();
 
-        uint256 stakedBefore = market.stakedCollateralAssets();
+        uint256 stakedBefore = _stakedCollateralAssets();
         Position memory positionBefore = _creditPosition();
         assertGt(CONVEX_REWARD_POOL.periodFinish(), block.timestamp + REWARD_ACCRUAL_TIME);
 
@@ -299,7 +299,7 @@ contract AltoConvexCreditLineMarketForkTest is Test {
         assertEq(CRV.balanceOf(claimCaller), callerCrvBefore);
         assertEq(CVX.balanceOf(claimCaller), callerCvxBefore);
         assertEq(WFRAX.balanceOf(claimCaller), callerWfraxBefore);
-        assertEq(market.stakedCollateralAssets(), stakedBefore);
+        assertEq(_stakedCollateralAssets(), stakedBefore);
         assertEq(CONVEX_REWARD_POOL.balanceOf(address(market)), stakedBefore);
 
         Position memory positionAfter = _creditPosition();
@@ -339,7 +339,7 @@ contract AltoConvexCreditLineMarketForkTest is Test {
         assertEq(totalBorrowedAfter.assets, 0);
         assertEq(totalBorrowedAfter.shares, 0);
         assertEq(market.badDebtAssets(), badDebt);
-        assertEq(market.stakedCollateralAssets(), 0);
+        assertEq(_stakedCollateralAssets(), 0);
         assertEq(CURVE_LP.balanceOf(address(market)), 0);
         assertTrue(market.convexActive());
         assertEq(DUSD_TOKEN.balanceOf(CREDIT_ACCOUNT), borrowerDusdBefore);
@@ -363,7 +363,7 @@ contract AltoConvexCreditLineMarketForkTest is Test {
         vm.prank(CREDIT_ACCOUNT);
         uint256 addedCollateral = market.addCollateral(RECOVERY_COLLATERAL, CREDIT_ACCOUNT);
         assertEq(addedCollateral, RECOVERY_COLLATERAL);
-        assertEq(market.stakedCollateralAssets(), RECOVERY_COLLATERAL);
+        assertEq(_stakedCollateralAssets(), RECOVERY_COLLATERAL);
 
         uint256 collateralValue = Math.mulDiv(RECOVERY_COLLATERAL, initialOraclePrice, LENDING_ORACLE_PRICE_PRECISION);
         maximumBorrow = Math.mulDiv(collateralValue, MAX_LTV, 1 ether);
@@ -402,7 +402,7 @@ contract AltoConvexCreditLineMarketForkTest is Test {
         assertEq(CURVE_LP.balanceOf(ALTO_TIMELOCK) - ownerLpBefore, RECOVERY_COLLATERAL);
         assertEq(market.badDebtAssets(), badDebt);
         assertEq(market.claimableFeesAssets(), 0);
-        assertEq(market.stakedCollateralAssets(), 0);
+        assertEq(_stakedCollateralAssets(), 0);
         assertEq(CURVE_LP.balanceOf(address(market)), 0);
         Position memory liquidatedPosition = _creditPosition();
         Balance memory totalBorrowedAfterLiquidation = _totalBorrowed();
@@ -537,6 +537,10 @@ contract AltoConvexCreditLineMarketForkTest is Test {
 
     function _halfCollateralValue() private view returns (uint256) {
         return Math.mulDiv(collateralAmount, initialOraclePrice, LENDING_ORACLE_PRICE_PRECISION) / 2;
+    }
+
+    function _stakedCollateralAssets() private view returns (uint256) {
+        return CONVEX_REWARD_POOL.balanceOf(address(market));
     }
 
     function _creditPosition() private view returns (Position memory creditPosition) {

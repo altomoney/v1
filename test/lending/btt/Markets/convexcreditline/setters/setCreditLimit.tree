@@ -1,8 +1,8 @@
 AltoConvexCreditLineMarket::setCreditLimit()
 ├── when caller is not owner
 │   └── it should revert with OwnableUnauthorizedAccount
-├── when new credit limit is zero
-│   └── it should revert with AltoCreditMarketInvalidInput before accruing interest
+├── when new credit limit is zero and no debt exists
+│   └── it should accrue interest and set the credit limit to zero
 ├── when new credit limit exceeds uint128 max
 │   └── it should accrue and then revert with MathUtilsMaxUint128Overflow during checked conversion
 ├── given market is not paused
@@ -24,7 +24,7 @@ AltoConvexCreditLineMarket::setCreditLimit()
     ├── it should accept exactly uint128 max
     ├── when new value equals current credit limit
     │   └── it should still emit and leave the same value
-    ├── it should update totalSupply assets and creditLimit
+    ├── it should update totalSupply assets
     ├── it should leave totalSupply shares at zero
     ├── it should not change totalBorrowed shares positions claimableFeesAssets or badDebtAssets except through accrual
     └── it should emit SetCreditLimit with old and new values after any AccrueInterest event

@@ -2,8 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {AltoBaseMarket} from "../AltoBaseMarket.sol";
+import {AltoCreditLineMarketLib} from "./AltoCreditLineMarketLib.sol";
 import {AltoConvexCreditLineLib} from "./AltoConvexCreditLineLib.sol";
-import {AssetShareConversionMath} from "../libraries/AssetShareConversionMath.sol";
 import {Uint128Converter} from "../libraries/Uint128Converter.sol";
 import {
     CreditMarketInitParams,
@@ -12,13 +12,11 @@ import {
     IAltoConvexCreditLineMarketStaticTypes
 } from "../interfaces/IAltoConvexCreditLineMarket.sol";
 import {IIrm, IRMType} from "../interfaces/IIrm.sol";
-import {BaseMarketInitParams, IMarketBase, MarketType, Position} from "../interfaces/IMarket.sol";
+import {BaseMarketInitParams, IMarketBase, MarketType} from "../interfaces/IMarket.sol";
 import {IMintableERC20} from "../interfaces/IMintableERC20.sol";
-import {IConvexRewardPool} from "../interfaces/vendor/IConvexRewardPool.sol";
 
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
-import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
-import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 /// @title Alto Convex Credit Line Market
 /// @author GPM
@@ -26,8 +24,6 @@ import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/inte
 /// @notice An Isolated Convex Credit Line Market
 /// @dev `totalSupply.assets` is the credit capacity shared by active debt and cumulative bad debt.
 contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMarketStaticTypes {
-    using FixedPointMath for uint256;
-    using AssetShareConversionMath for uint256;
     using Uint128Converter for uint256;
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
@@ -51,8 +47,8 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     /// @inheritdoc IAltoConvexCreditLineMarketBase
     address public convexRewardPool;
 
-    /// @inheritdoc IAltoConvexCreditLineMarketBase
-    address public convexDepositToken;
+    /// @notice The Convex deposit token associated with the reward pool.
+    address internal convexDepositToken;
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
     address public rewardRecipient;
@@ -63,8 +59,8 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     /// @inheritdoc IAltoConvexCreditLineMarketBase
     address[] public rewardToken;
 
-    /// @inheritdoc IAltoConvexCreditLineMarketBase
-    mapping(address => bool) public isRewardToken;
+    /// @notice Tracks tokens configured for reward forwarding.
+    mapping(address => bool) internal isRewardToken;
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
     uint256 public badDebtAssets;
@@ -81,27 +77,13 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
         _initializeConvex(_initParams);
     }
 
-    /// @inheritdoc IAltoConvexCreditLineMarketBase
-    function creditLimit() external view returns (uint256) {
-        return totalSupply.assets;
-    }
-
     /// @inheritdoc AltoBaseMarket
     function borrowOpeningFee() public view override(AltoBaseMarket, IMarketBase) returns (uint256) {
         return _borrowOpeningFee;
     }
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
-    function stakedCollateralAssets() external view returns (uint256) {
-        return IConvexRewardPool(convexRewardPool).balanceOf(address(this));
-    }
-
-    /// @inheritdoc IAltoConvexCreditLineMarketBase
-    function setCreditLimit(uint256 _newCreditLimit) external nonReentrant onlyOwner {
-        if (_newCreditLimit == 0) {
-            revert AltoCreditMarketInvalidInput();
-        }
-
+    function setCreditLimit(uint256 _newCreditLimit) external onlyOwner {
         if (!paused[PAUSE_TYPE]) {
             _accrueInterest();
         }
@@ -144,10 +126,6 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
     function claimInterest(uint256 interest) external nonReentrant whenNotPaused returns (uint256) {
-        if (interest > claimableFeesAssets) {
-            revert AltoCreditMarketInvalidInput();
-        }
-        _requireNonZeroAddress(feeRecipient);
         if (msg.sender != owner() && msg.sender != feeRecipient) {
             revert AltoCreditMarketUnauthorizedAccount();
         }
@@ -156,11 +134,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     }
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
-    function settleBadDebt(uint256 assets) external nonReentrant onlyOwner {
-        if (assets == 0 || assets > badDebtAssets) {
-            revert AltoCreditMarketInvalidInput();
-        }
-
+    function settleBadDebt(uint256 assets) external onlyOwner {
         _sendBorrowToken(msg.sender, address(this), assets);
         badDebtAssets -= assets;
 
@@ -181,23 +155,11 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
             _accrueInterest();
         }
 
-        if (!_isLiquidatable(borrower)) {
-            revert AltoCreditMarketPositionNotForeclosable();
-        }
-
-        Position storage borrowerPosition = position[borrower];
-        collateralAmount = borrowerPosition.collateralAssets;
-        uint128 badDebtShares = borrowerPosition.borrowShares;
-        badDebtAmount = totalBorrowed.assets;
-
-        totalBorrowed.assets = 0;
-        totalBorrowed.shares = 0;
+        uint128 badDebtShares;
+        (collateralAmount, badDebtAmount, badDebtShares) =
+            AltoCreditLineMarketLib.applyForeclosure(position[borrower], totalBorrowed, oracle, foreclosureLtv);
 
         badDebtAssets += badDebtAmount;
-        emit BadDebtAccrued(badDebtAmount);
-
-        borrowerPosition.borrowShares = 0;
-        borrowerPosition.collateralAssets = 0;
 
         if (collateralAmount != 0) {
             _sendCollateral(msg.sender, collateralAmount);
@@ -222,46 +184,34 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
     function addRewardToken(address _token) external onlyOwner {
-        _addRewardToken(_token);
-        emit RewardTokenAdded(_token);
+        AltoConvexCreditLineLib.addRewardToken(
+            rewardToken, isRewardToken, _token, collateralToken, borrowToken, convexDepositToken
+        );
     }
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
     function removeRewardToken(address _token) external onlyOwner {
         AltoConvexCreditLineLib.removeRewardToken(rewardToken, isRewardToken, convexRewardPool, _token);
-
-        emit RewardTokenRemoved(_token);
     }
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
-    function emergencyExitConvex() external nonReentrant onlyOwner returns (uint256 assets) {
+    function emergencyExitConvex() external onlyOwner returns (uint256 assets) {
         if (!paused[PAUSE_TYPE]) {
             revert AltoConvexCreditLineMustBePaused();
         }
         if (!convexActive) {
             revert AltoConvexCreditLineStrategyInactive();
         }
+        convexActive = false;
 
         assets = AltoConvexCreditLineLib.emergencyWithdraw(convexRewardPool);
-
-        convexActive = false;
-        emit ConvexEmergencyExit(assets);
     }
 
     /// @dev Initializes the Base market and then initializes Credit state.
     function _initializeCreditMarket(CreditMarketInitParams memory _initParams) internal onlyInitializing {
         BaseMarketInitParams memory baseMarketInitParams = _initParams.baseMarketInitParams;
 
-        _requireNonZeroAddress(_initParams.creditAccount);
-        _requireNonZeroAddress(baseMarketInitParams.feeRecipient);
-        if (
-            _initParams.creditLimit == 0 || _initParams.initialBorrowOpeningFee > MATH_PRECISION
-                || baseMarketInitParams.maxLtv >= _initParams.foreclosureLtv
-                || _initParams.foreclosureLtv > MATH_PRECISION
-                || IIrm(baseMarketInitParams.irm).IRM_TYPE() != IRMType.FIXED_RATE
-        ) {
-            revert AltoCreditMarketInvalidInput();
-        }
+        AltoCreditLineMarketLib.validateInitialization(_initParams);
 
         __UUPSUpgradeable_init();
         __AltoBaseMarket_init(baseMarketInitParams, MarketType.CREDIT_MINT);
@@ -280,7 +230,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
     /// @inheritdoc AltoBaseMarket
     /// @dev Unlike `AltoBaseMarket`, only a nonzero fixed-rate IRM can be set.
-    function _setIrm(address _irm, bool _skipAccrueInterest) internal override nonReentrant {
+    function _setIrm(address _irm, bool _skipAccrueInterest) internal override {
         _requireNonZeroAddress(_irm);
         if (_irm == irm || IIrm(_irm).IRM_TYPE() != IRMType.FIXED_RATE) {
             revert AltoCreditMarketInvalidInput();
@@ -326,7 +276,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
     /// @inheritdoc AltoBaseMarket
     /// @dev Only `creditAccount` can receive collateral, which is deposited into Convex.
-    function _addCollateral(uint256 assets, address onBehalf) internal override nonReentrant returns (uint256) {
+    function _addCollateral(uint256 assets, address onBehalf) internal override returns (uint256) {
         _requireCreditAccount(onBehalf);
         return super._addCollateral(assets, onBehalf);
     }
@@ -362,7 +312,6 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     function _sendCollateral(address receiver, uint256 assets) internal override {
         if (convexActive) {
             AltoConvexCreditLineLib.withdrawAndUnwrapCollateral(convexRewardPool, assets);
-            emit CollateralUnstaked(receiver, assets);
         }
 
         super._sendCollateral(receiver, assets);
@@ -400,15 +349,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
     /// @inheritdoc AltoBaseMarket
     /// @dev Repayment is limited to `creditAccount` debt and burns the payer's borrow tokens.
-    function _repay(uint256 assets, uint256 shares, address onBehalf)
-        internal
-        override
-        nonReentrant
-        returns (uint256, uint256)
-    {
-        if (!_onlyOneZero(assets, shares)) {
-            revert AltoCreditMarketInvalidInput();
-        }
+    function _repay(uint256 assets, uint256 shares, address onBehalf) internal override returns (uint256, uint256) {
         _requireCreditAccount(onBehalf);
 
         _accrueInterest();
@@ -448,20 +389,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
     /// @inheritdoc AltoBaseMarket
     function _isSolvent(address _user) internal view override returns (bool) {
-        if (position[_user].borrowShares == 0) {
-            return true;
-        }
-
-        uint256 collateralValue = _collateralValue(_user);
-        uint256 maxBorrowValue = collateralValue.multiplyWithPrecision(maxLtv);
-        return maxBorrowValue >= _borrowValue(_user);
-    }
-
-    /// @dev Returns true if the user's position has breached the foreclosure LTV.
-    function _isLiquidatable(address _user) internal view returns (bool) {
-        uint256 collateralValue = _collateralValue(_user);
-        uint256 foreclosureBorrowValue = collateralValue.multiplyWithPrecision(foreclosureLtv);
-        return _borrowValue(_user) > foreclosureBorrowValue;
+        return AltoCreditLineMarketLib.isSolvent(position[_user], totalBorrowed, oracle, maxLtv);
     }
 
     /// @dev Disabled because this market supports governance foreclosure instead of public liquidation.
@@ -508,44 +436,9 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
         rewardRecipient = _initParams.rewardRecipient;
         convexActive = true;
 
-        for (uint256 i = 0; i < tokenCount; ++i) {
-            _addRewardToken(_initParams.rewardTokens[i]);
-        }
-
-        if (!isRewardToken[IConvexRewardPool(rewardPool).rewardToken()]) {
-            revert AltoCreditMarketInvalidInput();
-        }
-
-        emit ConvexConfigured(
-            _initParams.convexBooster, _initParams.convexPoolId, rewardPool, depositToken, _initParams.rewardRecipient
+        AltoConvexCreditLineLib.initializeRewardTokens(
+            rewardToken, isRewardToken, _initParams.rewardTokens, collateralToken, borrowToken, depositToken, rewardPool
         );
-    }
-
-    /// @dev Adds a validated token to the reward forwarding list.
-    function _addRewardToken(address _token) private {
-        AltoConvexCreditLineLib.validateRewardTokenAddition(
-            rewardToken.length, isRewardToken[_token], _token, collateralToken, borrowToken, convexDepositToken
-        );
-
-        isRewardToken[_token] = true;
-        rewardToken.push(_token);
-    }
-
-    /// @dev Returns the user's collateral value in borrow-token asset units.
-    function _collateralValue(address _user) private view returns (uint256) {
-        uint256 collateralPrice = ILendingOracle(oracle).getPrice();
-        if (collateralPrice == 0) {
-            revert AltoCreditMarketInvalidOraclePrice();
-        }
-
-        uint256 collateralAssets = uint256(position[_user].collateralAssets);
-        return collateralAssets.divideWithRounding(collateralPrice, LENDING_ORACLE_PRICE_PRECISION, false);
-    }
-
-    /// @dev Returns the user's borrow value in borrow-token asset units.
-    function _borrowValue(address _user) private view returns (uint256) {
-        uint256 borrowShares = uint256(position[_user].borrowShares);
-        return borrowShares.convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
     }
 
     /// @dev Reverts unless the account is the configured credit account.

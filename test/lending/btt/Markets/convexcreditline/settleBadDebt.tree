@@ -1,10 +1,6 @@
 AltoConvexCreditLineMarket::settleBadDebt(uint256)
 ├── when caller is not owner
-│   └── it should revert with OwnableUnauthorizedAccount before validating amount or burning tokens
-├── when assets is zero
-│   └── it should revert with AltoCreditMarketInvalidInput without changing state
-├── when assets exceeds badDebtAssets
-│   └── it should revert with AltoCreditMarketInvalidInput without changing state
+│   └── it should revert with OwnableUnauthorizedAccount before burning tokens
 ├── when the market is active, frozen, or paused
 │   └── it should remain available
 ├── when settling part of recorded bad debt

@@ -18,7 +18,6 @@ AltoConvexCreditLineMarket::addRewardToken()
 └── when owner adds a valid token below the cap
     ├── it should append the token to the end of the list
     ├── it should increase the reward-token array length
-    ├── it should set isRewardToken to true
     ├── it should emit RewardTokenAdded
     ├── it should not call or validate the token's ERC20 methods
     ├── it should accept a contract whose balanceOf or transfer behavior is malformed

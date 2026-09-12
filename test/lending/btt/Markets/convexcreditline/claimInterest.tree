@@ -1,10 +1,6 @@
 AltoConvexCreditLineMarket::claimInterest()
 ├── when market is paused
 │   └── it should revert with IsPaused for PAUSE_TYPE
-├── when interest exceeds claimableFeesAssets
-│   └── it should revert with AltoCreditMarketInvalidInput before fee recipient and caller checks
-├── when fee recipient is zero address
-│   └── it should revert with AltoCreditMarketZeroAddress
 ├── when caller is neither owner nor fee recipient
 │   └── it should revert with AltoCreditMarketUnauthorizedAccount
 ├── given caller is owner

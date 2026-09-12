@@ -46,7 +46,7 @@ contract AltoConvexCreditLineMarketRemoveRewardTokenTest is ConvexCreditLineComm
         vm.prank(OWNER);
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.removeRewardToken(address(extraRewardToken));
-        assertTrue(market.isRewardToken(address(extraRewardToken)));
+        assertEq(market.rewardToken(1), address(extraRewardToken));
 
         deal(address(extraRewardToken), address(market), 1 ether);
         vm.prank(OWNER);
@@ -107,8 +107,6 @@ contract AltoConvexCreditLineMarketRemoveRewardTokenTest is ConvexCreditLineComm
         _assertRewardTokenCount(2);
         assertEq(market.rewardToken(0), address(primaryRewardToken));
         assertEq(market.rewardToken(1), address(third));
-        assertFalse(market.isRewardToken(address(extraRewardToken)));
-        assertTrue(market.isRewardToken(address(third)));
         _assertUnchanged(beforeState);
         assertEq(rewardPool.getRewardCalls(), rewardClaimsBefore);
     }
@@ -134,7 +132,8 @@ contract AltoConvexCreditLineMarketRemoveRewardTokenTest is ConvexCreditLineComm
 
         vm.prank(OWNER);
         market.removeRewardToken(address(primaryRewardToken));
-        assertFalse(market.isRewardToken(address(primaryRewardToken)));
+        _assertRewardTokenCount(1);
+        assertEq(market.rewardToken(0), address(extraRewardToken));
     }
 
     function test_RemainsCallableInAllPauseAndStrategyStates() external {

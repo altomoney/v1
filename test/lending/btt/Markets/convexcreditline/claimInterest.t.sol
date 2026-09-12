@@ -18,17 +18,6 @@ contract AltoConvexCreditLineMarketClaimInterestTest is ConvexCreditLineCommon {
         market.claimInterest(0);
     }
 
-    function test_AmountCheckPrecedesFeeRecipientAndCallerChecks() external {
-        vm.store(address(market), bytes32(uint256(13)), bytes32(0));
-        vm.prank(USER);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
-        market.claimInterest(1);
-
-        vm.prank(USER);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress.selector);
-        market.claimInterest(0);
-    }
-
     function test_RevertWhenCallerIsNeitherOwnerNorFeeRecipient() external {
         vm.prank(USER);
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);

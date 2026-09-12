@@ -86,38 +86,14 @@ interface IAltoConvexCreditLineMarketEvents {
     /// @param recipient The account that received the borrow tokens
     /// @param amount The amount of borrow tokens minted
     event InterestClaimed(address indexed recipient, uint256 amount);
-
-    /// @notice Emitted when debt is written off during foreclosure
-    /// @param badDebtAmount The amount of bad debt accrued
-    event BadDebtAccrued(uint256 badDebtAmount);
-
     /// @notice Emitted when recovered borrow tokens are burned to settle bad debt
     /// @param settledAssets The amount of bad debt settled
     event BadDebtSettled(uint256 settledAssets);
-
-    /// @notice Emitted when the Convex pool is configured
-    /// @param booster The address of the Convex Booster
-    /// @param poolId The Convex pool identifier
-    /// @param rewardPool The address of the Convex reward pool
-    /// @param depositToken The address of the Convex deposit token
-    /// @param rewardRecipient The account that receives Convex rewards
-    event ConvexConfigured(
-        address indexed booster,
-        uint256 indexed poolId,
-        address indexed rewardPool,
-        address depositToken,
-        address rewardRecipient
-    );
 
     /// @notice Emitted when collateral is deposited and staked in Convex
     /// @param caller The account that deposited the collateral
     /// @param assets The amount of collateral deposited
     event CollateralStaked(address indexed caller, uint256 assets);
-
-    /// @notice Emitted when collateral is unstaked and transferred
-    /// @param receiver The account that received the collateral
-    /// @param assets The amount of collateral withdrawn
-    event CollateralUnstaked(address indexed receiver, uint256 assets);
 
     /// @notice Emitted for each reward token processed during a claim
     /// @param caller The account that claimed the rewards
@@ -151,10 +127,6 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     /// @notice The sole account permitted to own market collateral and debt
     /// @return The configured credit-account address
     function creditAccount() external view returns (address);
-
-    /// @notice The maximum credit capacity; used capacity is `totalBorrowed.assets + badDebtAssets`
-    /// @return The maximum credit capacity in borrow-token assets
-    function creditLimit() external view returns (uint256);
 
     /// @notice The LTV above which governance may foreclose
     /// @return The foreclosure LTV in `MATH_PRECISION`
@@ -198,9 +170,6 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     /// @notice The Convex reward pool holding the market staked position
     function convexRewardPool() external view returns (address);
 
-    /// @notice The Convex deposit token associated with the reward pool
-    function convexDepositToken() external view returns (address);
-
     /// @notice The account that receives claimed Convex rewards
     function rewardRecipient() external view returns (address);
 
@@ -212,13 +181,6 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     /// @notice Returns a reward token by index
     /// @param index The index of the reward token
     function rewardToken(uint256 index) external view returns (address);
-
-    /// @notice Returns whether a token is configured as a reward token
-    /// @param token The token to query
-    function isRewardToken(address token) external view returns (bool);
-
-    /// @notice The collateral stake balance reported by the Convex reward pool
-    function stakedCollateralAssets() external view returns (uint256);
 
     /// @notice Claims and forwards every configured Convex reward token
     /// @return claimedAmounts The amount forwarded for each configured reward token

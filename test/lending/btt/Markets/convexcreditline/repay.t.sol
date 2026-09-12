@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {EndpointV2Mock} from "@layerzerolabs/test-devtools-evm-foundry/contracts/mocks/EndpointV2Mock.sol";
 
 import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
@@ -12,7 +11,7 @@ import {
     ConvexCreditLineInitParams
 } from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
-import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {DUSD} from "@alto/tokens/DUSD.sol";
@@ -35,16 +34,20 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         _repayAssets(USER, 1 ether);
     }
 
-    function test_InvalidAmountSelectionPrecedesCreditAccountCheck() external {
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
+    function test_CreditAccountCheckPrecedesInheritedAmountValidation() external {
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.repay(0, 0, USER);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.repay(1, 1, USER);
-
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.repay(1, 0, USER);
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.repay(1, 0, address(0));
+
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
+        market.repay(0, 0, CREDIT_ACCOUNT);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
+        market.repay(1, 1, CREDIT_ACCOUNT);
     }
 
     function test_AmountsAboveDebtOrPositionSharesRevertAtomically() external {
@@ -181,7 +184,7 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         market.removeCollateral(1 ether, CREDIT_ACCOUNT, RECEIVER, "");
     }
 
-    function test_BurnFailureAndReentrancyRollBackAtomically() external {
+    function test_BurnFailureRollsBackAtomically() external {
         _openPosition(1_000 ether, 100 ether);
         deal(address(borrowToken), USER, 10 ether);
         AccountingState memory beforeState = _state();
@@ -191,16 +194,9 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         vm.expectRevert(bytes("BURN_REVERTED"));
         market.repay(10 ether, 0, CREDIT_ACCOUNT);
         _assertUnchanged(beforeState);
-
-        vm.clearMockedCalls();
-        _mockBorrowTokenReentrancy(borrowToken.burn.selector);
-        vm.prank(USER);
-        vm.expectRevert(ReentrancyGuardUpgradeable.ReentrancyGuardReentrantCall.selector);
-        market.repay(10 ether, 0, CREDIT_ACCOUNT);
-        _assertUnchanged(beforeState);
     }
 
-    function test_AutomaticFeeClaimFailureAndReentrancyRollBackRepaymentAtomically() external {
+    function test_AutomaticFeeClaimFailureRollsBackRepaymentAtomically() external {
         _setOpeningFee(0.1 ether);
         _openPosition(1_000 ether, 100 ether);
         _mockAccrual(0, 1);
@@ -213,13 +209,6 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         vm.mockCallRevert(address(borrowToken), borrowToken.mint.selector, bytes("MINT_REVERTED"));
         vm.prank(USER);
         vm.expectRevert(bytes("MINT_REVERTED"));
-        market.repay(0, positionShares, CREDIT_ACCOUNT);
-        _assertUnchanged(beforeState);
-
-        vm.clearMockedCalls();
-        _mockBorrowTokenReentrancy(borrowToken.mint.selector);
-        vm.prank(USER);
-        vm.expectRevert(ReentrancyGuardUpgradeable.ReentrancyGuardReentrantCall.selector);
         market.repay(0, positionShares, CREDIT_ACCOUNT);
         _assertUnchanged(beforeState);
     }
@@ -333,7 +322,7 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         vm.mockCalls(address(irm), abi.encodeWithSelector(IIrm.updateInterestRate.selector), accrualResults);
         deal(address(borrowToken), USER, 10 ether);
         (uint128 supplyAssetsBefore, uint128 supplySharesBefore) = market.totalSupply();
-        uint256 stakedBefore = market.stakedCollateralAssets();
+        uint256 stakedBefore = _stakedCollateralAssets();
         uint256 claimableBefore = market.claimableFeesAssets();
         (,, uint128 collateralBefore) = market.position(CREDIT_ACCOUNT);
         uint256 depositsBefore = booster.depositCalls();
@@ -361,7 +350,7 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         (uint128 supplyAssetsAfter, uint128 supplySharesAfter) = market.totalSupply();
         assertEq(supplyAssetsAfter, supplyAssetsBefore);
         assertEq(supplySharesAfter, supplySharesBefore);
-        assertEq(market.stakedCollateralAssets(), stakedBefore);
+        assertEq(_stakedCollateralAssets(), stakedBefore);
         assertEq(booster.depositCalls(), depositsBefore);
         assertEq(rewardPool.withdrawCalls(), 0);
         assertEq(rewardPool.getRewardCalls(), rewardClaimsBefore);

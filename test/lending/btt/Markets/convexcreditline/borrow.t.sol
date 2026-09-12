@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {EndpointV2Mock} from "@layerzerolabs/test-devtools-evm-foundry/contracts/mocks/EndpointV2Mock.sol";
 
 import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
@@ -198,7 +197,7 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
 
         (uint128 debtAssets,) = market.totalBorrowed();
         assertEq(debtAssets, 100 ether);
-        assertEq(uint256(debtAssets) + market.badDebtAssets(), market.creditLimit());
+        assertEq(uint256(debtAssets) + market.badDebtAssets(), _creditLimit());
 
         AccountingState memory beforeState = _state();
         vm.prank(CREDIT_ACCOUNT);
@@ -356,18 +355,6 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
         assertEq(mintedAfter, mintedBefore);
     }
 
-    function test_RejectsBorrowTokenReentrancyAtomically() external {
-        _addCollateral(100 ether);
-        _mockBorrowTokenReentrancy(borrowToken.mint.selector);
-        AccountingState memory beforeState = _state();
-
-        vm.prank(CREDIT_ACCOUNT);
-        vm.expectRevert(ReentrancyGuardUpgradeable.ReentrancyGuardReentrantCall.selector);
-        market.borrow(1 ether, 0, CREDIT_ACCOUNT, RECEIVER, "");
-
-        _assertUnchanged(beforeState);
-    }
-
     function test_SuccessForCreditAccountAndDelegateWithFullFeeAndExpectedEvents() external {
         _addCollateral(1_000 ether);
         _setOpeningFee(MATH_PRECISION);
@@ -390,7 +377,7 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
         assertEq(borrowToken.balanceOf(RECEIVER), 100 ether);
         assertEq(market.claimableFeesAssets(), 100 ether);
         assertEq(collateralToken.balanceOf(address(market)), 0);
-        assertEq(market.stakedCollateralAssets(), beforeState.stakedCollateral);
+        assertEq(_stakedCollateralAssets(), beforeState.stakedCollateral);
         (uint128 supplyAssets, uint128 supplyShares) = market.totalSupply();
         assertEq(supplyAssets, beforeState.totalSupply.assets);
         assertEq(supplyShares, beforeState.totalSupply.shares);
