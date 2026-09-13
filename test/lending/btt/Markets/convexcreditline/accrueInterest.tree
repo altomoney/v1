@@ -3,6 +3,12 @@ AltoConvexCreditLineMarket::accrueInterest()
 │   └── it should revert with IsPaused for PAUSE_TYPE
 ├── when IRM call reverts or returns malformed data
 │   └── it should propagate the failure without changing accounting
+├── given an AdaptiveCurveIrm or PegResponsiveExponentialIrm
+│   ├── it should accrue old-model interest before switching to the new IRM
+│   ├── it should add new-model interest to active debt and claimable fees without changing credit capacity or shares
+│   ├── it should exclude paused time from accrual
+│   ├── it should use active debt divided by the credit limit for adaptive utilization
+│   └── it should apply the peg-responsive rate after a price checkpoint
 ├── given the IRM call
 │   ├── it should pass creditLimit as total supply assets
 │   ├── it should pass current totalBorrowed assets

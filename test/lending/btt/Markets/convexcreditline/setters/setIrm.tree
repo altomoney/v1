@@ -5,10 +5,8 @@ AltoConvexCreditLineMarket::setIrm()
 │   └── it should revert with AltoCreditMarketZeroAddress before accruing interest
 ├── when new IRM equals current IRM
 │   └── it should revert with AltoCreditMarketInvalidInput before accruing interest
-├── when new IRM does not report FIXED_RATE
-│   └── it should revert with AltoCreditMarketInvalidInput before accruing interest
-├── when new IRM type query reverts or returns malformed data
-│   └── it should propagate the failure and preserve current IRM
+├── when new IRM has no code
+│   └── it should revert during registration and preserve current IRM
 ├── given skipAccrueInterest is false
 │   ├── when market is not paused
 │   │   ├── it should accrue interest using the old IRM before updating the address
@@ -17,7 +15,8 @@ AltoConvexCreditLineMarket::setIrm()
 │       └── it should skip old IRM accrual
 ├── given skipAccrueInterest is true
 │   └── it should skip old IRM accrual whether market is active paused or frozen
-├── given a valid new fixed-rate IRM
+├── given a valid new IRM
+│   ├── it should accept AdaptiveCurveIrm and PegResponsiveExponentialIrm implementations
 │   ├── it should emit SetIrm with old and new addresses after optional accrual
 │   ├── it should update irm
 │   ├── it should call setMarket on the new IRM with the credit line address

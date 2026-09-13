@@ -4,8 +4,10 @@ pragma solidity ^0.8.28;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
+import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
+import {PegResponsiveExponentialIrm} from "@alto/lending/irm/PegResponsiveExponentialIrm.sol";
 import {IAltoConvexCreditLineMarketErrors} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
-import {IIrm, IRMType} from "@alto/lending/interfaces/IIrm.sol";
+import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 
@@ -17,9 +19,7 @@ contract AltoConvexCreditLineMarketSetIrmTest is ConvexCreditLineCommon {
         market.setIrm(USER, false);
     }
 
-    function test_RevertForZeroCurrentAndNonFixedBeforeAccrual() external {
-        FixedRateIrm adaptive = _newFixedRateIrm();
-        vm.mockCall(address(adaptive), abi.encodeCall(IIrm.IRM_TYPE, ()), abi.encode(IRMType.ADAPTIVE_CURVE));
+    function test_RevertForZeroAndCurrentBeforeAccrual() external {
         _mockIrmUpdateRevert();
 
         vm.startPrank(OWNER);
@@ -27,27 +27,35 @@ contract AltoConvexCreditLineMarketSetIrmTest is ConvexCreditLineCommon {
         market.setIrm(address(0), false);
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.setIrm(address(irm), false);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
-        market.setIrm(address(adaptive), false);
         vm.stopPrank();
 
         assertEq(market.irm(), address(irm));
     }
 
-    function test_PropagatesMalformedOrRevertingTypeQuery() external {
-        FixedRateIrm candidate = _newFixedRateIrm();
-        bytes memory query = abi.encodeCall(IIrm.IRM_TYPE, ());
-        vm.mockCallRevert(address(candidate), query, "TYPE_REVERTED");
+    function test_SwitchesToAdaptiveCurveIrm() external {
+        AdaptiveCurveIrm candidate = _newAdaptiveCurveIrm();
+        vm.expectEmit(address(market));
+        emit IMarketEvents.SetIrm(address(irm), address(candidate));
         vm.prank(OWNER);
-        vm.expectRevert(bytes("TYPE_REVERTED"));
         market.setIrm(address(candidate), true);
-        vm.clearMockedCalls();
+        assertEq(market.irm(), address(candidate));
+        assertEq(candidate.market(), address(market));
+    }
 
-        vm.mockCall(address(candidate), query, hex"01");
+    function test_SwitchesToPegResponsiveIrm() external {
+        PegResponsiveExponentialIrm candidate = _newPegResponsiveIrm();
+        vm.expectEmit(address(market));
+        emit IMarketEvents.SetIrm(address(irm), address(candidate));
+        vm.prank(OWNER);
+        market.setIrm(address(candidate), true);
+        assertEq(market.irm(), address(candidate));
+        assertEq(candidate.market(), address(market));
+    }
+
+    function test_RevertWhen_NewIrmHasNoCode() external {
         vm.prank(OWNER);
         vm.expectRevert();
-        market.setIrm(address(candidate), true);
-        vm.clearMockedCalls();
+        market.setIrm(USER, true);
         assertEq(market.irm(), address(irm));
     }
 

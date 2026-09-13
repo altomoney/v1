@@ -9,6 +9,10 @@ import {ERC20Mock} from "morpho-blue/src/mocks/ERC20Mock.sol";
 
 import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
+import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
+import {PegResponsiveExponentialIrm} from "@alto/lending/irm/PegResponsiveExponentialIrm.sol";
+import {PegResponsiveExponentialIrmConfig} from "@alto/lending/interfaces/IPegResponsiveExponentialIrm.sol";
+import {MockDusdPegOracle} from "@alto-test/lending/btt/mocks/MockDusdPegOracle.sol";
 import {
     CreditMarketInitParams,
     IAltoConvexCreditLineMarketEvents,
@@ -159,6 +163,39 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
 
     function _newFixedRateIrm() internal returns (FixedRateIrm) {
         return new FixedRateIrm(BORROW_RATE, OWNER);
+    }
+
+    function _newAdaptiveCurveIrm() internal returns (AdaptiveCurveIrm) {
+        return new AdaptiveCurveIrm(
+            AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
+                curveSteepness: 4 ether,
+                adjustmentSpeed: int256(50 ether) / int256(365 days),
+                targetUtilization: 0.9 ether,
+                initialRateAtTarget: int256(BORROW_RATE),
+                minRateAtTarget: int256(0.001 ether) / int256(365 days),
+                maxRateAtTarget: int256(2 ether) / int256(365 days)
+            }),
+            OWNER
+        );
+    }
+
+    function _newPegResponsiveIrm() internal returns (PegResponsiveExponentialIrm) {
+        MockDusdPegOracle pegOracle = new MockDusdPegOracle();
+        pegOracle.setPrice(1 ether, uint48(block.timestamp), true);
+        return new PegResponsiveExponentialIrm(
+            address(pegOracle),
+            PegResponsiveExponentialIrmConfig({
+                recoveryPrice: 1 ether,
+                stressPrice: 0.995 ether,
+                baseRate: BORROW_RATE,
+                stressRate: 0.075 ether / uint256(365 days),
+                maxRate: 8 ether / uint256(365 days),
+                doublingDistance: 0.0025 ether,
+                recoveryDelay: 6 hours,
+                maxOracleAge: 30 minutes
+            }),
+            OWNER
+        );
     }
 
     function _mockAccrual(uint256 interest, uint256 borrowRate) internal {

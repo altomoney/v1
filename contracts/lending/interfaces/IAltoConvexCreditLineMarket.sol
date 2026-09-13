@@ -262,13 +262,14 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
 /// @custom:contact security@altofoundation.org
 /// @notice Interface for a Curve-LP-backed credit line market staked through Convex
 interface IAltoConvexCreditLineMarket is IMarket, IAltoConvexCreditLineMarketBase {
-    /// @notice Sets a nonzero fixed-rate IRM for the market
-    /// @param irm The address of the new fixed-rate IRM
+    /// @notice Sets a nonzero IRM for the market
+    /// @param irm The address of the new IRM implementing IIrm
     /// @param skipAccrueInterest Whether to skip accrual with the current IRM before updating it
     function setIrm(address irm, bool skipAccrueInterest) external override;
 
-    /// @notice Accrues fixed-rate interest into active debt and claimable fees
-    /// @dev The credit limit stored in `totalSupply.assets` remains unchanged.
+    /// @notice Accrues interest into active debt and claimable fees
+    /// @dev The IRM receives the credit limit as total supply and active debt as total borrowed, excluding bad debt.
+    /// The credit limit stored in `totalSupply.assets` remains unchanged.
     function accrueInterest() external override;
 }
 

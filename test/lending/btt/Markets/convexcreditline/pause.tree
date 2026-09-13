@@ -9,7 +9,7 @@ AltoConvexCreditLineMarket::pause()
 │       └── it should propagate the failure and remain unpaused atomically
 ├── when disabling PAUSE_TYPE
 │   ├── it should notify the IRM before marking the market unpaused
-│   ├── it should restart fixed-rate accrual from the unpause timestamp
+│   ├── it should restart interest accrual from the unpause timestamp
 │   └── when the IRM notification fails
 │       └── it should propagate the failure and remain paused atomically
 ├── when enabling or disabling FROZEN_TYPE

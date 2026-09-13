@@ -5,7 +5,9 @@ AltoConvexCreditLineMarket::initialize()
 │   └── it should revert with InvalidInitialization
 ├── given invalid credit market parameters
 │   ├── when IRM is zero address
-│   │   └── it should revert when the fixed-rate type query returns no data
+│   │   └── it should revert with AltoCreditMarketZeroAddress
+│   ├── when IRM has no code
+│   │   └── it should revert during registration and leave the proxy uninitialized
 │   ├── when credit account is zero address
 │   │   └── it should revert with AltoCreditMarketZeroAddress
 │   ├── when fee recipient is zero address
@@ -32,10 +34,6 @@ AltoConvexCreditLineMarket::initialize()
 │   │   └── it should revert with AltoCreditMarketInvalidInput
 │   ├── when foreclosure LTV exceeds MATH_PRECISION
 │   │   └── it should revert with AltoCreditMarketInvalidInput
-│   ├── when IRM type is not FIXED_RATE
-│   │   └── it should revert with AltoCreditMarketInvalidInput
-│   ├── when IRM type query reverts or returns malformed data
-│   │   └── it should propagate the failure and leave the proxy uninitialized
 │   └── when IRM rejects market registration
 │       └── it should revert atomically and leave the proxy uninitialized
 ├── given invalid Convex configuration
@@ -103,7 +101,8 @@ AltoConvexCreditLineMarket::initialize()
     ├── it should set MARKET_TYPE to CREDIT_MINT
     ├── it should initialize Base token oracle IRM LTV fee recipient and owner state
     ├── it should leave liquidationEngine at zero
-    ├── it should register the market with the fixed-rate IRM exactly once
+    ├── it should register the market with the configured IRM exactly once
+    ├── it should accept AdaptiveCurveIrm and PegResponsiveExponentialIrm implementations
     ├── it should grant only the configured emergency admin PAUSE_TYPE and FROZEN_TYPE pauser permissions
     ├── it should set creditAccount foreclosureLtv and borrowOpeningFee
     ├── it should set totalSupply assets to the credit limit and shares to zero
