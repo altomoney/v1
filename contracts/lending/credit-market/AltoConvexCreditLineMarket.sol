@@ -23,8 +23,9 @@ import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/inte
 /// @title Alto Convex Credit Line Market
 /// @author GPM
 /// @custom:contact security@altofoundation.org
-/// @notice An Isolated Convex Credit Line Market
-/// @dev `totalSupply.assets` is the credit capacity shared by active debt and cumulative bad debt.
+/// @notice A single-account revolving DUSD credit line backed by Curve LP staked through Convex
+/// @dev `totalSupply.assets` is the credit capacity shared by active debt and unsettled bad debt.
+/// Supply shares stay zero. Interest and opening fees accrue to `claimableFeesAssets`.
 /// @custom:audit Pending
 contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMarketStaticTypes {
     using FixedPointMath for uint256;
@@ -163,6 +164,9 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
     /// @inheritdoc AltoBaseMarket
     /// @dev Foreclosure is available only after debt strictly exceeds the foreclosure LTV.
+    /// All active debt becomes bad debt and all recorded collateral goes to the owner. Claimable fees remain
+    /// unchanged. Collateral withdrawal does not claim rewards, which remain payable to `rewardRecipient`.
+    /// LP recovery and swaps happen separately. `settleBadDebt` burns recovered DUSD through this market.
     function governanceLiquidate(address borrower, bool skipAccrueInterest)
         external
         override(AltoBaseMarket, IMarketBase)
@@ -394,6 +398,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
     /// @inheritdoc AltoBaseMarket
     /// @dev Repayment is limited to `creditAccount` debt and burns the payer's borrow tokens.
+    /// Pending fees are minted before the repayment burn, so DUSD minter headroom must cover that intermediate mint.
     function _repay(uint256 assets, uint256 shares, address onBehalf)
         internal
         override
@@ -438,6 +443,8 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     }
 
     /// @inheritdoc AltoBaseMarket
+    /// @dev Full share repayment can leave virtual-share rounding dust in global borrowed assets. The account's
+    /// solvency follows its borrow shares, so that residual does not lock a debt-free account's collateral.
     function _isSolvent(address _user) internal view override returns (bool) {
         if (position[_user].borrowShares == 0) {
             return true;

@@ -16,6 +16,7 @@ import {IConvexRewardPool} from "@alto/lending/interfaces/vendor/IConvexRewardPo
 /// @custom:contact security@altofoundation.org
 /// @notice Stateless Convex custody and reward operations for AltoConvexCreditLineMarket
 /// @dev Linked functions execute in the calling market's context, so `address(this)` and storage refer to the market.
+/// Custody assumes standard exact-transfer LP tokens and trusted Convex contracts with one-to-one receipt accounting.
 /// @custom:audit Pending
 library AltoConvexCreditLineLib {
     using SafeERC20 for IERC20;
@@ -99,7 +100,8 @@ library AltoConvexCreditLineLib {
     /// @notice Claims Convex rewards and forwards every configured reward-token balance to the recipient.
     /// @dev Requests primary and extra rewards, then transfers each token's entire market balance, including any
     /// balance held before the claim. A `RewardsClaimed` event is emitted for every configured token, including zero
-    /// amounts.
+    /// amounts. Claims are atomic across Convex and every configured token. A failed claim, balance read or transfer
+    /// reverts the whole operation. Reward configuration must track changes to Convex extra rewards and wrappers.
     /// @param convexRewardPool The reward pool from which rewards are claimed.
     /// @param recipient The account that receives every claimed reward token.
     /// @param rewardTokens The market's configured reward-token list, processed in storage order.
@@ -171,7 +173,8 @@ library AltoConvexCreditLineLib {
 
     /// @notice Removes a non-primary reward token that has no balance held by the market.
     /// @dev Removes the token with swap-and-pop, so the ordering of the remaining list may change. The current primary
-    /// reward token cannot be removed.
+    /// reward token cannot be removed. A token with a nonzero balance or a reverting `balanceOf` cannot be removed
+    /// through this path, so checking code presence when adding a token does not replace ERC-20 compatibility review.
     /// @param rewardTokens The market's reward-token list.
     /// @param isRewardToken The mapping that records whether a token is configured.
     /// @param convexRewardPool The reward pool used to identify the current primary reward token.
