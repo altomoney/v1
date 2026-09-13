@@ -9,7 +9,7 @@ AltoConvexCreditLineMarket::addRewardToken()
 │   └── it should revert with AltoCreditMarketInvalidInput
 ├── when token is borrowToken
 │   └── it should revert with AltoCreditMarketInvalidInput
-├── when token is convexDepositToken
+├── when token is the reward pool staking token
 │   └── it should revert with AltoCreditMarketInvalidInput
 ├── when token is already configured
 │   └── it should revert with AltoCreditMarketInvalidInput without duplicating it

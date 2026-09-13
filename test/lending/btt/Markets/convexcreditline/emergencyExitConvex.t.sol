@@ -95,7 +95,7 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
 
         assertEq(assets, 10 ether);
         assertFalse(market.convexActive());
-        assertEq(market.stakedCollateralAssets(), 0);
+        assertEq(rewardPool.balanceOf(address(market)), 0);
         assertEq(collateralToken.balanceOf(address(market)), 10 ether);
         assertEq(collateralToken.allowance(address(market), address(booster)), 0);
     }
@@ -123,7 +123,6 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
         assertEq(assets, 100 ether);
         assertEq(rewardPool.lastWithdrawAmount(), 100 ether);
         assertFalse(rewardPool.lastWithdrawClaim());
-        assertEq(market.stakedCollateralAssets(), 0);
         assertEq(rewardPool.balanceOf(address(market)), 0);
         assertEq(collateralToken.balanceOf(address(market)), 103 ether);
         assertFalse(market.convexActive());

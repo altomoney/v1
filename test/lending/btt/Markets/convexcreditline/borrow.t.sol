@@ -198,7 +198,8 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
 
         (uint128 debtAssets,) = market.totalBorrowed();
         assertEq(debtAssets, 100 ether);
-        assertEq(uint256(debtAssets) + market.badDebtAssets(), market.creditLimit());
+        (uint128 creditCapacity,) = market.totalSupply();
+        assertEq(uint256(debtAssets) + market.badDebtAssets(), creditCapacity);
 
         AccountingState memory beforeState = _state();
         vm.prank(CREDIT_ACCOUNT);
@@ -390,7 +391,7 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
         assertEq(borrowToken.balanceOf(RECEIVER), 100 ether);
         assertEq(market.claimableFeesAssets(), 100 ether);
         assertEq(collateralToken.balanceOf(address(market)), 0);
-        assertEq(market.stakedCollateralAssets(), beforeState.stakedCollateral);
+        assertEq(rewardPool.balanceOf(address(market)), beforeState.stakedCollateral);
         (uint128 supplyAssets, uint128 supplyShares) = market.totalSupply();
         assertEq(supplyAssets, beforeState.totalSupply.assets);
         assertEq(supplyShares, beforeState.totalSupply.shares);

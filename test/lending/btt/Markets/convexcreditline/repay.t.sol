@@ -333,7 +333,7 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         vm.mockCalls(address(irm), abi.encodeWithSelector(IIrm.updateInterestRate.selector), accrualResults);
         deal(address(borrowToken), USER, 10 ether);
         (uint128 supplyAssetsBefore, uint128 supplySharesBefore) = market.totalSupply();
-        uint256 stakedBefore = market.stakedCollateralAssets();
+        uint256 stakedBefore = rewardPool.balanceOf(address(market));
         uint256 claimableBefore = market.claimableFeesAssets();
         (,, uint128 collateralBefore) = market.position(CREDIT_ACCOUNT);
         uint256 depositsBefore = booster.depositCalls();
@@ -361,7 +361,7 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         (uint128 supplyAssetsAfter, uint128 supplySharesAfter) = market.totalSupply();
         assertEq(supplyAssetsAfter, supplyAssetsBefore);
         assertEq(supplySharesAfter, supplySharesBefore);
-        assertEq(market.stakedCollateralAssets(), stakedBefore);
+        assertEq(rewardPool.balanceOf(address(market)), stakedBefore);
         assertEq(booster.depositCalls(), depositsBefore);
         assertEq(rewardPool.withdrawCalls(), 0);
         assertEq(rewardPool.getRewardCalls(), rewardClaimsBefore);

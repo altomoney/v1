@@ -160,10 +160,6 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     /// @return The configured credit-account address
     function creditAccount() external view returns (address);
 
-    /// @notice The maximum credit capacity; used capacity is `totalBorrowed.assets + badDebtAssets`
-    /// @return The maximum credit capacity in borrow-token assets
-    function creditLimit() external view returns (uint256);
-
     /// @notice The LTV above which governance may foreclose
     /// @return The foreclosure LTV in `MATH_PRECISION`
     function foreclosureLtv() external view returns (uint256);
@@ -212,9 +208,6 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     /// @notice The Convex reward pool holding the market staked position
     function convexRewardPool() external view returns (address);
 
-    /// @notice The Convex deposit token associated with the reward pool
-    function convexDepositToken() external view returns (address);
-
     /// @notice The account that receives claimed Convex rewards
     function rewardRecipient() external view returns (address);
 
@@ -230,9 +223,6 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     /// @notice Returns whether a token is configured as a reward token
     /// @param token The token to query
     function isRewardToken(address token) external view returns (bool);
-
-    /// @notice The collateral stake balance reported by the Convex reward pool
-    function stakedCollateralAssets() external view returns (uint256);
 
     /// @notice Claims and forwards every configured Convex reward token
     /// @return claimedAmounts The amount forwarded for each configured reward token
