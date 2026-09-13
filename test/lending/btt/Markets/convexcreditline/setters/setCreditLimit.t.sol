@@ -159,6 +159,7 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
     }
 
     function test_ValidIncreaseDecreaseMaximumAndUnchangedValue() external {
+        AccountingState memory beforeState = _state();
         vm.startPrank(OWNER);
         market.setCreditLimit(CREDIT_LIMIT + 1);
         market.setCreditLimit(CREDIT_LIMIT - 1);
@@ -168,10 +169,8 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
         market.setCreditLimit(type(uint128).max);
         vm.stopPrank();
 
-        assertEq(_creditLimit(), type(uint128).max);
-        (, uint128 supplyShares) = market.totalSupply();
-        assertEq(supplyShares, 0);
-        (, uint128 borrowShares) = market.totalBorrowed();
-        assertEq(borrowShares, 0);
+        AccountingState memory expectedState = beforeState;
+        expectedState.totalSupply.assets = type(uint128).max;
+        _assertStateEq(_state(), expectedState);
     }
 }

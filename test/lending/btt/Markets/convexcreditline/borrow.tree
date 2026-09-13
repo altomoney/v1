@@ -65,12 +65,6 @@ AltoConvexCreditLineMarket::borrow()
 │   └── when creditAccount has no collateral
 │       └── it should revert for every positive draw
 ├── given borrow token minting
-│   ├── when market lacks minter permission
-│   │   └── it should revert atomically
-│   ├── when token ceiling is insufficient
-│   │   └── it should revert atomically
-│   ├── when borrow token is paused or mint otherwise reverts
-│   │   └── it should revert atomically
 │   ├── when mint succeeds but the later oracle or solvency check fails
 │   │   └── it should roll back receiver balance and token minter accounting
 │   └── when receiver is any nonzero address

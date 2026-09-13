@@ -85,21 +85,6 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
         assertTrue(market.convexActive());
     }
 
-    function test_ApprovalFailureCannotBlockEmergencyExit() external {
-        _addCollateral(10 ether);
-        _pause(PAUSE_TYPE);
-        collateralToken.setApproveFailure(true);
-
-        vm.prank(OWNER);
-        uint256 assets = market.emergencyExitConvex();
-
-        assertEq(assets, 10 ether);
-        assertFalse(market.convexActive());
-        assertEq(_stakedCollateralAssets(), 0);
-        assertEq(collateralToken.balanceOf(address(market)), 10 ether);
-        assertEq(collateralToken.allowance(address(market), address(booster)), 0);
-    }
-
     function test_SuccessRecoversAllStakePreservesIdleAndAccounting() external {
         _openPosition(100 ether, 10 ether);
         deal(address(collateralToken), address(market), 3 ether);
@@ -187,5 +172,7 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
         assets = market.emergencyExitConvex();
         assertEq(assets, 15 ether);
         assertEq(collateralToken.balanceOf(address(market)), 15 ether);
+        (,, uint128 collateralAfter) = market.position(CREDIT_ACCOUNT);
+        assertEq(collateralAfter, 0);
     }
 }

@@ -107,6 +107,11 @@ contract AltoConvexCreditLineMarketClaimInterestTest is ConvexCreditLineCommon {
     function test_ClaimDoesNotAccrueOrTouchMarketOrConvexAccounting() external {
         _createFees(10 ether);
         AccountingState memory beforeState = _state();
+        uint256 tokenSupplyBefore = borrowToken.totalSupply();
+        uint256 feeRecipientBalanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
+        uint256 ownerBalanceBefore = borrowToken.balanceOf(OWNER);
+        uint256 userBalanceBefore = borrowToken.balanceOf(USER);
+        uint256 marketBalanceBefore = borrowToken.balanceOf(address(market));
         uint256 deposits = booster.depositCalls();
         uint256 withdrawals = rewardPool.withdrawCalls();
         uint256 rewardClaims = rewardPool.getRewardCalls();
@@ -120,13 +125,14 @@ contract AltoConvexCreditLineMarketClaimInterestTest is ConvexCreditLineCommon {
         market.claimInterest(4 ether);
         vm.clearMockedCalls();
 
-        AccountingState memory afterState = _state();
-        assertEq(afterState.totalSupply.assets, beforeState.totalSupply.assets);
-        assertEq(afterState.totalBorrowed.assets, beforeState.totalBorrowed.assets);
-        assertEq(afterState.totalBorrowed.shares, beforeState.totalBorrowed.shares);
-        assertEq(afterState.creditPosition.borrowShares, beforeState.creditPosition.borrowShares);
-        assertEq(afterState.creditPosition.collateralAssets, beforeState.creditPosition.collateralAssets);
-        assertEq(afterState.claimableFees, beforeState.claimableFees - 4 ether);
+        AccountingState memory expectedState = beforeState;
+        expectedState.claimableFees -= 4 ether;
+        _assertStateEq(_state(), expectedState);
+        assertEq(borrowToken.totalSupply(), tokenSupplyBefore + 4 ether);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), feeRecipientBalanceBefore + 4 ether);
+        assertEq(borrowToken.balanceOf(OWNER), ownerBalanceBefore);
+        assertEq(borrowToken.balanceOf(USER), userBalanceBefore);
+        assertEq(borrowToken.balanceOf(address(market)), marketBalanceBefore);
         assertEq(booster.depositCalls(), deposits);
         assertEq(rewardPool.withdrawCalls(), withdrawals);
         assertEq(rewardPool.getRewardCalls(), rewardClaims);

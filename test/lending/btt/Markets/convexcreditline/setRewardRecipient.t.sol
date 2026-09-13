@@ -39,6 +39,7 @@ contract AltoConvexCreditLineMarketSetRewardRecipientTest is ConvexCreditLineCom
         emit IAltoConvexCreditLineMarketEvents.SetRewardRecipient(USER, USER);
         vm.prank(CREDIT_ACCOUNT);
         market.setRewardRecipient(USER);
+        assertEq(market.rewardRecipient(), USER);
     }
 
     function test_SubsequentClaimsUseNewRecipient() external {

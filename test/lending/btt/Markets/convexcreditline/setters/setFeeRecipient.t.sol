@@ -22,6 +22,7 @@ contract AltoConvexCreditLineMarketSetFeeRecipientTest is ConvexCreditLineCommon
     }
 
     function test_UpdatesRecipientAndEmitsEvenWhenUnchanged() external {
+        AccountingState memory beforeState = _state();
         _mockIrmUpdateRevert();
         vm.expectEmit(address(market));
         emit IMarketEvents.SetFeeRecipient(FEE_RECIPIENT, RECEIVER);
@@ -33,6 +34,7 @@ contract AltoConvexCreditLineMarketSetFeeRecipientTest is ConvexCreditLineCommon
         vm.prank(OWNER);
         market.setFeeRecipient(RECEIVER);
         assertEq(market.feeRecipient(), RECEIVER);
+        _assertUnchanged(beforeState);
     }
 
     function test_RedirectsExistingFeesAndRemovesOldClaimPermission() external {

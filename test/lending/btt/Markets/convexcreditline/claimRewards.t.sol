@@ -88,6 +88,14 @@ contract AltoConvexCreditLineMarketClaimRewardsTest is ConvexCreditLineCommon {
         distributed[1] = 7 ether;
         rewardPool.setRewards(tokens, distributed);
 
+        vm.expectEmit(address(market));
+        emit IAltoConvexCreditLineMarketEvents.RewardsClaimed(
+            address(this), REWARD_RECIPIENT, address(primaryRewardToken), 5 ether
+        );
+        vm.expectEmit(address(market));
+        emit IAltoConvexCreditLineMarketEvents.RewardsClaimed(
+            address(this), REWARD_RECIPIENT, address(extraRewardToken), 7 ether
+        );
         uint256[] memory amounts = market.claimRewards();
 
         assertEq(amounts.length, 2);

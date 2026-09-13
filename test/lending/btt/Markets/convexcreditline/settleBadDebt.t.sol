@@ -49,6 +49,12 @@ contract AltoConvexCreditLineMarketSettleBadDebtTest is ConvexCreditLineCommon {
     function test_PartialAndFullSettlementBurnOwnerTokensEmitAndPreserveOtherState() external {
         _createBadDebtAndFundOwner(100 ether);
         AccountingState memory expected = _state();
+        address[] memory rewardsBefore = _configuredRewards(2);
+        address boosterBefore = market.convexBooster();
+        uint256 poolIdBefore = market.convexPoolId();
+        address rewardPoolBefore = market.convexRewardPool();
+        address rewardRecipientBefore = market.rewardRecipient();
+        bool convexActiveBefore = market.convexActive();
         uint256 supplyBefore = borrowToken.totalSupply();
         assertEq(borrowToken.allowance(OWNER, address(market)), 0);
 
@@ -74,6 +80,12 @@ contract AltoConvexCreditLineMarketSettleBadDebtTest is ConvexCreditLineCommon {
         assertEq(borrowToken.balanceOf(OWNER), 0);
         assertEq(borrowToken.balanceOf(address(market)), 0);
         assertEq(borrowToken.totalSupply(), supplyBefore - 100 ether);
+        _assertRewardList(rewardsBefore);
+        assertEq(market.convexBooster(), boosterBefore);
+        assertEq(market.convexPoolId(), poolIdBefore);
+        assertEq(market.convexRewardPool(), rewardPoolBefore);
+        assertEq(market.rewardRecipient(), rewardRecipientBefore);
+        assertEq(market.convexActive(), convexActiveBefore);
     }
 
     function test_SettlementRestoresExactlyTheSettledCreditCapacity() external {

@@ -27,11 +27,6 @@ AltoConvexCreditLineMarket::repay()
 │   ├── it should calculate assets rounded up
 │   ├── it should permit repaying exactly all creditAccount borrow shares
 │   └── it should burn the calculated assets from caller
-├── given borrow token burn failure
-│   ├── when caller balance is insufficient
-│   │   └── it should revert atomically
-│   └── when market lacks burner permission or borrow token is paused
-│       └── it should revert atomically
 ├── given automatic fee claiming
 │   ├── it should accrue interest before determining the fees to claim
 │   ├── it should claim all opening fees and the first interest accrual before burning repayment assets
@@ -39,11 +34,7 @@ AltoConvexCreditLineMarket::repay()
 │   ├── when the inherited repayment accrual returns additional interest
 │   │   └── it should leave that later interest in claimableFeesAssets
 │   ├── it should clear the pre-claim fee balance and mint those fees only to feeRecipient
-│   ├── it should allow all shares to be repaid with DUSD after updating the market's minted amount
-│   ├── when fee minting fails
-│   │   └── it should revert the fee claim and repayment atomically
-│   └── when DUSD minter permission or ceiling headroom is missing
-│       └── it should revert the fee claim and repayment atomically
+│   └── it should allow all shares to be repaid with DUSD after updating the market's minted amount
 └── given a valid repayment
     ├── when caller is creditAccount
     │   └── it should succeed

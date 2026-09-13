@@ -80,6 +80,7 @@ contract AltoConvexCreditLineMarketAccrueInterestTest is ConvexCreditLineCommon 
         assertEq(afterState.totalBorrowed.shares, beforeState.totalBorrowed.shares);
         assertEq(afterState.totalSupply.assets, beforeState.totalSupply.assets);
         assertEq(afterState.totalSupply.shares, beforeState.totalSupply.shares);
+        assertEq(afterState.creditPosition.supplyShares, beforeState.creditPosition.supplyShares);
         assertEq(afterState.creditPosition.borrowShares, beforeState.creditPosition.borrowShares);
         assertEq(afterState.creditPosition.collateralAssets, beforeState.creditPosition.collateralAssets);
     }

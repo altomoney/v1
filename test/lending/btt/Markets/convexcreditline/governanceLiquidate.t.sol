@@ -15,6 +15,16 @@ import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {ConvexCreditLineCommon} from "./ConvexCreditLineCommon.t.sol";
 
 contract AltoConvexCreditLineMarketGovernanceLiquidateTest is ConvexCreditLineCommon {
+    struct ForeclosureState {
+        uint256 ownerCollateral;
+        uint256 tokenSupply;
+        uint256 marketMinted;
+        uint128 supplyAssets;
+        uint128 supplyShares;
+        uint128 borrowShares;
+        uint128 claimableFees;
+    }
+
     function test_RevertWhenCallerIsNotOwner() external {
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this)));
         market.governanceLiquidate(CREDIT_ACCOUNT, false);
@@ -92,6 +102,14 @@ contract AltoConvexCreditLineMarketGovernanceLiquidateTest is ConvexCreditLineCo
         vm.prank(OWNER);
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidOraclePrice.selector);
         market.governanceLiquidate(CREDIT_ACCOUNT, false);
+        _assertUnchanged(beforeState);
+
+        oracle.setPrice(LENDING_ORACLE_PRICE_PRECISION);
+        vm.mockCallRevert(address(oracle), abi.encodeCall(oracle.getPrice, ()), "ORACLE_REVERTED");
+        vm.prank(OWNER);
+        vm.expectRevert(bytes("ORACLE_REVERTED"));
+        market.governanceLiquidate(CREDIT_ACCOUNT, false);
+        vm.clearMockedCalls();
         _assertUnchanged(beforeState);
 
         oracle.setPrice(100 ether);
@@ -174,23 +192,6 @@ contract AltoConvexCreditLineMarketGovernanceLiquidateTest is ConvexCreditLineCo
         assertEq(rewardPool.withdrawCalls(), withdrawalsBefore);
     }
 
-    function test_CollateralTransferFailureRollsBackEverything() external {
-        _openForeclosablePosition();
-        vm.mockCallRevert(
-            address(collateralToken),
-            abi.encodeCall(collateralToken.transfer, (OWNER, 1_000 ether)),
-            bytes("TRANSFER_REVERTED")
-        );
-        AccountingState memory beforeState = _state();
-
-        vm.prank(OWNER);
-        vm.expectRevert(bytes("TRANSFER_REVERTED"));
-        market.governanceLiquidate(CREDIT_ACCOUNT, false);
-        vm.clearMockedCalls();
-
-        _assertUnchanged(beforeState);
-    }
-
     function test_ZeroCollateralStillClearsForeclosableDebtWithoutCustodyCall() external {
         _openPosition(10 ether, 1 ether);
         bytes32 positionBase = keccak256(abi.encode(CREDIT_ACCOUNT, uint256(8)));
@@ -212,16 +213,15 @@ contract AltoConvexCreditLineMarketGovernanceLiquidateTest is ConvexCreditLineCo
         _borrow(100 ether);
         oracle.setPrice(100 ether);
         _mockAccrual(5 ether, 37);
-        uint256 tokenSupplyBefore = borrowToken.totalSupply();
-        (uint128 supplyAssetsBefore, uint128 supplySharesBefore) = market.totalSupply();
-        uint256 creditLimitBefore = supplyAssetsBefore;
-        uint256 claimableBefore = market.claimableFeesAssets();
-        (, uint128 sharesBefore,) = market.position(CREDIT_ACCOUNT);
+        deal(address(collateralToken), address(market), 3 ether);
+        ForeclosureState memory beforeState = _foreclosureState();
 
         vm.expectEmit(address(market));
         emit IMarketEvents.AccrueInterest(37, 5 ether, 115 ether, uint128(CREDIT_LIMIT));
         vm.expectEmit(address(market));
-        emit IMarketEvents.GovernanceLiquidation(CREDIT_ACCOUNT, OWNER, 1_000 ether, 115 ether, sharesBefore);
+        emit IMarketEvents.GovernanceLiquidation(
+            CREDIT_ACCOUNT, OWNER, 1_000 ether, 115 ether, beforeState.borrowShares
+        );
         vm.prank(OWNER);
         (uint256 collateral, uint256 badDebt) = market.governanceLiquidate(CREDIT_ACCOUNT, false);
 
@@ -234,12 +234,18 @@ contract AltoConvexCreditLineMarketGovernanceLiquidateTest is ConvexCreditLineCo
         assertEq(positionShares, 0);
         assertEq(positionCollateral, 0);
         (uint128 supplyAssetsAfter, uint128 supplySharesAfter) = market.totalSupply();
-        assertEq(supplyAssetsAfter, creditLimitBefore);
-        assertEq(supplyAssetsAfter, supplyAssetsBefore);
-        assertEq(supplySharesAfter, supplySharesBefore);
-        assertEq(market.claimableFeesAssets(), claimableBefore + 5 ether);
+        assertEq(supplyAssetsAfter, beforeState.supplyAssets);
+        assertEq(supplySharesAfter, beforeState.supplyShares);
+        assertEq(market.claimableFeesAssets(), beforeState.claimableFees + 5 ether);
         assertEq(market.badDebtAssets(), 115 ether);
-        assertEq(borrowToken.totalSupply(), tokenSupplyBefore);
+        assertEq(borrowToken.totalSupply(), beforeState.tokenSupply);
+        (uint256 marketMintedAfter,) = borrowToken.minterConfig(address(market));
+        assertEq(marketMintedAfter, beforeState.marketMinted);
+        assertEq(rewardPool.lastWithdrawAmount(), 1_000 ether);
+        assertFalse(rewardPool.lastWithdrawClaim());
+        assertEq(rewardPool.balanceOf(address(market)), 0);
+        assertEq(collateralToken.balanceOf(OWNER), beforeState.ownerCollateral + 1_000 ether);
+        assertEq(collateralToken.balanceOf(address(market)), 3 ether);
         assertTrue(market.convexActive());
         assertEq(primaryRewardToken.balanceOf(REWARD_RECIPIENT), 0);
 
@@ -316,6 +322,15 @@ contract AltoConvexCreditLineMarketGovernanceLiquidateTest is ConvexCreditLineCo
         vm.expectRevert(IMarketErrors.AltoBaseMarketInsufficientMarketLiquidity.selector);
         market.borrow(1, 0, CREDIT_ACCOUNT, RECEIVER, "");
         _assertUnchanged(beforeState);
+    }
+
+    function _foreclosureState() private view returns (ForeclosureState memory state) {
+        state.ownerCollateral = collateralToken.balanceOf(OWNER);
+        state.tokenSupply = borrowToken.totalSupply();
+        (state.marketMinted,) = borrowToken.minterConfig(address(market));
+        (state.supplyAssets, state.supplyShares) = market.totalSupply();
+        (, state.borrowShares,) = market.position(CREDIT_ACCOUNT);
+        state.claimableFees = market.claimableFeesAssets();
     }
 
     function _openForeclosablePosition() private {

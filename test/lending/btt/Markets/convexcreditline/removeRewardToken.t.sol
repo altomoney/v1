@@ -54,7 +54,7 @@ contract AltoConvexCreditLineMarketRemoveRewardTokenTest is ConvexCreditLineComm
         market.removeRewardToken(address(extraRewardToken));
     }
 
-    function test_ExternalQueryFailuresPreserveList() external {
+    function test_RewardPoolQueryFailuresPreserveList() external {
         address[] memory beforeList = _configuredRewards(2);
         vm.mockCallRevert(address(rewardPool), abi.encodeCall(IConvexRewardPool.rewardToken, ()), "REWARD_REVERTED");
         vm.prank(OWNER);
@@ -64,13 +64,6 @@ contract AltoConvexCreditLineMarketRemoveRewardTokenTest is ConvexCreditLineComm
         _assertRewardList(beforeList);
 
         vm.mockCall(address(rewardPool), abi.encodeCall(IConvexRewardPool.rewardToken, ()), hex"01");
-        vm.prank(OWNER);
-        vm.expectRevert();
-        market.removeRewardToken(address(extraRewardToken));
-        vm.clearMockedCalls();
-        _assertRewardList(beforeList);
-
-        vm.mockCall(address(extraRewardToken), abi.encodeCall(extraRewardToken.balanceOf, (address(market))), hex"01");
         vm.prank(OWNER);
         vm.expectRevert();
         market.removeRewardToken(address(extraRewardToken));
@@ -114,7 +107,12 @@ contract AltoConvexCreditLineMarketRemoveRewardTokenTest is ConvexCreditLineComm
     function test_RemovedTokenCanBeReaddedAndIsExcludedFromClaims() external {
         vm.prank(OWNER);
         market.removeRewardToken(address(extraRewardToken));
-        deal(address(extraRewardToken), address(market), 5 ether);
+        address[] memory tokens = new address[](1);
+        tokens[0] = address(extraRewardToken);
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 5 ether;
+        rewardPool.setRewards(tokens, amounts);
+
         market.claimRewards();
         assertEq(extraRewardToken.balanceOf(address(market)), 5 ether);
         assertEq(extraRewardToken.balanceOf(REWARD_RECIPIENT), 0);

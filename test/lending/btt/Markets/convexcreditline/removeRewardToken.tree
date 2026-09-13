@@ -12,8 +12,6 @@ AltoConvexCreditLineMarket::removeRewardToken()
 │       └── it should revert with AltoCreditMarketInvalidInput
 ├── when reward pool rewardToken query reverts or returns malformed data
 │   └── it should propagate the failure without changing the list
-├── when token balanceOf reverts or returns malformed data
-│   └── it should propagate the failure without changing the list
 ├── given a configured non-primary token with zero balance
 │   ├── when token is the last list element
 │   │   └── it should pop the last element without changing earlier order

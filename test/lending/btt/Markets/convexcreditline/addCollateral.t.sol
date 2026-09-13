@@ -58,15 +58,13 @@ contract AltoConvexCreditLineMarketAddCollateralTest is ConvexCreditLineCommon {
         vm.prank(USER);
         vm.expectRevert(bytes("DEPOSIT_REVERTED"));
         market.addCollateral(10 ether, CREDIT_ACCOUNT);
-        _assertUnchanged(beforeState);
-        assertEq(collateralToken.allowance(address(market), address(booster)), 0);
+        _assertFailedDeposit(beforeState, 20 ether);
 
         booster.setDepositBehavior(false, false, type(uint256).max, type(uint256).max);
         vm.prank(USER);
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoConvexCreditLineExternalCallFailed.selector);
         market.addCollateral(10 ether, CREDIT_ACCOUNT);
-        _assertUnchanged(beforeState);
-        assertEq(collateralToken.allowance(address(market), address(booster)), 0);
+        _assertFailedDeposit(beforeState, 20 ether);
     }
 
     function test_ValidDepositsPreserveExistingIdleStakeAndUpdateOnlyCreditPosition() external {
@@ -90,10 +88,16 @@ contract AltoConvexCreditLineMarketAddCollateralTest is ConvexCreditLineCommon {
         returnedAssets = market.addCollateral(7 ether, CREDIT_ACCOUNT);
         vm.stopPrank();
 
-        (,, uint128 collateralAssets) = market.position(CREDIT_ACCOUNT);
+        (uint128 positionSupplyShares, uint128 borrowShares, uint128 collateralAssets) = market.position(CREDIT_ACCOUNT);
+        (uint128 callerSupplyShares, uint128 callerBorrowShares, uint128 callerCollateralAssets) = market.position(USER);
         assertEq(collateralToken.balanceOf(USER), 0);
         assertEq(collateralToken.balanceOf(CREDIT_ACCOUNT), 0);
+        assertEq(positionSupplyShares, 0);
+        assertEq(borrowShares, 0);
         assertEq(collateralAssets, 17 ether);
+        assertEq(callerSupplyShares, 0);
+        assertEq(callerBorrowShares, 0);
+        assertEq(callerCollateralAssets, 0);
         assertEq(collateralToken.balanceOf(address(market)), 3 ether);
         assertEq(_stakedCollateralAssets(), 22 ether);
         assertEq(rewardPool.balanceOf(address(market)), 22 ether);
@@ -109,5 +113,11 @@ contract AltoConvexCreditLineMarketAddCollateralTest is ConvexCreditLineCommon {
         (uint128 debtAssets, uint128 debtShares) = market.totalBorrowed();
         assertEq(debtAssets, 0);
         assertEq(debtShares, 0);
+    }
+
+    function _assertFailedDeposit(AccountingState memory beforeState, uint256 callerBalance) private view {
+        _assertUnchanged(beforeState);
+        assertEq(collateralToken.balanceOf(USER), callerBalance);
+        assertEq(collateralToken.allowance(address(market), address(booster)), 0);
     }
 }

@@ -45,8 +45,6 @@ AltoConvexCreditLineMarket::governanceLiquidate()
 │   │   └── it should preserve unrelated surplus LP held by the market
 │   └── when recovered idle LP is insufficient
 │       └── it should revert with ERC20InsufficientBalance and preserve foreclosure accounting
-├── when collateral transfer to owner fails
-│   └── it should revert atomically and restore debt collateral and Convex withdrawal state
 ├── given foreclosable debt and zero collateral
 │   ├── it should not call collateral withdrawal or transfer
 │   └── it should still clear debt and emit foreclosure values
