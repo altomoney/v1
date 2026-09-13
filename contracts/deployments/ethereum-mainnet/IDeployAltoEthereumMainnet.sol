@@ -38,7 +38,8 @@ enum DeploymentPhase {
     MINT_CURVE_CONVEX_POSITION, // Phase 29: Deploy MintCurveConvexPositionFactory, PositionBeacon and setBeacon
     MINT_MARKET_FRXUSD, // Phase 30: Deploy refreshed frxUSD Mint Market
     OWNER_FIXED_RATE_IRM_FACTORY, // Phase 31: Deploy the reusable Timelock-owned FixedRateIrm factory
-    MARKET_DEPRECATION_PHASE_0 // Phase 32: Freeze ten old markets and apply the T0 fixed rates
+    MARKET_DEPRECATION_PHASE_0, // Phase 32: Freeze ten old markets and apply the T0 fixed rates
+    CONVEX_CREDIT_LINE_MARKET // Phase 33: Deploy the frxUSD/DUSD Convex credit-line market
 }
 
 enum UsmFinalizeMode {
@@ -75,6 +76,13 @@ struct MintCurveConvexPositionContracts {
     address factoryImplementation; // Factory implementation behind the proxy
     address positionImplementation; // MintCurveConvexPosition implementation (beacon implementation)
     address positionBeacon; // PositionBeacon wired into the factory
+}
+
+struct ConvexCreditLineMarketContracts {
+    address market;
+    address marketImplementation;
+    address marketIrm;
+    address marketOracle;
 }
 
 struct AltoEthereumMainnetInput {
@@ -126,6 +134,7 @@ struct Contracts {
     MarketContracts refreshSusdeMintMarket;
     MarketContracts refreshSyrupUsdcMintMarket;
     MarketContracts refreshFrxUsdMarket;
+    ConvexCreditLineMarketContracts convexCreditLineMarket;
 }
 
 // PARAMETERS FOR THE DEPLOYMENT
@@ -200,4 +209,23 @@ struct DeployMintMarketParams {
     LiquidationConfiguration liquidationConfig; // Liquidation configuration
     address freezer; // Pauser/Freezer Multisig address
     address[] validSwapTargets; // valid swap target addresses
+}
+
+struct DeployConvexCreditLineMarketParams {
+    address owner;
+    address dusd;
+    address feeRecipient;
+    address collateralToken;
+    address creditAccount;
+    uint256 irmInterestRate;
+    uint256 maxLtv;
+    uint256 creditLimit;
+    uint256 foreclosureLtv;
+    uint256 initialBorrowOpeningFee;
+    address convexBooster;
+    uint256 convexPoolId;
+    address rewardRecipient;
+    address[] rewardTokens;
+    address freezer;
+    address emergencyController;
 }

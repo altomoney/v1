@@ -17,7 +17,7 @@ import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 import {USDC_MAINNET, FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
-DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.OWNER_FIXED_RATE_IRM_FACTORY;
+DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.CONVEX_CREDIT_LINE_MARKET;
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployAltoEthereumMainnetScript is Script {
@@ -91,6 +91,10 @@ contract DeployAltoEthereumMainnetScript is Script {
                 deploymentInput.contracts.dusd,
                 FRXUSD_MAINNET
             );
+        } else if (phase == DeploymentPhase.CONVEX_CREDIT_LINE_MARKET) {
+            Options memory opts;
+            opts.unsafeAllow = "external-library-linking";
+            Upgrades.validateImplementation("AltoConvexCreditLineMarket.sol:AltoConvexCreditLineMarket", opts);
         } else if (
             phase == DeploymentPhase.MINT_MARKET_WETH || phase == DeploymentPhase.MINT_MARKET_WSTETH
                 || phase == DeploymentPhase.MINT_MARKET_RETH || phase == DeploymentPhase.MINT_MARKET_METH
@@ -169,6 +173,7 @@ contract DeployAltoEthereumMainnetScript is Script {
             contractsJson, "refreshSyrupUsdcMint", input.contracts.refreshSyrupUsdcMintMarket
         );
         contractsJson = _serializeMarketContracts(contractsJson, "refreshFrxUsd", input.contracts.refreshFrxUsdMarket);
+        contractsJson = _serializeConvexCreditLineMarketContracts(contractsJson);
 
         // Serialize USDC USM contracts
         if (input.contracts.permissionedUsm.dusdUsm != address(0)) {
@@ -297,6 +302,27 @@ contract DeployAltoEthereumMainnetScript is Script {
         console.log("Deployment data saved to:", fileName);
     }
 
+    function _serializeConvexCreditLineMarketContracts(string memory contractsJson) internal returns (string memory) {
+        if (input.contracts.convexCreditLineMarket.market == address(0)) {
+            return contractsJson;
+        }
+
+        contractsJson =
+            vm.serializeAddress("contracts", "convexCreditLineMarket", input.contracts.convexCreditLineMarket.market);
+        contractsJson = vm.serializeAddress(
+            "contracts",
+            "convexCreditLineMarketImplementation",
+            input.contracts.convexCreditLineMarket.marketImplementation
+        );
+        contractsJson = vm.serializeAddress(
+            "contracts", "convexCreditLineMarketIrm", input.contracts.convexCreditLineMarket.marketIrm
+        );
+        contractsJson = vm.serializeAddress(
+            "contracts", "convexCreditLineMarketOracle", input.contracts.convexCreditLineMarket.marketOracle
+        );
+        return contractsJson;
+    }
+
     function _serializeMarketContracts(string memory contractsJson, string memory prefix, MarketContracts memory market)
         internal
         returns (string memory)
@@ -363,6 +389,14 @@ contract DeployAltoEthereumMainnetScript is Script {
         loadedInput.contracts.refreshSusdeMintMarket = _loadMarketContracts(json, "refreshSusdeMint");
         loadedInput.contracts.refreshSyrupUsdcMintMarket = _loadMarketContracts(json, "refreshSyrupUsdcMint");
         loadedInput.contracts.refreshFrxUsdMarket = _loadMarketContracts(json, "refreshFrxUsd");
+        loadedInput.contracts.convexCreditLineMarket.market =
+            _tryParseAddress(json, ".contracts.convexCreditLineMarket");
+        loadedInput.contracts.convexCreditLineMarket.marketImplementation =
+            _tryParseAddress(json, ".contracts.convexCreditLineMarketImplementation");
+        loadedInput.contracts.convexCreditLineMarket.marketIrm =
+            _tryParseAddress(json, ".contracts.convexCreditLineMarketIrm");
+        loadedInput.contracts.convexCreditLineMarket.marketOracle =
+            _tryParseAddress(json, ".contracts.convexCreditLineMarketOracle");
 
         // Load USDC USM contracts
         loadedInput.contracts.permissionedUsm.dusdUsm = _tryParseAddress(json, ".contracts.permissionedUsm");
@@ -542,6 +576,10 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("MintCurveConvexPositionFactory", abiFolder);
             _extractContractABI("MintCurveConvexPosition", abiFolder);
             _extractContractABI("PositionBeacon", abiFolder);
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.CONVEX_CREDIT_LINE_MARKET) {
+            _extractContractABI("AltoConvexCreditLineMarket", abiFolder);
+            _extractContractABI("FixedRateIrm", abiFolder);
+            _extractContractABI("AltoCreditMarketLpOracle", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.OWNER_FIXED_RATE_IRM_FACTORY) {
             _extractContractABI("OwnerFixedRateIrmFactory", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.MARKET_DEPRECATION_PHASE_0) {
