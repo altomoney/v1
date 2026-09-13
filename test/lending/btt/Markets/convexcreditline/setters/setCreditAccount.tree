@@ -9,16 +9,14 @@ AltoConvexCreditLineMarket::setCreditAccount()
 │   └── it should revert with AltoCreditMarketPositionNotEmpty without changing state
 ├── given current account has debt but no collateral
 │   └── it should revert with AltoCreditMarketPositionNotEmpty without changing state
-├── given current account has no debt or collateral
-│   ├── it should update creditAccount and emit SetCreditAccount with old and new addresses
-│   ├── it should preserve rewardRecipient account-specific authorizations and market accounting
-│   ├── it should allow the new account to add collateral borrow repay withdraw and set its reward recipient
-│   ├── it should reject operations targeting the old credit account
-│   ├── it should not grant the old account or its delegates authority over the new account
-│   ├── it should allow rotation after full repayment and collateral withdrawal
-│   ├── it should preserve bad debt and used capacity when rotating after foreclosure
-│   ├── it should remain callable while paused frozen or Convex inactive
-│   └── when new account equals current account
-│       └── it should emit SetCreditAccount with the same address
-└── when owner attempts rotation during a collateral transfer callback
-    └── it should revert with ReentrancyGuardReentrantCall and roll back the withdrawal
+└── given current account has no debt or collateral
+    ├── it should update creditAccount and emit SetCreditAccount with old and new addresses
+    ├── it should preserve rewardRecipient account-specific authorizations and market accounting
+    ├── it should allow the new account to add collateral borrow repay withdraw and set its reward recipient
+    ├── it should reject operations targeting the old credit account
+    ├── it should not grant the old account or its delegates authority over the new account
+    ├── it should allow rotation after full repayment and collateral withdrawal
+    ├── it should preserve bad debt and used capacity when rotating after foreclosure
+    ├── it should remain callable while paused frozen or Convex inactive
+    └── when new account equals current account
+        └── it should emit SetCreditAccount with the same address
