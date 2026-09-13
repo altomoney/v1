@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import {IAltoConvexCreditLineMarketErrors} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
@@ -155,21 +154,6 @@ contract AltoConvexCreditLineMarketSetCreditAccountTest is ConvexCreditLineCommo
         vm.prank(OWNER);
         market.setCreditAccount(CREDIT_ACCOUNT);
         assertEq(market.creditAccount(), CREDIT_ACCOUNT);
-    }
-
-    function test_RevertWhen_OwnerAttemptsRotationDuringCollateralTransfer() external {
-        _addCollateral(1_000 ether);
-        vm.prank(OWNER);
-        market.transferOwnershipSkip2Step(address(collateralToken));
-        collateralToken.setCallback(address(market), abi.encodeCall(market.setCreditAccount, (USER)), 4);
-        AccountingState memory beforeState = _state();
-
-        vm.prank(CREDIT_ACCOUNT);
-        vm.expectRevert(ReentrancyGuardUpgradeable.ReentrancyGuardReentrantCall.selector);
-        market.removeCollateral(1_000 ether, CREDIT_ACCOUNT, CREDIT_ACCOUNT, "");
-
-        assertEq(market.creditAccount(), CREDIT_ACCOUNT);
-        _assertUnchanged(beforeState);
     }
 
     function _expectPositionNotEmpty() private {

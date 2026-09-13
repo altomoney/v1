@@ -97,7 +97,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     }
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
-    function setCreditAccount(address _newCreditAccount) external nonReentrant onlyOwner {
+    function setCreditAccount(address _newCreditAccount) external onlyOwner {
         _requireNonZeroAddress(_newCreditAccount);
 
         Position storage creditPosition = position[creditAccount];
@@ -110,7 +110,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     }
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
-    function setCreditLimit(uint256 _newCreditLimit) external nonReentrant onlyOwner {
+    function setCreditLimit(uint256 _newCreditLimit) external onlyOwner {
         if (_newCreditLimit == 0) {
             revert AltoCreditMarketInvalidInput();
         }
@@ -169,7 +169,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     }
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
-    function settleBadDebt(uint256 assets) external nonReentrant onlyOwner {
+    function settleBadDebt(uint256 assets) external onlyOwner {
         if (assets == 0 || assets > badDebtAssets) {
             revert AltoCreditMarketInvalidInput();
         }
@@ -246,7 +246,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     }
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
-    function emergencyExitConvex() external nonReentrant onlyOwner returns (uint256 assets) {
+    function emergencyExitConvex() external onlyOwner returns (uint256 assets) {
         if (!paused[PAUSE_TYPE]) {
             revert AltoConvexCreditLineMustBePaused();
         }
@@ -293,7 +293,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
     /// @inheritdoc AltoBaseMarket
     /// @dev Unlike `AltoBaseMarket`, only a nonzero fixed-rate IRM can be set.
-    function _setIrm(address _irm, bool _skipAccrueInterest) internal override nonReentrant {
+    function _setIrm(address _irm, bool _skipAccrueInterest) internal override {
         _requireNonZeroAddress(_irm);
         if (_irm == irm || IIrm(_irm).IRM_TYPE() != IRMType.FIXED_RATE) {
             revert AltoCreditMarketInvalidInput();
