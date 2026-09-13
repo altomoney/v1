@@ -97,6 +97,19 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     }
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
+    function setCreditAccount(address _newCreditAccount) external nonReentrant onlyOwner {
+        _requireNonZeroAddress(_newCreditAccount);
+
+        Position storage creditPosition = position[creditAccount];
+        if (creditPosition.borrowShares != 0 || creditPosition.collateralAssets != 0) {
+            revert AltoCreditMarketPositionNotEmpty();
+        }
+
+        emit SetCreditAccount(creditAccount, _newCreditAccount);
+        creditAccount = _newCreditAccount;
+    }
+
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
     function setCreditLimit(uint256 _newCreditLimit) external nonReentrant onlyOwner {
         if (_newCreditLimit == 0) {
             revert AltoCreditMarketInvalidInput();
@@ -223,7 +236,6 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     /// @inheritdoc IAltoConvexCreditLineMarketBase
     function addRewardToken(address _token) external onlyOwner {
         _addRewardToken(_token);
-        emit RewardTokenAdded(_token);
     }
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
@@ -270,6 +282,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
         emit SetForeclosureLtv(0, _initParams.foreclosureLtv);
 
         creditAccount = _initParams.creditAccount;
+        emit SetCreditAccount(address(0), _initParams.creditAccount);
 
         totalSupply.assets = _initParams.creditLimit.toUint128();
         emit SetCreditLimit(0, _initParams.creditLimit);
@@ -529,6 +542,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
         isRewardToken[_token] = true;
         rewardToken.push(_token);
+        emit RewardTokenAdded(_token);
     }
 
     /// @dev Returns the user's collateral value in borrow-token asset units.

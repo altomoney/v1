@@ -334,7 +334,7 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         assertEq(collateralToken.allowance(address(candidate), address(booster)), 0);
     }
 
-    function test_InitializationEmitsBaseThenCreditThenConvexEventsWithoutRewardAddedEvents() external {
+    function test_InitializationEmitsBaseThenCreditThenConvexEvents() external {
         ConvexCreditLineInitParams memory params = _validInitParams();
         AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
         vm.recordLogs();
@@ -362,7 +362,6 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
             if (topic == IAltoConvexCreditLineMarketEvents.SetCreditLimit.selector) creditLimitIndex = i;
             if (topic == IAltoConvexCreditLineMarketEvents.SetBorrowOpeningFee.selector) openingFeeIndex = i;
             if (topic == IAltoConvexCreditLineMarketEvents.ConvexConfigured.selector) convexIndex = i;
-            assertTrue(topic != IAltoConvexCreditLineMarketEvents.RewardTokenAdded.selector);
         }
 
         assertLt(liquidationEngineIndex, irmIndex);
@@ -374,6 +373,37 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         assertLt(foreclosureIndex, creditLimitIndex);
         assertLt(creditLimitIndex, openingFeeIndex);
         assertLt(openingFeeIndex, convexIndex);
+    }
+
+    function test_InitializationEmitsCreditAccountAndEachInitialRewardTokenOnce() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
+
+        vm.expectEmit(address(candidate));
+        emit SetCreditAccount(address(0), CREDIT_ACCOUNT);
+        for (uint256 i = 0; i < params.rewardTokens.length; ++i) {
+            vm.expectEmit(address(candidate));
+            emit RewardTokenAdded(params.rewardTokens[i]);
+        }
+        vm.expectEmit(address(candidate));
+        emit ConvexConfigured(address(booster), POOL_ID, address(rewardPool), address(depositToken), REWARD_RECIPIENT);
+
+        vm.recordLogs();
+        candidate.initialize(params);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        uint256 creditAccountEvents;
+        uint256 rewardTokenEvents;
+        for (uint256 i = 0; i < logs.length; ++i) {
+            if (logs[i].emitter != address(candidate)) continue;
+            if (logs[i].topics[0] == IAltoConvexCreditLineMarketEvents.SetCreditAccount.selector) {
+                ++creditAccountEvents;
+            }
+            if (logs[i].topics[0] == IAltoConvexCreditLineMarketEvents.RewardTokenAdded.selector) {
+                ++rewardTokenEvents;
+            }
+        }
+        assertEq(creditAccountEvents, 1);
+        assertEq(rewardTokenEvents, params.rewardTokens.length);
     }
 
     function test_RevertForInvalidInitialRewardList() external {

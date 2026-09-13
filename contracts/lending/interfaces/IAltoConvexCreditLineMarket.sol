@@ -41,6 +41,9 @@ interface IAltoConvexCreditLineMarketErrors {
     /// @notice Error thrown when an account is unauthorized
     error AltoCreditMarketUnauthorizedAccount();
 
+    /// @notice Error thrown when changing a credit account that still has debt or collateral
+    error AltoCreditMarketPositionNotEmpty();
+
     /// @notice Error thrown when callback data is provided
     error AltoCreditMarketCallbacksUnsupported();
 
@@ -67,6 +70,11 @@ interface IAltoConvexCreditLineMarketErrors {
 }
 
 interface IAltoConvexCreditLineMarketEvents {
+    /// @notice Emitted when the credit account is initialized or changed
+    /// @param oldCreditAccount The previous credit account, or zero during initialization
+    /// @param newCreditAccount The new credit account
+    event SetCreditAccount(address indexed oldCreditAccount, address indexed newCreditAccount);
+
     /// @notice Emitted when the credit limit is set
     /// @param oldCreditLimit The old credit limit
     /// @param newCreditLimit The new credit limit
@@ -167,6 +175,12 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     /// @notice The cumulative debt written off during foreclosures
     /// @return The cumulative bad debt in borrow-token assets
     function badDebtAssets() external view returns (uint256);
+
+    /// @notice Sets the credit account when the current account has no debt or collateral
+    /// @dev Only the owner may change the account. The reward recipient and account-specific authorizations
+    /// retain their configured values; the new credit account may update its reward recipient and authorizations.
+    /// @param newCreditAccount The nonzero account permitted to own market collateral and debt
+    function setCreditAccount(address newCreditAccount) external;
 
     /// @notice Sets the maximum credit capacity; used capacity is `totalBorrowed.assets + badDebtAssets`
     /// @param newCreditLimit The new credit limit

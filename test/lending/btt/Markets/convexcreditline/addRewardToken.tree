@@ -19,7 +19,7 @@ AltoConvexCreditLineMarket::addRewardToken()
     ├── it should append the token to the end of the list
     ├── it should increase the reward-token array length
     ├── it should set isRewardToken to true
-    ├── it should emit RewardTokenAdded
+    ├── it should emit exactly one RewardTokenAdded
     ├── it should not call or validate the token's ERC20 methods
     ├── it should accept a contract whose balanceOf or transfer behavior is malformed
     ├── it should allow a previously removed token to be added again at the end of the list
