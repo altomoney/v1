@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import {AltoBaseMarket} from "../AltoBaseMarket.sol";
+import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {AltoConvexCreditLineLib} from "./AltoConvexCreditLineLib.sol";
-import {AssetShareConversionMath} from "../libraries/AssetShareConversionMath.sol";
-import {Uint128Converter} from "../libraries/Uint128Converter.sol";
+import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
+import {Uint128Converter} from "@alto/lending/libraries/Uint128Converter.sol";
 import {
     CreditMarketInitParams,
     IAltoConvexCreditLineMarketBase,
     ConvexCreditLineInitParams,
     IAltoConvexCreditLineMarketStaticTypes
-} from "../interfaces/IAltoConvexCreditLineMarket.sol";
-import {IIrm} from "../interfaces/IIrm.sol";
-import {BaseMarketInitParams, IMarketBase, MarketType, Position} from "../interfaces/IMarket.sol";
-import {IMintableERC20} from "../interfaces/IMintableERC20.sol";
-import {IConvexRewardPool} from "../interfaces/vendor/IConvexRewardPool.sol";
+} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
+import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
+import {BaseMarketInitParams, IMarketBase, MarketType, Position} from "@alto/lending/interfaces/IMarket.sol";
+import {IMintableERC20} from "@alto/lending/interfaces/IMintableERC20.sol";
+import {IConvexRewardPool} from "@alto/lending/interfaces/vendor/IConvexRewardPool.sol";
 
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
