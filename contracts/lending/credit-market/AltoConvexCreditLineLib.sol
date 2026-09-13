@@ -152,21 +152,22 @@ library AltoConvexCreditLineLib {
     /// @param token The candidate reward-token address.
     /// @param collateralToken The market collateral token, which cannot be added as a reward token.
     /// @param borrowToken The market borrow token, which cannot be added as a reward token.
-    /// @param convexDepositToken The Convex deposit token, which cannot be added as a reward token.
+    /// @param convexRewardPool The Convex reward pool whose staking token cannot be added as a reward token.
     function validateRewardTokenAddition(
         uint256 rewardTokenCount,
         bool tokenAlreadyAdded,
         address token,
         address collateralToken,
         address borrowToken,
-        address convexDepositToken
+        address convexRewardPool
     ) external view {
         if (token == address(0)) {
             revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress();
         }
         if (
             token.code.length == 0 || rewardTokenCount >= MAX_REWARD_TOKENS || token == collateralToken
-                || token == borrowToken || token == convexDepositToken || tokenAlreadyAdded
+                || token == borrowToken || token == IConvexRewardPool(convexRewardPool).stakingToken()
+                || tokenAlreadyAdded
         ) {
             revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput();
         }

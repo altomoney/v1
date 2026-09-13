@@ -118,7 +118,8 @@ reward pool.
 The accounting unit nevertheless remains the raw Curve LP:
 
 - `position.collateralAssets` records the amount deposited by the user; and
-- `stakedCollateralAssets()` reads the corresponding reward-pool balance.
+- `IConvexRewardPool(convexRewardPool).balanceOf(address(market))` reads the
+  corresponding reward-pool balance.
 
 The implementation assumes these quantities remain 1:1. It does not contain a
 share-price or exchange-rate calculation.

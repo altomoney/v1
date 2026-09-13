@@ -62,7 +62,8 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         assertEq(market.convexBooster(), boosterBefore);
         assertEq(market.convexRewardPool(), rewardPoolBefore);
         assertEq(market.foreclosureLtv(), FORECLOSURE_LTV);
-        assertEq(market.creditLimit(), CREDIT_LIMIT);
+        (uint128 creditCapacity,) = market.totalSupply();
+        assertEq(creditCapacity, CREDIT_LIMIT);
         assertEq(market.rewardToken(0), address(primaryRewardToken));
         assertEq(market.rewardToken(1), address(extraRewardToken));
         _assertUnchanged(beforeState);
@@ -473,7 +474,6 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         assertTrue(market.pausers(OWNER, FROZEN_TYPE));
 
         assertEq(market.creditAccount(), CREDIT_ACCOUNT);
-        assertEq(market.creditLimit(), CREDIT_LIMIT);
         assertEq(market.foreclosureLtv(), FORECLOSURE_LTV);
         assertEq(market.borrowOpeningFee(), 0);
         assertEq(market.claimableFeesAssets(), 0);
@@ -493,7 +493,6 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         assertEq(market.convexBooster(), address(booster));
         assertEq(market.convexPoolId(), POOL_ID);
         assertEq(market.convexRewardPool(), address(rewardPool));
-        assertEq(market.convexDepositToken(), address(depositToken));
         assertEq(market.rewardRecipient(), REWARD_RECIPIENT);
         assertTrue(market.convexActive());
         _assertRewardTokenCount(2);
@@ -501,7 +500,7 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         assertEq(market.rewardToken(1), address(extraRewardToken));
         assertEq(collateralToken.allowance(address(market), address(booster)), 0);
         assertEq(collateralToken.balanceOf(address(market)), 0);
-        assertEq(market.stakedCollateralAssets(), 0);
+        assertEq(rewardPool.balanceOf(address(market)), 0);
         assertEq(booster.depositCalls(), 0);
     }
 
@@ -546,7 +545,8 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
 
         assertEq(candidate.owner(), OWNER);
         assertEq(candidate.convexPoolId(), 0);
-        assertEq(candidate.creditLimit(), type(uint128).max);
+        (uint128 creditCapacity,) = candidate.totalSupply();
+        assertEq(creditCapacity, type(uint128).max);
         assertEq(candidate.foreclosureLtv(), MATH_PRECISION);
         assertEq(candidate.borrowOpeningFee(), MATH_PRECISION);
     }

@@ -52,9 +52,6 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     address public convexRewardPool;
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
-    address public convexDepositToken;
-
-    /// @inheritdoc IAltoConvexCreditLineMarketBase
     address public rewardRecipient;
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
@@ -81,19 +78,9 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
         _initializeConvex(_initParams);
     }
 
-    /// @inheritdoc IAltoConvexCreditLineMarketBase
-    function creditLimit() external view returns (uint256) {
-        return totalSupply.assets;
-    }
-
     /// @inheritdoc AltoBaseMarket
     function borrowOpeningFee() public view override(AltoBaseMarket, IMarketBase) returns (uint256) {
         return _borrowOpeningFee;
-    }
-
-    /// @inheritdoc IAltoConvexCreditLineMarketBase
-    function stakedCollateralAssets() external view returns (uint256) {
-        return IConvexRewardPool(convexRewardPool).balanceOf(address(this));
     }
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
@@ -517,7 +504,6 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
         convexBooster = _initParams.convexBooster;
         convexPoolId = _initParams.convexPoolId;
         convexRewardPool = rewardPool;
-        convexDepositToken = depositToken;
         rewardRecipient = _initParams.rewardRecipient;
         convexActive = true;
 
@@ -537,7 +523,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     /// @dev Adds a validated token to the reward forwarding list.
     function _addRewardToken(address _token) private {
         AltoConvexCreditLineLib.validateRewardTokenAddition(
-            rewardToken.length, isRewardToken[_token], _token, collateralToken, borrowToken, convexDepositToken
+            rewardToken.length, isRewardToken[_token], _token, collateralToken, borrowToken, convexRewardPool
         );
 
         isRewardToken[_token] = true;

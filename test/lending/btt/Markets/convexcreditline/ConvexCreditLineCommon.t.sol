@@ -290,7 +290,7 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
         state.creditBalance = borrowToken.balanceOf(CREDIT_ACCOUNT);
         state.receiverBorrowBalance = borrowToken.balanceOf(RECEIVER);
         state.idleCollateral = collateralToken.balanceOf(address(market));
-        state.stakedCollateral = market.stakedCollateralAssets();
+        state.stakedCollateral = rewardPool.balanceOf(address(market));
     }
 
     function _assertStateEq(AccountingState memory actual, AccountingState memory expected) internal pure {
