@@ -271,6 +271,12 @@ FRXUSD_MINT_LIQUIDATION_ENGINE=$(get_address ".contracts.refreshFrxUsdLiquidatio
 FRXUSD_MINT_LEVERAGE_SWAPPER=$(get_address ".contracts.refreshFrxUsdLeverageSwapper")
 FRXUSD_MINT_LEVERAGE=$(get_address ".contracts.refreshFrxUsdLeverage")
 
+# Convex Credit Line Market contracts
+CONVEX_CREDIT_LINE_MARKET=$(get_address ".contracts.convexCreditLineMarket")
+CONVEX_CREDIT_LINE_MARKET_IMPL=$(get_address ".contracts.convexCreditLineMarketImplementation")
+CONVEX_CREDIT_LINE_MARKET_IRM=$(get_address ".contracts.convexCreditLineMarketIrm")
+CONVEX_CREDIT_LINE_MARKET_ORACLE=$(get_address ".contracts.convexCreditLineMarketOracle")
+
 # Permissioned USM contracts
 PERMISSIONED_USM=$(get_address ".contracts.permissionedUsm")
 PERMISSIONED_USM_IMPL=$(get_address ".contracts.permissionedUsmImplementation")
@@ -408,6 +414,10 @@ echo "- frxUSD Mint Market Oracle: $FRXUSD_MINT_MARKET_ORACLE"
 echo "- frxUSD Mint Liquidation Engine: $FRXUSD_MINT_LIQUIDATION_ENGINE"
 echo "- frxUSD Mint Leverage Swapper: $FRXUSD_MINT_LEVERAGE_SWAPPER"
 echo "- frxUSD Mint Leverage: $FRXUSD_MINT_LEVERAGE"
+echo "- Convex Credit Line Market: $CONVEX_CREDIT_LINE_MARKET"
+echo "- Convex Credit Line Market Implementation: $CONVEX_CREDIT_LINE_MARKET_IMPL"
+echo "- Convex Credit Line Market IRM: $CONVEX_CREDIT_LINE_MARKET_IRM"
+echo "- Convex Credit Line Market Oracle: $CONVEX_CREDIT_LINE_MARKET_ORACLE"
 echo "- Permissioned USM: $PERMISSIONED_USM"
 echo "- Permissioned USM Implementation: $PERMISSIONED_USM_IMPL"
 echo "- Permissioned USM Fixed Price Strategy: $PERMISSIONED_USM_FIXED_PRICE_STRATEGY"
@@ -573,6 +583,12 @@ verify_contract "FrxUsdMintMarketOracle" "$FRXUSD_MINT_MARKET_ORACLE" "contracts
 verify_contract "FrxUsdMintLiquidationEngine" "$FRXUSD_MINT_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
 verify_contract "FrxUsdMintLeverageSwapper" "$FRXUSD_MINT_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "FrxUsdMintLeverage" "$FRXUSD_MINT_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
+
+# Convex Credit Line Market contracts
+verify_contract "ConvexCreditLineMarket" "$CONVEX_CREDIT_LINE_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+verify_contract "ConvexCreditLineMarketImplementation" "$CONVEX_CREDIT_LINE_MARKET_IMPL" "contracts/lending/credit-market/AltoConvexCreditLineMarket.sol:AltoConvexCreditLineMarket"
+verify_contract "ConvexCreditLineMarketIRM" "$CONVEX_CREDIT_LINE_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
+verify_contract "ConvexCreditLineMarketOracle" "$CONVEX_CREDIT_LINE_MARKET_ORACLE" "contracts/oracles/AltoCreditMarketLpOracle/AltoCreditMarketLpOracle.sol:AltoCreditMarketLpOracle"
 
 # Permissioned USM contracts
 verify_contract "PermissionedUsm" "$PERMISSIONED_USM" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
