@@ -12,7 +12,7 @@ import {
     ConvexCreditLineInitParams
 } from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
-import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {DUSD} from "@alto/tokens/DUSD.sol";
@@ -35,16 +35,45 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         _repayAssets(USER, 1 ether);
     }
 
-    function test_InvalidAmountSelectionPrecedesCreditAccountCheck() external {
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
+    function test_CreditAccountCheckPrecedesInheritedAmountValidation() external {
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.repay(0, 0, USER);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.repay(1, 1, USER);
 
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.repay(1, 0, USER);
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.repay(1, 0, address(0));
+    }
+
+    function test_InvalidAmountsRollBackAccrualAndAutomaticFeeMinting() external {
+        _openPosition(1_000 ether, 100 ether);
+        _mockAccrual(5 ether, 19);
+        AccountingState memory beforeState = _state();
+        uint256 supplyBefore = borrowToken.totalSupply();
+        uint256 recipientBalanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
+        (uint256 mintedBefore,) = borrowToken.minterConfig(address(market));
+
+        for (uint256 amount; amount < 2; ++amount) {
+            vm.expectCall(address(irm), abi.encodeCall(IIrm.updateInterestRate, (CREDIT_LIMIT, 100 ether)));
+            vm.expectCall(address(borrowToken), abi.encodeCall(borrowToken.mint, (FEE_RECIPIENT, 5 ether)));
+            vm.prank(USER);
+            vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
+            market.repay(amount, amount, CREDIT_ACCOUNT);
+
+            _assertUnchanged(beforeState);
+            assertEq(borrowToken.totalSupply(), supplyBefore);
+            assertEq(borrowToken.balanceOf(FEE_RECIPIENT), recipientBalanceBefore);
+            (uint256 mintedAfter,) = borrowToken.minterConfig(address(market));
+            assertEq(mintedAfter, mintedBefore);
+        }
+
+        _mockIrmUpdateRevert();
+        vm.prank(USER);
+        vm.expectRevert(bytes("UPDATE_REVERTED"));
+        market.repay(0, 0, CREDIT_ACCOUNT);
+        _assertUnchanged(beforeState);
     }
 
     function test_AmountsAboveDebtOrPositionSharesRevertAtomically() external {

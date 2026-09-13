@@ -179,6 +179,7 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     function setCreditAccount(address newCreditAccount) external;
 
     /// @notice Sets the maximum credit capacity; used capacity is `totalBorrowed.assets + badDebtAssets`
+    /// @dev Zero is allowed when active debt and bad debt are both zero after any interest accrual.
     /// @param newCreditLimit The new credit limit
     function setCreditLimit(uint256 newCreditLimit) external;
 

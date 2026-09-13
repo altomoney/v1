@@ -2,7 +2,7 @@ AltoConvexCreditLineMarket::addRewardToken()
 ├── when caller is not owner
 │   └── it should revert with OwnableUnauthorizedAccount
 ├── when token is zero address
-│   └── it should revert with AltoCreditMarketZeroAddress
+│   └── it should revert with AltoCreditMarketInvalidInput because the address has no code
 ├── when token has no contract code
 │   └── it should revert with AltoCreditMarketInvalidInput
 ├── when token is collateralToken

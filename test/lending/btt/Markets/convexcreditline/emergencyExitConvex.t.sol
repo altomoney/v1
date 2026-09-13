@@ -100,6 +100,26 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
         assertEq(collateralToken.allowance(address(market), address(booster)), 0);
     }
 
+    function test_WithdrawalCallbackObservesInactiveStrategy() external {
+        _addCollateral(10 ether);
+        _pause(PAUSE_TYPE);
+        rewardPool.setCallback(address(this), abi.encodeCall(this.assertInactiveDuringWithdrawal, ()), true, false);
+
+        vm.expectCall(address(this), abi.encodeCall(this.assertInactiveDuringWithdrawal, ()));
+        vm.prank(OWNER);
+        uint256 assets = market.emergencyExitConvex();
+
+        assertEq(assets, 10 ether);
+        assertFalse(market.convexActive());
+        assertEq(rewardPool.balanceOf(address(market)), 0);
+        assertEq(collateralToken.balanceOf(address(market)), 10 ether);
+    }
+
+    function assertInactiveDuringWithdrawal() external view {
+        assertEq(msg.sender, address(rewardPool));
+        assertFalse(market.convexActive());
+    }
+
     function test_SuccessRecoversAllStakePreservesIdleAndAccounting() external {
         _openPosition(100 ether, 10 ether);
         deal(address(collateralToken), address(market), 3 ether);

@@ -2,7 +2,11 @@ AltoConvexCreditLineMarket::setCreditLimit()
 ├── when caller is not owner
 │   └── it should revert with OwnableUnauthorizedAccount
 ├── when new credit limit is zero
-│   └── it should revert with AltoCreditMarketInvalidInput before accruing interest
+│   ├── when active debt and badDebtAssets are zero
+│   │   ├── it should accrue interest first when not paused and then allow zero if no debt accrues
+│   │   └── it should allow zero without accruing interest when paused
+│   └── when active debt or badDebtAssets is nonzero
+│       └── it should revert with AltoBaseMarketInsufficientMarketLiquidity without changing state
 ├── when new credit limit exceeds uint128 max
 │   └── it should accrue and then revert with MathUtilsMaxUint128Overflow during checked conversion
 ├── given market is not paused

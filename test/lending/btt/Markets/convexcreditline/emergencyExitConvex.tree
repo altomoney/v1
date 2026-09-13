@@ -18,6 +18,7 @@ AltoConvexCreditLineMarket::emergencyExitConvex()
 │   ├── it should emit ConvexEmergencyExit with zero
 │   └── it should return zero
 ├── given market is paused and staked collateral is nonzero
+│   ├── it should mark Convex inactive before external withdrawal callbacks execute
 │   ├── when reward pool balance query reverts
 │   │   └── it should propagate the failure and keep Convex active
 │   ├── when withdrawAndUnwrap reverts

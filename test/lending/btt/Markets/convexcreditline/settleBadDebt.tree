@@ -4,7 +4,7 @@ AltoConvexCreditLineMarket::settleBadDebt(uint256)
 ├── when assets is zero
 │   └── it should revert with AltoCreditMarketInvalidInput without changing state
 ├── when assets exceeds badDebtAssets
-│   └── it should revert with AltoCreditMarketInvalidInput without changing state
+│   └── it should revert with an arithmetic panic before calling burn without changing state
 ├── when the market is active, frozen, or paused
 │   └── it should remain available
 ├── when settling part of recorded bad debt
