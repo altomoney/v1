@@ -29,23 +29,21 @@ library AltoConvexCreditLineLib {
     /// @param collateralToken The Curve LP token used as market collateral.
     /// @param rewardRecipient The account configured to receive claimed reward tokens.
     /// @param rewardTokenCount The number of reward tokens supplied during initialization.
-    /// @return depositToken The Convex deposit token associated with the pool.
-    /// @return rewardPool The Convex reward pool in which collateral will be staked.
+    /// @return convexDepositToken The Convex deposit token associated with the pool.
+    /// @return convexRewardPool The Convex reward pool in which collateral will be staked.
     function validateConvexInitialization(
         address convexBooster,
         uint256 convexPoolId,
         address collateralToken,
         address rewardRecipient,
         uint256 rewardTokenCount
-    ) external view returns (address depositToken, address rewardPool) {
+    ) external view returns (address convexDepositToken, address convexRewardPool) {
         if (convexBooster == address(0) || rewardRecipient == address(0)) {
             revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress();
         }
 
-        address lpToken;
-        address gauge;
-        bool shutdown;
-        (lpToken, depositToken, gauge, rewardPool,, shutdown) = IConvexBooster(convexBooster).poolInfo(convexPoolId);
+        (address lpToken, address depositToken, address gauge, address rewardPool,, bool shutdown) =
+            IConvexBooster(convexBooster).poolInfo(convexPoolId);
 
         if (lpToken == address(0) || depositToken == address(0) || gauge == address(0) || rewardPool == address(0)) {
             revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress();
@@ -61,6 +59,8 @@ library AltoConvexCreditLineLib {
         ) {
             revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput();
         }
+
+        return (depositToken, rewardPool);
     }
 
     /// @notice Requests that Convex deposit collateral held by the market and stake the resulting deposit tokens.
