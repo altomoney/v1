@@ -24,7 +24,7 @@ contract AltoConvexCreditLineMarketAddRewardTokenTest is ConvexCreditLineCommon 
 
     function test_RevertForZeroNoCodeAndReservedTokens() external {
         vm.startPrank(OWNER);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.addRewardToken(address(0));
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.addRewardToken(USER);

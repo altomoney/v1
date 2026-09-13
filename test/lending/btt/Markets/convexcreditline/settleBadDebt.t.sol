@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {stdError} from "forge-std/StdError.sol";
 import {EndpointV2Mock} from "@layerzerolabs/test-devtools-evm-foundry/contracts/mocks/EndpointV2Mock.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -26,7 +27,7 @@ contract AltoConvexCreditLineMarketSettleBadDebtTest is ConvexCreditLineCommon {
         market.settleBadDebt(0);
     }
 
-    function test_RejectsZeroAndAmountAboveBadDebtWithoutBurning() external {
+    function test_RejectsZeroWithoutBurning() external {
         vm.prank(OWNER);
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.settleBadDebt(0);
@@ -39,12 +40,30 @@ contract AltoConvexCreditLineMarketSettleBadDebtTest is ConvexCreditLineCommon {
         vm.startPrank(OWNER);
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.settleBadDebt(0);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
-        market.settleBadDebt(100 ether + 1);
         vm.stopPrank();
 
         _assertUnchanged(beforeState);
         assertEq(borrowToken.totalSupply(), supplyBefore);
+    }
+
+    function test_AmountAboveBadDebtRevertsBeforeBurning() external {
+        _createBadDebtAndFundOwner(100 ether);
+        AccountingState memory beforeState = _state();
+        uint256 ownerBalanceBefore = borrowToken.balanceOf(OWNER);
+        uint256 supplyBefore = borrowToken.totalSupply();
+        (uint256 mintedBefore,) = borrowToken.minterConfig(address(market));
+        uint256 assets = 100 ether + 1;
+
+        vm.mockCallRevert(address(borrowToken), borrowToken.burn.selector, bytes("BURN_MUST_NOT_BE_CALLED"));
+        vm.prank(OWNER);
+        vm.expectRevert(stdError.arithmeticError);
+        market.settleBadDebt(assets);
+
+        _assertUnchanged(beforeState);
+        assertEq(borrowToken.balanceOf(OWNER), ownerBalanceBefore);
+        assertEq(borrowToken.totalSupply(), supplyBefore);
+        (uint256 mintedAfter,) = borrowToken.minterConfig(address(market));
+        assertEq(mintedAfter, mintedBefore);
     }
 
     function test_AvailableWhenActiveFrozenOrPaused() external {

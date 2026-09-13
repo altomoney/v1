@@ -23,20 +23,18 @@ library AltoConvexCreditLineLib {
 
     /// @notice Validates the Convex pool configuration used to initialize the market.
     /// @dev Confirms that the pool is active, matches the collateral token and is internally consistent with its
-    /// reward pool. At least one reward token must be configured by the market.
+    /// reward pool. The calling market separately validates the reward-token list.
     /// @param convexBooster The Convex Booster that registers and accepts deposits for the pool.
     /// @param convexPoolId The identifier of the pool registered in the Convex Booster.
     /// @param collateralToken The Curve LP token used as market collateral.
     /// @param rewardRecipient The account configured to receive claimed reward tokens.
-    /// @param rewardTokenCount The number of reward tokens supplied during initialization.
     /// @return convexDepositToken The Convex deposit token associated with the pool.
     /// @return convexRewardPool The Convex reward pool in which collateral will be staked.
     function validateConvexInitialization(
         address convexBooster,
         uint256 convexPoolId,
         address collateralToken,
-        address rewardRecipient,
-        uint256 rewardTokenCount
+        address rewardRecipient
     ) external view returns (address convexDepositToken, address convexRewardPool) {
         if (convexBooster == address(0) || rewardRecipient == address(0)) {
             revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress();
@@ -55,7 +53,7 @@ library AltoConvexCreditLineLib {
         IConvexRewardPool rewards = IConvexRewardPool(rewardPool);
         if (
             rewards.pid() != convexPoolId || rewards.operator() != convexBooster
-                || rewards.stakingToken() != depositToken || rewardTokenCount == 0
+                || rewards.stakingToken() != depositToken
         ) {
             revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput();
         }
@@ -161,9 +159,6 @@ library AltoConvexCreditLineLib {
         address borrowToken,
         address convexRewardPool
     ) external view {
-        if (token == address(0)) {
-            revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress();
-        }
         if (
             token.code.length == 0 || rewardTokenCount >= MAX_REWARD_TOKENS || token == collateralToken
                 || token == borrowToken || token == IConvexRewardPool(convexRewardPool).stakingToken()

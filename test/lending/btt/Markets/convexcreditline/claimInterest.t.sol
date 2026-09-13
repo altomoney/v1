@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {stdError} from "forge-std/StdError.sol";
+import {Uint128Converter} from "@alto/lending/libraries/Uint128Converter.sol";
 import {
     IAltoConvexCreditLineMarketErrors,
     IAltoConvexCreditLineMarketEvents
@@ -18,10 +20,10 @@ contract AltoConvexCreditLineMarketClaimInterestTest is ConvexCreditLineCommon {
         market.claimInterest(0);
     }
 
-    function test_AmountCheckPrecedesFeeRecipientAndCallerChecks() external {
+    function test_FeeRecipientCheckPrecedesCallerAndAmountChecks() external {
         vm.store(address(market), bytes32(uint256(13)), bytes32(0));
         vm.prank(USER);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress.selector);
         market.claimInterest(1);
 
         vm.prank(USER);
@@ -33,6 +35,31 @@ contract AltoConvexCreditLineMarketClaimInterestTest is ConvexCreditLineCommon {
         vm.prank(USER);
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.claimInterest(0);
+
+        vm.prank(USER);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
+        market.claimInterest(type(uint256).max);
+    }
+
+    function test_OverclaimsRevertAtomicallyAtCheckedSubtractionOrConversion() external {
+        _createFees(10 ether);
+        AccountingState memory beforeState = _state();
+        uint256 supplyBefore = borrowToken.totalSupply();
+        uint256 recipientBalanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
+
+        vm.prank(OWNER);
+        vm.expectRevert(stdError.arithmeticError);
+        market.claimInterest(10 ether + 1);
+        _assertUnchanged(beforeState);
+        assertEq(borrowToken.totalSupply(), supplyBefore);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), recipientBalanceBefore);
+
+        vm.prank(FEE_RECIPIENT);
+        vm.expectRevert(Uint128Converter.MathUtilsMaxUint128Overflow.selector);
+        market.claimInterest(uint256(type(uint128).max) + 1);
+        _assertUnchanged(beforeState);
+        assertEq(borrowToken.totalSupply(), supplyBefore);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), recipientBalanceBefore);
     }
 
     function test_ZeroClaimsAllAndZeroBalanceEmitsWithoutMinting() external {

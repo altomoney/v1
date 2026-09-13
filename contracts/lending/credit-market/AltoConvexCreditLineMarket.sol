@@ -98,10 +98,6 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
     function setCreditLimit(uint256 _newCreditLimit) external onlyOwner {
-        if (_newCreditLimit == 0) {
-            revert AltoCreditMarketInvalidInput();
-        }
-
         if (!paused[PAUSE_TYPE]) {
             _accrueInterest();
         }
@@ -144,9 +140,6 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
     function claimInterest(uint256 interest) external nonReentrant whenNotPaused returns (uint256) {
-        if (interest > claimableFeesAssets) {
-            revert AltoCreditMarketInvalidInput();
-        }
         _requireNonZeroAddress(feeRecipient);
         if (msg.sender != owner() && msg.sender != feeRecipient) {
             revert AltoCreditMarketUnauthorizedAccount();
@@ -157,12 +150,12 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
     function settleBadDebt(uint256 assets) external onlyOwner {
-        if (assets == 0 || assets > badDebtAssets) {
+        if (assets == 0) {
             revert AltoCreditMarketInvalidInput();
         }
 
-        _sendBorrowToken(msg.sender, address(this), assets);
         badDebtAssets -= assets;
+        _sendBorrowToken(msg.sender, address(this), assets);
 
         emit BadDebtSettled(assets);
     }
@@ -241,9 +234,9 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
             revert AltoConvexCreditLineStrategyInactive();
         }
 
+        convexActive = false;
         assets = AltoConvexCreditLineLib.emergencyWithdraw(convexRewardPool);
 
-        convexActive = false;
         emit ConvexEmergencyExit(assets);
     }
 
@@ -406,9 +399,6 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
         nonReentrant
         returns (uint256, uint256)
     {
-        if (!_onlyOneZero(assets, shares)) {
-            revert AltoCreditMarketInvalidInput();
-        }
         _requireCreditAccount(onBehalf);
 
         _accrueInterest();
@@ -494,11 +484,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     function _initializeConvex(ConvexCreditLineInitParams memory _initParams) private {
         uint256 tokenCount = _initParams.rewardTokens.length;
         (address depositToken, address rewardPool) = AltoConvexCreditLineLib.validateConvexInitialization(
-            _initParams.convexBooster,
-            _initParams.convexPoolId,
-            collateralToken,
-            _initParams.rewardRecipient,
-            tokenCount
+            _initParams.convexBooster, _initParams.convexPoolId, collateralToken, _initParams.rewardRecipient
         );
 
         convexBooster = _initParams.convexBooster;

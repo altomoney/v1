@@ -4,12 +4,12 @@ AltoConvexCreditLineMarket::repay()
 ├── when market is frozen but not paused
 │   └── it should remain available
 ├── given invalid inputs
-│   ├── when assets and shares are both zero
-│   │   └── it should revert with AltoCreditMarketInvalidInput
-│   ├── when assets and shares are both nonzero
-│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when onBehalf is creditAccount and assets and shares are both zero or both nonzero
+│   │   ├── it should accrue and claim fees before inherited amount validation
+│   │   ├── it should revert with AltoBaseMarketInvalidInput and roll back accrual and fee minting
+│   │   └── it should propagate an IRM failure before reaching amount validation
 │   ├── when amount selection is invalid and onBehalf is also invalid
-│   │   └── it should revert with AltoCreditMarketInvalidInput before checking creditAccount
+│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount before accruing or checking amounts
 │   ├── when onBehalf is not creditAccount
 │   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
 │   ├── when onBehalf is zero address

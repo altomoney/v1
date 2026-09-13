@@ -423,7 +423,7 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
 
         params = _validInitParams();
         params.rewardTokens[0] = address(0);
-        _expectCreditZero(candidate, params);
+        _expectCreditInvalid(candidate, params);
 
         params = _validInitParams();
         params.rewardTokens[0] = USER;
