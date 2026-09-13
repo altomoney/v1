@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
-import {Balance, IMarket, MarketType} from "@alto/lending/interfaces/IMarket.sol";
+import {Balance, IMarket, MarketType, Position} from "@alto/lending/interfaces/IMarket.sol";
 import {
     DeployAltoEthereumMainnet,
     AltoEthereumMainnetParams,
@@ -23,6 +23,8 @@ import {AltoLeverageSwapperMultiTarget} from "@alto/lending/leverage/AltoLeverag
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
+import {AltoCreditMarketLpOracle} from "@alto/oracles/AltoCreditMarketLpOracle/AltoCreditMarketLpOracle.sol";
 import {
     ERC4626RatioChainlinkOracleRETH,
     IReth
@@ -61,10 +63,18 @@ import {
     CHAINLINK_ETH_USD_PRICE_FEED,
     CHAINLINK_USDE_USD_PRICE_FEED,
     CHAINLINK_USDC_USD_PRICE_FEED,
-    CHAINLINK_FRXUSD_USD_PRICE_FEED
+    CHAINLINK_FRXUSD_USD_PRICE_FEED,
+    FRXUSD_DUSD_CURVE_POOL_MAINNET,
+    POOL_ID_FRXUSD_DUSD_CURVE_POOL_MAINNET,
+    CONVEX_REWARD_POOL_CVX_FRXUSD_DUSD_MAINNET,
+    CONVEX_BOOSTER_MAINNET,
+    CRV_TOKEN_MAINNET,
+    CVX_TOKEN_MAINNET,
+    WFRAX_TOKEN_MAINNET
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
 ///      and skip re-deploying prerequisites. The file must be at:
@@ -207,6 +217,13 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         loaded.contracts.refreshSusdeMintMarket = _loadMarketContracts(json, "refreshSusdeMint");
         loaded.contracts.refreshSyrupUsdcMintMarket = _loadMarketContracts(json, "refreshSyrupUsdcMint");
         loaded.contracts.refreshFrxUsdMarket = _loadMarketContracts(json, "refreshFrxUsd");
+        loaded.contracts.convexCreditLineMarket.market = _tryParseAddress(json, ".contracts.convexCreditLineMarket");
+        loaded.contracts.convexCreditLineMarket.marketImplementation =
+            _tryParseAddress(json, ".contracts.convexCreditLineMarketImplementation");
+        loaded.contracts.convexCreditLineMarket.marketIrm =
+            _tryParseAddress(json, ".contracts.convexCreditLineMarketIrm");
+        loaded.contracts.convexCreditLineMarket.marketOracle =
+            _tryParseAddress(json, ".contracts.convexCreditLineMarketOracle");
 
         loaded.contracts.permissionedUsm.dusdUsm = _tryParseAddress(json, ".contracts.permissionedUsm");
         loaded.contracts.permissionedUsm.dusdUsmImplementation =
@@ -574,7 +591,7 @@ abstract contract DeployMarketPhaseTestBase is DeployAltoEthereumMainnetTestBase
         }
     }
 
-    function _assertSafeJson(string memory path, bytes4 expectedSelector) private view {
+    function _assertSafeJson(string memory path, bytes4 expectedSelector) internal view {
         assertTrue(vm.exists(path), "Safe JSON must be written");
         string memory json = vm.readFile(path);
         assertEq(vm.parseJsonAddress(json, ".transactions[0].to"), input.contracts.timelock, "Safe target");
@@ -934,6 +951,113 @@ contract DeployFrxUsdMintMarketPhaseTest is DeployMarketPhaseTestBase {
         assertEq(inDecimals, 18, "input decimals");
         assertEq(outDecimals, 36, "output decimals");
         assertEq(feedDecimals, 8, "feed decimals");
+    }
+}
+
+contract DeployConvexCreditLineMarketPhaseTest is DeployMarketPhaseTestBase {
+    string internal constant SCHEDULE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-frxusd-dusd-convex-credit-line-market-registry-schedule.json";
+    string internal constant EXECUTE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-frxusd-dusd-convex-credit-line-market-registry-execute.json";
+
+    function test_deployConvexCreditLineMarketAndExecuteTimelockTransactions() public {
+        _deployMarket(DeploymentPhase.CONVEX_CREDIT_LINE_MARKET);
+
+        AltoConvexCreditLineMarket market = AltoConvexCreditLineMarket(input.contracts.convexCreditLineMarket.market);
+        FixedRateIrm irm = FixedRateIrm(input.contracts.convexCreditLineMarket.marketIrm);
+
+        assertTrue(address(market).code.length > 0, "market");
+        address marketImplementation = input.contracts.convexCreditLineMarket.marketImplementation;
+        assertTrue(marketImplementation.code.length > 0, "implementation");
+        assertNotEq(address(market), marketImplementation, "proxy and implementation");
+        assertEq(Upgrades.getImplementationAddress(address(market)), marketImplementation, "proxy implementation");
+        address marketOracle = input.contracts.convexCreditLineMarket.marketOracle;
+        assertTrue(marketOracle.code.length > 0, "oracle");
+        assertEq(
+            keccak256(marketOracle.code), keccak256(type(AltoCreditMarketLpOracle).runtimeCode), "oracle implementation"
+        );
+        assertEq(AltoCreditMarketLpOracle(marketOracle).getPrice(), 1e36, "oracle price");
+        assertEq(uint256(market.MARKET_TYPE()), uint256(MarketType.CREDIT_MINT), "market type");
+        assertEq(market.borrowToken(), input.contracts.dusd, "borrow token");
+        assertEq(market.collateralToken(), FRXUSD_DUSD_CURVE_POOL_MAINNET, "collateral token");
+        assertEq(market.irm(), address(irm), "IRM");
+        assertEq(market.oracle(), marketOracle, "oracle");
+        assertEq(market.liquidationEngine(), address(0), "liquidation engine");
+        assertEq(market.maxLtv(), 0.6 ether, "max LTV");
+        assertEq(market.foreclosureLtv(), 0.8 ether, "foreclosure LTV");
+        assertEq(market.borrowOpeningFee(), 0, "borrow opening fee");
+        assertEq(market.creditAccount(), TREASURY_MULTISIG, "credit account");
+        assertEq(market.feeRecipient(), input.contracts.feeRecipientMintMarkets, "fee recipient");
+
+        Balance memory supply = IMarket(address(market)).totalSupply();
+        Balance memory borrowed = IMarket(address(market)).totalBorrowed();
+        assertEq(supply.assets, 1_000_000 ether, "credit limit");
+        Position memory creditPosition = IMarket(address(market)).position(TREASURY_MULTISIG);
+        assertEq(creditPosition.supplyShares, 0, "credit-account supply shares");
+        assertEq(creditPosition.borrowShares, 0, "credit-account borrow shares");
+        assertEq(creditPosition.collateralAssets, 0, "credit-account collateral");
+        assertEq(supply.shares, 0, "supply shares");
+        assertEq(borrowed.assets, 0, "borrowed assets");
+        assertEq(borrowed.shares, 0, "borrowed shares");
+        assertEq(market.claimableFeesAssets(), 0, "claimable fees");
+        assertEq(market.badDebtAssets(), 0, "bad debt");
+
+        assertEq(market.convexBooster(), CONVEX_BOOSTER_MAINNET, "Convex Booster");
+        assertEq(market.convexPoolId(), POOL_ID_FRXUSD_DUSD_CURVE_POOL_MAINNET, "Convex pool id");
+        assertEq(market.convexRewardPool(), CONVEX_REWARD_POOL_CVX_FRXUSD_DUSD_MAINNET, "Convex reward pool");
+        assertTrue(market.convexActive(), "Convex strategy active");
+        assertEq(market.rewardRecipient(), TREASURY_MULTISIG, "reward recipient");
+        assertEq(market.rewardToken(0), CRV_TOKEN_MAINNET, "CRV reward");
+        assertEq(market.rewardToken(1), CVX_TOKEN_MAINNET, "CVX reward");
+        assertEq(market.rewardToken(2), WFRAX_TOKEN_MAINNET, "WFRAX reward");
+        vm.expectRevert();
+        market.rewardToken(3);
+
+        assertEq(Ownable(address(market)).owner(), input.contracts.timelock, "market owner");
+        assertEq(Ownable(address(irm)).owner(), input.contracts.timelock, "IRM owner");
+        (uint256 borrowRate,) = irm.irState();
+        assertEq(borrowRate, 0.04 ether / uint256(365 days), "borrow rate");
+        assertEq(market.pendingOwner(), address(0), "market pending owner");
+        assertEq(irm.pendingOwner(), address(0), "IRM pending owner");
+        assertFalse(market.paused(PAUSE_TYPE), "market initially paused");
+        assertFalse(market.paused(FROZEN_TYPE), "market initially frozen");
+        assertEq(irm.market(), address(market), "IRM market");
+        assertTrue(Pausable(address(market)).pausers(PRODUCTION_FREEZER, PAUSE_TYPE), "production pauser");
+        assertTrue(Pausable(address(market)).pausers(PRODUCTION_FREEZER, FROZEN_TYPE), "production freezer");
+        assertTrue(Pausable(address(market)).pausers(FUTURE_EMERGENCY_CONTROLLER, PAUSE_TYPE), "controller pauser");
+        assertTrue(Pausable(address(market)).pausers(FUTURE_EMERGENCY_CONTROLLER, FROZEN_TYPE), "controller freezer");
+        assertFalse(Pausable(address(market)).pausers(params.deployer, PAUSE_TYPE), "deployer pauser");
+        assertFalse(Pausable(address(market)).pausers(params.deployer, FROZEN_TYPE), "deployer freezer");
+
+        _assertCreditMarketGovernance(address(market), false);
+        _assertSafeJson(SCHEDULE_JSON, TimelockController.scheduleBatch.selector);
+        _assertSafeJson(EXECUTE_JSON, TimelockController.executeBatch.selector);
+        _executeSafeTimelockBatch(SCHEDULE_JSON, EXECUTE_JSON);
+        _assertCreditMarketGovernance(address(market), true);
+
+        assertFalse(
+            AltoAdapter(payable(input.contracts.altoAdapter)).isApprovedContract(address(market)),
+            "credit market should not be adapter-approved"
+        );
+        assertFalse(
+            ILiquidationPeripheryBase(input.contracts.liquidationPeriphery).supportedMarkets(address(market)),
+            "credit market should not be supported by liquidation periphery"
+        );
+        assertFalse(
+            market.authorizedLiquidationPeriphery(input.contracts.liquidationPeriphery),
+            "credit market should not authorize liquidation periphery"
+        );
+    }
+
+    function _assertCreditMarketGovernance(address market, bool enabled) private view {
+        assertEq(IMarketRegistry(input.contracts.marketRegistry).isMintMarket(market), enabled, "registry status");
+
+        IDUSD dusd = IDUSD(input.contracts.dusd);
+        assertEq(dusd.allowedMinter(market), enabled, "DUSD minter status");
+        assertEq(dusd.allowedBurner(market), enabled, "DUSD burner status");
+        (uint256 minted, uint256 ceiling) = dusd.minterConfig(market);
+        assertEq(minted, 0, "initial minted amount");
+        assertEq(ceiling, enabled ? 1_000_000 ether : 0, "DUSD minter ceiling");
     }
 }
 

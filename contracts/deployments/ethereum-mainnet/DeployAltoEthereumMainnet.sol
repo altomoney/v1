@@ -55,6 +55,10 @@ import {DUSDBatch, DUSDBatchParams, DUSDBatchReport} from "@alto/deployments/eth
 import {MintMarketBatch, MintMarketBatchParams} from "@alto/deployments/ethereum-mainnet/MintMarketBatch.sol";
 import {BorrowMarketBatch, BorrowMarketBatchParams} from "@alto/deployments/ethereum-mainnet/BorrowMarketBatch.sol";
 import {
+    ConvexCreditLineMarketBatch,
+    ConvexCreditLineMarketBatchParams
+} from "@alto/deployments/ethereum-mainnet/ConvexCreditLineMarketBatch.sol";
+import {
     LeverageSwapperMultiTargetBatch,
     LeverageSwapperMultiTargetBatchParams
 } from "@alto/deployments/ethereum-mainnet/LeverageSwapperMultiTargetBatch.sol";
@@ -90,7 +94,8 @@ import {
     CONVEX_REWARD_POOL_CVX_FRXUSD_DUSD_MAINNET,
     CONVEX_BOOSTER_MAINNET,
     CRV_TOKEN_MAINNET,
-    CVX_TOKEN_MAINNET
+    CVX_TOKEN_MAINNET,
+    WFRAX_TOKEN_MAINNET
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
@@ -115,6 +120,8 @@ import {
     UsmFinalizeMode,
     AdvancedPermissionsUsmContracts,
     MintCurveConvexPositionContracts,
+    ConvexCreditLineMarketContracts,
+    DeployConvexCreditLineMarketParams,
     Contracts
 } from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 import {ILiquidationPeripheryBase} from "@alto/lending/liquidation/interfaces/ILiquidationPeriphery.sol";
@@ -735,6 +742,10 @@ library DeployAltoEthereumMainnet {
             input = MarketDeprecationDeployment.deployFactory(input);
         } else if (params.phase == DeploymentPhase.MARKET_DEPRECATION_PHASE_0) {
             input = MarketDeprecationDeployment.generate(params, input);
+        } else if (params.phase == DeploymentPhase.CONVEX_CREDIT_LINE_MARKET) {
+            input.contracts.convexCreditLineMarket = _deployConvexCreditLineMarket(
+                _convexCreditLineMarketParams(input, params), input, params.deployerHasOwnership
+            );
         } else {
             revert("Invalid phase");
         }
@@ -1002,6 +1013,103 @@ library DeployAltoEthereumMainnet {
         }
 
         return report;
+    }
+
+    function _convexCreditLineMarketParams(
+        AltoEthereumMainnetInput memory input,
+        AltoEthereumMainnetParams memory params
+    ) internal pure returns (DeployConvexCreditLineMarketParams memory) {
+        return DeployConvexCreditLineMarketParams({
+            owner: input.contracts.timelock,
+            dusd: input.contracts.dusd,
+            feeRecipient: input.contracts.feeRecipientMintMarkets,
+            collateralToken: FRXUSD_DUSD_CURVE_POOL_MAINNET,
+            creditAccount: params.treasuryMultisig,
+            irmInterestRate: 0.04 ether / uint256(365 days), // 4%
+            maxLtv: 0.6 ether, // 60%
+            creditLimit: 1_000_000 ether, // 1,000,000 DUSD
+            foreclosureLtv: 0.8 ether, // 80%
+            initialBorrowOpeningFee: 0,
+            convexBooster: CONVEX_BOOSTER_MAINNET,
+            convexPoolId: POOL_ID_FRXUSD_DUSD_CURVE_POOL_MAINNET,
+            rewardRecipient: params.treasuryMultisig,
+            rewardTokens: _convexCreditLineRewardTokens(),
+            freezer: params.freezer,
+            emergencyController: input.contracts.emergencyController
+        });
+    }
+
+    function _convexCreditLineRewardTokens() private pure returns (address[] memory rewardTokens) {
+        rewardTokens = new address[](3);
+        rewardTokens[0] = CRV_TOKEN_MAINNET;
+        rewardTokens[1] = CVX_TOKEN_MAINNET;
+        rewardTokens[2] = WFRAX_TOKEN_MAINNET;
+    }
+
+    function _deployConvexCreditLineMarket(
+        DeployConvexCreditLineMarketParams memory marketParams,
+        AltoEthereumMainnetInput memory input,
+        bool deployerHasOwnership
+    ) internal returns (ConvexCreditLineMarketContracts memory report) {
+        ConvexCreditLineMarketBatch batch = new ConvexCreditLineMarketBatch(
+            ConvexCreditLineMarketBatchParams({
+                owner: marketParams.owner,
+                dusd: marketParams.dusd,
+                feeRecipient: marketParams.feeRecipient,
+                collateralToken: marketParams.collateralToken,
+                creditAccount: marketParams.creditAccount,
+                irmInterestRate: marketParams.irmInterestRate,
+                maxLtv: marketParams.maxLtv,
+                creditLimit: marketParams.creditLimit,
+                foreclosureLtv: marketParams.foreclosureLtv,
+                initialBorrowOpeningFee: marketParams.initialBorrowOpeningFee,
+                convexBooster: marketParams.convexBooster,
+                convexPoolId: marketParams.convexPoolId,
+                rewardRecipient: marketParams.rewardRecipient,
+                rewardTokens: marketParams.rewardTokens,
+                freezer: marketParams.freezer,
+                emergencyController: marketParams.emergencyController
+            })
+        );
+        report = batch.getReport();
+
+        if (deployerHasOwnership) {
+            IDUSD(marketParams.dusd).setMinterStatus(report.market, true);
+            IDUSD(marketParams.dusd).setMinterCeiling(report.market, marketParams.creditLimit);
+            IDUSD(marketParams.dusd).setBurnerStatus(report.market, true);
+            IMarketRegistry(input.contracts.marketRegistry).addMintMarket(report.market);
+        } else {
+            _writeConvexCreditLineMarketFinalizationBatch(marketParams, input, report.market);
+        }
+    }
+
+    function _writeConvexCreditLineMarketFinalizationBatch(
+        DeployConvexCreditLineMarketParams memory marketParams,
+        AltoEthereumMainnetInput memory input,
+        address market
+    ) private {
+        address timelock = input.contracts.timelock;
+        uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
+
+        address[] memory targets = new address[](4);
+        uint256[] memory values = new uint256[](4);
+        bytes[] memory payloads = new bytes[](4);
+
+        targets[0] = marketParams.dusd;
+        payloads[0] = abi.encodeCall(IDUSD.setMinterStatus, (market, true));
+
+        targets[1] = marketParams.dusd;
+        payloads[1] = abi.encodeCall(IDUSD.setMinterCeiling, (market, marketParams.creditLimit));
+
+        targets[2] = marketParams.dusd;
+        payloads[2] = abi.encodeCall(IDUSD.setBurnerStatus, (market, true));
+
+        targets[3] = input.contracts.marketRegistry;
+        payloads[3] = abi.encodeCall(IMarketRegistry.addMintMarket, (market));
+
+        SafeTransactionBuilder.writeTimelockBatch(
+            "frxusd-dusd-convex-credit-line-market-registry", timelock, targets, values, payloads, minDelay
+        );
     }
 
     function _deployUsm(DeployUsmParams memory usmParams, AltoEthereumMainnetInput memory input)
