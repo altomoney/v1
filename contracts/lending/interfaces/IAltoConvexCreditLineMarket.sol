@@ -168,8 +168,8 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     /// @return The claimable amount in borrow-token assets
     function claimableFeesAssets() external view returns (uint128);
 
-    /// @notice The cumulative debt written off during foreclosures
-    /// @return The cumulative bad debt in borrow-token assets
+    /// @notice The debt written off during foreclosures that has not been settled
+    /// @return The unsettled bad debt in borrow-token assets
     function badDebtAssets() external view returns (uint256);
 
     /// @notice Sets the credit account when the current account has no debt or collateral
@@ -197,6 +197,8 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     function claimInterest(uint256 interest) external returns (uint256 claimed);
 
     /// @notice Burns recovered borrow tokens from the owner and reduces recorded bad debt
+    /// @dev Available while paused or frozen. The amount must be positive and cannot exceed bad debt, the owner's
+    /// token balance or DUSD's minted balance for this market. Unminted fees may need to be claimed before settlement.
     /// @param assets The amount of bad debt to settle in borrow-token assets
     function settleBadDebt(uint256 assets) external;
 

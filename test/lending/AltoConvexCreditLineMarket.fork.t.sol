@@ -110,7 +110,8 @@ contract AltoConvexCreditLineMarketForkTest is Test {
         collateralReceiver = makeAddr("CollateralReceiver");
 
         oracle = new OracleMock();
-        // PRICING_LP option 1: virtual price multiplied by the minimum underlying price (both assumed at $1).
+        // Test valuation uses virtual price with both underlying assets assumed at $1.
+        // The deployment script uses AltoCreditMarketLpOracle's fixed 1 DUSD per LP instead.
         initialOraclePrice = CURVE_POOL.get_virtual_price() * 1e18;
         oracle.setPrice(initialOraclePrice);
 
