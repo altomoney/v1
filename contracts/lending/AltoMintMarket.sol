@@ -60,6 +60,10 @@ contract AltoMintMarket is AltoBaseMarket {
     }
 
     function initialize(MintMarketInitParams memory _initParams) public initializer {
+        // Ordinary markets require an engine for public liquidation.
+        if (_initParams.baseMarketInitParams.liquidationEngine == address(0)) {
+            revert AltoBaseMarketInvalidInput();
+        }
         __AltoBaseMarket_init(_initParams.baseMarketInitParams, MarketType.MINT);
 
         if (_initParams.initialBorrowOpeningFee > MATH_PRECISION) {

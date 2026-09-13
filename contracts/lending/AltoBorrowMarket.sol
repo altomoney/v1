@@ -65,6 +65,10 @@ contract AltoBorrowMarket is AltoBaseMarket {
     }
 
     function initialize(BorrowMarketInitParams memory _initParams) public initializer {
+        // Ordinary markets require an engine for public liquidation.
+        if (_initParams.baseMarketInitParams.liquidationEngine == address(0)) {
+            revert AltoBaseMarketInvalidInput();
+        }
         __AltoBaseMarket_init(_initParams.baseMarketInitParams, MarketType.BORROW);
 
         if (_initParams.initialBorrowOpeningFee > MATH_PRECISION || _initParams.initialInterestFee > MATH_PRECISION) {
