@@ -7,9 +7,9 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {
     IAltoConvexCreditLineMarketErrors,
     IAltoConvexCreditLineMarketEvents
-} from "../interfaces/IAltoConvexCreditLineMarket.sol";
-import {IConvexBooster} from "../interfaces/vendor/IConvexBooster.sol";
-import {IConvexRewardPool} from "../interfaces/vendor/IConvexRewardPool.sol";
+} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
+import {IConvexBooster} from "@alto/lending/interfaces/vendor/IConvexBooster.sol";
+import {IConvexRewardPool} from "@alto/lending/interfaces/vendor/IConvexRewardPool.sol";
 
 /// @title Alto Convex Credit Line Library
 /// @author GPM
