@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 import {
     IAltoConvexCreditLineMarketErrors,
@@ -62,8 +63,14 @@ contract AltoConvexCreditLineMarketAddRewardTokenTest is ConvexCreditLineCommon 
         AccountingState memory beforeState = _state();
         vm.expectEmit(address(market));
         emit IAltoConvexCreditLineMarketEvents.RewardTokenAdded(token);
+        vm.recordLogs();
         vm.prank(OWNER);
         market.addRewardToken(token);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 1);
+        assertEq(logs[0].emitter, address(market));
+        assertEq(logs[0].topics[0], IAltoConvexCreditLineMarketEvents.RewardTokenAdded.selector);
 
         _assertRewardTokenCount(3);
         assertEq(market.rewardToken(2), token);
