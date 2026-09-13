@@ -11,7 +11,7 @@ import {
     ConvexCreditLineInitParams,
     IAltoConvexCreditLineMarketStaticTypes
 } from "../interfaces/IAltoConvexCreditLineMarket.sol";
-import {IIrm, IRMType} from "../interfaces/IIrm.sol";
+import {IIrm} from "../interfaces/IIrm.sol";
 import {BaseMarketInitParams, IMarketBase, MarketType, Position} from "../interfaces/IMarket.sol";
 import {IMintableERC20} from "../interfaces/IMintableERC20.sol";
 import {IConvexRewardPool} from "../interfaces/vendor/IConvexRewardPool.sol";
@@ -266,11 +266,11 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
         _requireNonZeroAddress(_initParams.creditAccount);
         _requireNonZeroAddress(baseMarketInitParams.feeRecipient);
+        _requireNonZeroAddress(baseMarketInitParams.irm);
         if (
             _initParams.creditLimit == 0 || _initParams.initialBorrowOpeningFee > MATH_PRECISION
                 || baseMarketInitParams.maxLtv >= _initParams.foreclosureLtv
                 || _initParams.foreclosureLtv > MATH_PRECISION
-                || IIrm(baseMarketInitParams.irm).IRM_TYPE() != IRMType.FIXED_RATE
         ) {
             revert AltoCreditMarketInvalidInput();
         }
@@ -292,10 +292,10 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     }
 
     /// @inheritdoc AltoBaseMarket
-    /// @dev Unlike `AltoBaseMarket`, only a nonzero fixed-rate IRM can be set.
+    /// @dev Unlike `AltoBaseMarket`, the IRM must be nonzero.
     function _setIrm(address _irm, bool _skipAccrueInterest) internal override {
         _requireNonZeroAddress(_irm);
-        if (_irm == irm || IIrm(_irm).IRM_TYPE() != IRMType.FIXED_RATE) {
+        if (_irm == irm) {
             revert AltoCreditMarketInvalidInput();
         }
 
@@ -447,7 +447,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
         return interest;
     }
 
-    /// @dev Accrues fixed-rate interest into active debt and `claimableFeesAssets` without changing the credit limit.
+    /// @dev Accrues interest into active debt and `claimableFeesAssets` without changing the credit limit.
     function _accrueInterest() internal override {
         (uint256 interest, uint256 borrowRate) = IIrm(irm).updateInterestRate(totalSupply.assets, totalBorrowed.assets);
 

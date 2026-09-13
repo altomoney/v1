@@ -6,12 +6,50 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IMintableERC20} from "@alto/lending/interfaces/IMintableERC20.sol";
 import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
+import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
+import {PegResponsiveExponentialIrm} from "@alto/lending/irm/PegResponsiveExponentialIrm.sol";
+import {MockDusdPegOracle} from "@alto-test/lending/btt/mocks/MockDusdPegOracle.sol";
 import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 import {ConvexCreditLineCommon} from "./ConvexCreditLineCommon.t.sol";
 
 contract AltoConvexCreditLineMarketAccrueInterestTest is ConvexCreditLineCommon {
+    function test_AdaptiveIrmAccruesAndRespondsToCreditUtilization() external {
+        AdaptiveCurveIrm candidate = _newAdaptiveCurveIrm();
+        _assertVariableIrmAccrualAndPause(candidate);
+
+        (uint128 debt,) = market.totalBorrowed();
+        (, uint256 lowUtilizationRate) = candidate.updateInterestRateView(CREDIT_LIMIT, debt);
+        uint256 newCreditLimit = uint256(debt) * 2;
+        vm.prank(OWNER);
+        market.setCreditLimit(newCreditLimit);
+        (, uint256 higherUtilizationRate) = candidate.updateInterestRateView(newCreditLimit, debt);
+        assertGt(higherUtilizationRate, lowUtilizationRate);
+
+        vm.expectEmit(address(market));
+        emit IMarketEvents.AccrueInterest(higherUtilizationRate, 0, debt, uint128(newCreditLimit));
+        market.accrueInterest();
+    }
+
+    function test_PegResponsiveIrmAccruesAndRespondsToPegPrice() external {
+        PegResponsiveExponentialIrm candidate = _newPegResponsiveIrm();
+        _assertVariableIrmAccrualAndPause(candidate);
+
+        MockDusdPegOracle(candidate.pegOracle()).setPrice(0.99 ether, uint48(block.timestamp), true);
+        market.accrueInterest();
+        (uint256 stressedRate,,,) = candidate.irState();
+        assertGt(stressedRate, BORROW_RATE);
+
+        vm.warp(block.timestamp + 1 days);
+        (uint128 debt,) = market.totalBorrowed();
+        (uint256 interest, uint256 rate) = candidate.updateInterestRateView(CREDIT_LIMIT, debt);
+        assertEq(rate, stressedRate);
+        vm.expectEmit(address(market));
+        emit IMarketEvents.AccrueInterest(rate, interest, uint128(uint256(debt) + interest), uint128(CREDIT_LIMIT));
+        market.accrueInterest();
+    }
+
     function test_RevertWhenPaused() external {
         _pause(PAUSE_TYPE);
         _assertPausedRevert(PAUSE_TYPE);
@@ -119,6 +157,39 @@ contract AltoConvexCreditLineMarketAccrueInterestTest is ConvexCreditLineCommon 
         market.accrueInterest();
         vm.clearMockedCalls();
         _assertUnchanged(beforeState);
+    }
+
+    function _assertVariableIrmAccrualAndPause(IIrm candidate) private {
+        _openPosition(1_000 ether, 100 ether);
+        vm.warp(block.timestamp + 1 days);
+        (uint256 oldInterest,) = irm.updateInterestRateView(CREDIT_LIMIT, 100 ether);
+        assertGt(oldInterest, 0);
+
+        vm.prank(OWNER);
+        market.setIrm(address(candidate), false);
+        AccountingState memory beforeState = _state();
+        assertEq(beforeState.totalBorrowed.assets, 100 ether + oldInterest);
+        assertEq(beforeState.claimableFees, oldInterest);
+
+        vm.warp(block.timestamp + 1 days);
+        (uint256 interest, uint256 rate) =
+            candidate.updateInterestRateView(CREDIT_LIMIT, beforeState.totalBorrowed.assets);
+        assertGt(interest, 0);
+        uint128 expectedDebt = uint128(uint256(beforeState.totalBorrowed.assets) + interest);
+        vm.expectEmit(address(market));
+        emit IMarketEvents.AccrueInterest(rate, interest, expectedDebt, uint128(CREDIT_LIMIT));
+        market.accrueInterest();
+
+        AccountingState memory expectedState = beforeState;
+        expectedState.totalBorrowed.assets = expectedDebt;
+        expectedState.claimableFees += uint128(interest);
+        _assertStateEq(_state(), expectedState);
+
+        _pause(PAUSE_TYPE);
+        vm.warp(block.timestamp + 7 days);
+        _unpause(PAUSE_TYPE);
+        market.accrueInterest();
+        _assertStateEq(_state(), expectedState);
     }
 
     function _setTokenCallsToRevert(bool shouldRevert) private {

@@ -7,6 +7,8 @@ import {Vm} from "forge-std/Vm.sol";
 
 import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
+import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
+import {PegResponsiveExponentialIrm} from "@alto/lending/irm/PegResponsiveExponentialIrm.sol";
 import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 import {Uint128Converter} from "@alto/lending/libraries/Uint128Converter.sol";
 import {
@@ -16,7 +18,7 @@ import {
 } from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {IAltoLiquidationEngine} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
 import {IMarketErrors, IMarketEvents, MarketType} from "@alto/lending/interfaces/IMarket.sol";
-import {IIrm, IRMType} from "@alto/lending/interfaces/IIrm.sol";
+import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {IConvexRewardPool} from "@alto/lending/interfaces/vendor/IConvexRewardPool.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
@@ -75,7 +77,7 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
 
         params.creditMarketInitParams.baseMarketInitParams.irm = address(0);
-        vm.expectRevert();
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress.selector);
         candidate.initialize(params);
 
         params = _validInitParams();
@@ -191,16 +193,10 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         assertEq(candidateIrm.market(), address(0));
     }
 
-    function test_RevertForInvalidIrmTypeAndRegistrationFailure() external {
+    function test_RevertWhen_IrmRegistrationFails() external {
         ConvexCreditLineInitParams memory params = _validInitParams();
         AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
         FixedRateIrm candidateIrm = FixedRateIrm(params.creditMarketInitParams.baseMarketInitParams.irm);
-        bytes memory typeCall = abi.encodeCall(IIrm.IRM_TYPE, ());
-
-        vm.mockCall(address(candidateIrm), typeCall, abi.encode(IRMType.ADAPTIVE_CURVE));
-        _expectCreditInvalid(candidate, params);
-        vm.clearMockedCalls();
-
         vm.mockCallRevert(
             address(candidateIrm), abi.encodeWithSelector(IIrm.setMarket.selector), bytes("SET_MARKET_REVERTED")
         );
@@ -210,21 +206,32 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         assertEq(candidateIrm.market(), address(0));
     }
 
-    function test_RevertAndRollbackWhenIrmTypeQueryRevertsOrIsMalformed() external {
+    function test_InitializesWithAdaptiveCurveIrm() external {
         ConvexCreditLineInitParams memory params = _validInitParams();
+        AdaptiveCurveIrm candidateIrm = _newAdaptiveCurveIrm();
+        params.creditMarketInitParams.baseMarketInitParams.irm = address(candidateIrm);
+
+        AltoConvexCreditLineMarket candidate = _initialize(params);
+        assertEq(candidate.irm(), address(candidateIrm));
+        assertEq(candidateIrm.market(), address(candidate));
+    }
+
+    function test_InitializesWithPegResponsiveIrm() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        PegResponsiveExponentialIrm candidateIrm = _newPegResponsiveIrm();
+        params.creditMarketInitParams.baseMarketInitParams.irm = address(candidateIrm);
+
+        AltoConvexCreditLineMarket candidate = _initialize(params);
+        assertEq(candidate.irm(), address(candidateIrm));
+        assertEq(candidateIrm.market(), address(candidate));
+    }
+
+    function test_RevertWhen_IrmHasNoCode() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        params.creditMarketInitParams.baseMarketInitParams.irm = USER;
         AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
-        address candidateIrm = params.creditMarketInitParams.baseMarketInitParams.irm;
-        bytes memory callData = abi.encodeCall(IIrm.IRM_TYPE, ());
-
-        vm.mockCallRevert(candidateIrm, callData, "IRM_TYPE_REVERTED");
-        vm.expectRevert(bytes("IRM_TYPE_REVERTED"));
-        candidate.initialize(params);
-        vm.clearMockedCalls();
-
-        vm.mockCall(candidateIrm, callData, hex"01");
         vm.expectRevert();
         candidate.initialize(params);
-        vm.clearMockedCalls();
         assertEq(candidate.owner(), address(0));
     }
 
