@@ -25,6 +25,7 @@ import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/inte
 /// @custom:contact security@altofoundation.org
 /// @notice An Isolated Convex Credit Line Market
 /// @dev `totalSupply.assets` is the credit capacity shared by active debt and cumulative bad debt.
+/// @custom:audit Pending
 contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMarketStaticTypes {
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
