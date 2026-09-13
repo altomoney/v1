@@ -743,8 +743,32 @@ library DeployAltoEthereumMainnet {
         } else if (params.phase == DeploymentPhase.MARKET_DEPRECATION_PHASE_0) {
             input = MarketDeprecationDeployment.generate(params, input);
         } else if (params.phase == DeploymentPhase.CONVEX_CREDIT_LINE_MARKET) {
+            address[] memory rewardTokens = new address[](3);
+            rewardTokens[0] = CRV_TOKEN_MAINNET;
+            rewardTokens[1] = CVX_TOKEN_MAINNET;
+            rewardTokens[2] = WFRAX_TOKEN_MAINNET;
+
             input.contracts.convexCreditLineMarket = _deployConvexCreditLineMarket(
-                _convexCreditLineMarketParams(input, params), input, params.deployerHasOwnership
+                DeployConvexCreditLineMarketParams({
+                    owner: input.contracts.timelock,
+                    dusd: input.contracts.dusd,
+                    feeRecipient: input.contracts.feeRecipientMintMarkets,
+                    collateralToken: FRXUSD_DUSD_CURVE_POOL_MAINNET,
+                    creditAccount: params.treasuryMultisig,
+                    irmInterestRate: 0.04 ether / uint256(365 days), // 4%
+                    maxLtv: 0.6 ether, // 60%
+                    creditLimit: 1_000_000 ether, // 1,000,000 DUSD
+                    foreclosureLtv: 0.8 ether, // 80%
+                    initialBorrowOpeningFee: 0,
+                    convexBooster: CONVEX_BOOSTER_MAINNET,
+                    convexPoolId: POOL_ID_FRXUSD_DUSD_CURVE_POOL_MAINNET,
+                    rewardRecipient: params.treasuryMultisig,
+                    rewardTokens: rewardTokens,
+                    freezer: params.freezer,
+                    emergencyController: input.contracts.emergencyController
+                }),
+                input,
+                params.deployerHasOwnership
             );
         } else {
             revert("Invalid phase");
@@ -1015,42 +1039,13 @@ library DeployAltoEthereumMainnet {
         return report;
     }
 
-    function _convexCreditLineMarketParams(
-        AltoEthereumMainnetInput memory input,
-        AltoEthereumMainnetParams memory params
-    ) internal pure returns (DeployConvexCreditLineMarketParams memory) {
-        return DeployConvexCreditLineMarketParams({
-            owner: input.contracts.timelock,
-            dusd: input.contracts.dusd,
-            feeRecipient: input.contracts.feeRecipientMintMarkets,
-            collateralToken: FRXUSD_DUSD_CURVE_POOL_MAINNET,
-            creditAccount: params.treasuryMultisig,
-            irmInterestRate: 0.04 ether / uint256(365 days), // 4%
-            maxLtv: 0.6 ether, // 60%
-            creditLimit: 1_000_000 ether, // 1,000,000 DUSD
-            foreclosureLtv: 0.8 ether, // 80%
-            initialBorrowOpeningFee: 0,
-            convexBooster: CONVEX_BOOSTER_MAINNET,
-            convexPoolId: POOL_ID_FRXUSD_DUSD_CURVE_POOL_MAINNET,
-            rewardRecipient: params.treasuryMultisig,
-            rewardTokens: _convexCreditLineRewardTokens(),
-            freezer: params.freezer,
-            emergencyController: input.contracts.emergencyController
-        });
-    }
-
-    function _convexCreditLineRewardTokens() private pure returns (address[] memory rewardTokens) {
-        rewardTokens = new address[](3);
-        rewardTokens[0] = CRV_TOKEN_MAINNET;
-        rewardTokens[1] = CVX_TOKEN_MAINNET;
-        rewardTokens[2] = WFRAX_TOKEN_MAINNET;
-    }
-
     function _deployConvexCreditLineMarket(
         DeployConvexCreditLineMarketParams memory marketParams,
         AltoEthereumMainnetInput memory input,
         bool deployerHasOwnership
     ) internal returns (ConvexCreditLineMarketContracts memory report) {
+        // Match mint-market headroom so accrued interest can be minted above the credit limit.
+        uint256 minterCeiling = marketParams.creditLimit * 1.05 ether / marketParams.foreclosureLtv;
         ConvexCreditLineMarketBatch batch = new ConvexCreditLineMarketBatch(
             ConvexCreditLineMarketBatchParams({
                 owner: marketParams.owner,
@@ -1075,18 +1070,19 @@ library DeployAltoEthereumMainnet {
 
         if (deployerHasOwnership) {
             IDUSD(marketParams.dusd).setMinterStatus(report.market, true);
-            IDUSD(marketParams.dusd).setMinterCeiling(report.market, marketParams.creditLimit);
+            IDUSD(marketParams.dusd).setMinterCeiling(report.market, minterCeiling);
             IDUSD(marketParams.dusd).setBurnerStatus(report.market, true);
             IMarketRegistry(input.contracts.marketRegistry).addMintMarket(report.market);
         } else {
-            _writeConvexCreditLineMarketFinalizationBatch(marketParams, input, report.market);
+            _writeConvexCreditLineMarketFinalizationBatch(marketParams, input, report.market, minterCeiling);
         }
     }
 
     function _writeConvexCreditLineMarketFinalizationBatch(
         DeployConvexCreditLineMarketParams memory marketParams,
         AltoEthereumMainnetInput memory input,
-        address market
+        address market,
+        uint256 minterCeiling
     ) private {
         address timelock = input.contracts.timelock;
         uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
@@ -1099,7 +1095,7 @@ library DeployAltoEthereumMainnet {
         payloads[0] = abi.encodeCall(IDUSD.setMinterStatus, (market, true));
 
         targets[1] = marketParams.dusd;
-        payloads[1] = abi.encodeCall(IDUSD.setMinterCeiling, (market, marketParams.creditLimit));
+        payloads[1] = abi.encodeCall(IDUSD.setMinterCeiling, (market, minterCeiling));
 
         targets[2] = marketParams.dusd;
         payloads[2] = abi.encodeCall(IDUSD.setBurnerStatus, (market, true));

@@ -1047,6 +1047,49 @@ contract DeployConvexCreditLineMarketPhaseTest is DeployMarketPhaseTestBase {
             market.authorizedLiquidationPeriphery(input.contracts.liquidationPeriphery),
             "credit market should not authorize liquidation periphery"
         );
+
+        _assertFullyDrawnMarketCanRepayAfterInterest(market);
+    }
+
+    function test_deployConvexCreditLineMarketWithDirectFinalization() public {
+        params.phase = DeploymentPhase.CONVEX_CREDIT_LINE_MARKET;
+        params.deployerHasOwnership = true;
+
+        vm.startPrank(input.contracts.timelock);
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+        vm.stopPrank();
+
+        AltoConvexCreditLineMarket market = AltoConvexCreditLineMarket(input.contracts.convexCreditLineMarket.market);
+        _assertCreditMarketGovernance(address(market), true);
+        _assertFullyDrawnMarketCanRepayAfterInterest(market);
+    }
+
+    function _assertFullyDrawnMarketCanRepayAfterInterest(AltoConvexCreditLineMarket market) private {
+        uint256 creditLimit = IMarket(address(market)).totalSupply().assets;
+        uint256 collateral = 2_000_000 ether;
+        deal(market.collateralToken(), TREASURY_MULTISIG, collateral);
+
+        vm.startPrank(TREASURY_MULTISIG);
+        IERC20Metadata(market.collateralToken()).approve(address(market), collateral);
+        market.addCollateral(collateral, TREASURY_MULTISIG);
+        market.borrow(creditLimit, 0, TREASURY_MULTISIG, TREASURY_MULTISIG, "");
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 30 days);
+        market.accrueInterest();
+        uint256 interest = market.claimableFeesAssets();
+        assertGt(interest, 0, "interest accrued above fully drawn credit limit");
+
+        IERC20Metadata dusd = IERC20Metadata(input.contracts.dusd);
+        uint256 recipientBalanceBefore = dusd.balanceOf(market.feeRecipient());
+        vm.prank(TREASURY_MULTISIG);
+        (uint256 repaidAssets,) = market.repay(1 ether, 0, TREASURY_MULTISIG);
+
+        assertEq(repaidAssets, 1 ether, "repayment succeeds while debt exceeds credit limit");
+        assertEq(market.claimableFeesAssets(), 0, "repayment claims interest");
+        assertEq(dusd.balanceOf(market.feeRecipient()), recipientBalanceBefore + interest, "interest minted");
+        (uint256 minted,) = IDUSD(input.contracts.dusd).minterConfig(address(market));
+        assertEq(minted, creditLimit + interest - repaidAssets, "minted debt after repayment");
     }
 
     function _assertCreditMarketGovernance(address market, bool enabled) private view {
@@ -1057,7 +1100,7 @@ contract DeployConvexCreditLineMarketPhaseTest is DeployMarketPhaseTestBase {
         assertEq(dusd.allowedBurner(market), enabled, "DUSD burner status");
         (uint256 minted, uint256 ceiling) = dusd.minterConfig(market);
         assertEq(minted, 0, "initial minted amount");
-        assertEq(ceiling, enabled ? 1_000_000 ether : 0, "DUSD minter ceiling");
+        assertEq(ceiling, enabled ? 1_312_500 ether : 0, "DUSD minter ceiling");
     }
 }
 
