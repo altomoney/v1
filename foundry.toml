@@ -9,7 +9,7 @@ no-match-test = "testSimulate*"
 
 evm_version = 'cancun'
 optimizer = true
-optimizer_runs = 1
+optimizer_runs = 100
 
 remappings = [
 	'deployments/=contracts/deployments/',
@@ -61,4 +61,4 @@ src = 'contracts'
 test = "test/lending"
 
 [profile.deployment]
-optimizer_runs = 200
+optimizer_runs = 100
