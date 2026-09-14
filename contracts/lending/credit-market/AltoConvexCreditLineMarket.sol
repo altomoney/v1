@@ -141,7 +141,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     }
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
-    function claimInterest(uint256 interest) external nonReentrant whenNotPaused returns (uint256) {
+    function claimInterest(uint256 interest) external whenNotPaused returns (uint256) {
         _requireNonZeroAddress(feeRecipient);
         if (interest > claimableFeesAssets) {
             revert AltoCreditMarketInvalidInput();
@@ -399,13 +399,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
     /// @inheritdoc AltoBaseMarket
     /// @dev Repayment is limited to `creditAccount` debt and burns the payer's borrow tokens.
-    /// Pending fees are minted before the repayment burn, so DUSD minter headroom must cover that intermediate mint.
-    function _repay(uint256 assets, uint256 shares, address onBehalf)
-        internal
-        override
-        nonReentrant
-        returns (uint256, uint256)
-    {
+    function _repay(uint256 assets, uint256 shares, address onBehalf) internal override returns (uint256, uint256) {
         _requireCreditAccount(onBehalf);
 
         _accrueInterest();

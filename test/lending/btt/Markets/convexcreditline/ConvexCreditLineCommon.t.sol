@@ -39,11 +39,7 @@ contract BorrowTokenReentrantCallMock {
     }
 
     function mint(address, uint256) external {
-        MARKET.repay(1, 0, CREDIT_ACCOUNT);
-    }
-
-    function burn(address, uint256) external {
-        MARKET.repay(1, 0, CREDIT_ACCOUNT);
+        MARKET.borrow(1, 0, CREDIT_ACCOUNT, address(this), "");
     }
 }
 
@@ -221,9 +217,9 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
         );
     }
 
-    function _mockBorrowTokenReentrancy(bytes4 selector) internal {
+    function _mockBorrowTokenReentrancy() internal {
         BorrowTokenReentrantCallMock callback = new BorrowTokenReentrantCallMock(market, CREDIT_ACCOUNT);
-        vm.mockFunction(address(borrowToken), address(callback), abi.encodeWithSelector(selector));
+        vm.mockFunction(address(borrowToken), address(callback), abi.encodeWithSelector(borrowToken.mint.selector));
     }
 
     function _addCollateral(uint256 assets) internal {
