@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {stdError} from "forge-std/StdError.sol";
-import {Uint128Converter} from "@alto/lending/libraries/Uint128Converter.sol";
 import {
     IAltoConvexCreditLineMarketErrors,
     IAltoConvexCreditLineMarketEvents
@@ -20,7 +18,7 @@ contract AltoConvexCreditLineMarketClaimInterestTest is ConvexCreditLineCommon {
         market.claimInterest(0);
     }
 
-    function test_FeeRecipientCheckPrecedesCallerAndAmountChecks() external {
+    function test_FeeRecipientCheckPrecedesAmountCheck() external {
         vm.store(address(market), bytes32(uint256(13)), bytes32(0));
         vm.prank(USER);
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress.selector);
@@ -31,32 +29,60 @@ contract AltoConvexCreditLineMarketClaimInterestTest is ConvexCreditLineCommon {
         market.claimInterest(0);
     }
 
-    function test_RevertWhenCallerIsNeitherOwnerNorFeeRecipient() external {
-        vm.prank(USER);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
-        market.claimInterest(0);
+    function test_AnyoneCanClaimFeesOnlyForFeeRecipient() external {
+        _createFees(10 ether);
+        uint256 callerBalanceBefore = borrowToken.balanceOf(USER);
 
+        vm.expectEmit(address(market));
+        emit IAltoConvexCreditLineMarketEvents.InterestClaimed(FEE_RECIPIENT, 4 ether);
         vm.prank(USER);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
-        market.claimInterest(type(uint256).max);
+        uint256 claimed = market.claimInterest(4 ether);
+        assertEq(claimed, 4 ether);
+        assertEq(market.claimableFeesAssets(), 6 ether);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), 4 ether);
+        assertEq(borrowToken.balanceOf(USER), callerBalanceBefore);
+
+        vm.expectEmit(address(market));
+        emit IAltoConvexCreditLineMarketEvents.InterestClaimed(FEE_RECIPIENT, 6 ether);
+        vm.prank(USER);
+        claimed = market.claimInterest(0);
+        assertEq(claimed, 6 ether);
+        assertEq(market.claimableFeesAssets(), 0);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), 10 ether);
+        assertEq(borrowToken.balanceOf(USER), callerBalanceBefore);
+
+        uint256 supplyBefore = borrowToken.totalSupply();
+        vm.expectEmit(address(market));
+        emit IAltoConvexCreditLineMarketEvents.InterestClaimed(FEE_RECIPIENT, 0);
+        vm.prank(USER);
+        claimed = market.claimInterest(0);
+        assertEq(claimed, 0);
+        assertEq(borrowToken.totalSupply(), supplyBefore);
     }
 
-    function test_OverclaimsRevertAtomicallyAtCheckedSubtractionOrConversion() external {
+    function test_OverclaimsRevertWithInvalidInputWithoutMintingOrChangingAccounting() external {
         _createFees(10 ether);
         AccountingState memory beforeState = _state();
         uint256 supplyBefore = borrowToken.totalSupply();
         uint256 recipientBalanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
 
         vm.prank(OWNER);
-        vm.expectRevert(stdError.arithmeticError);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.claimInterest(10 ether + 1);
         _assertUnchanged(beforeState);
         assertEq(borrowToken.totalSupply(), supplyBefore);
         assertEq(borrowToken.balanceOf(FEE_RECIPIENT), recipientBalanceBefore);
 
         vm.prank(FEE_RECIPIENT);
-        vm.expectRevert(Uint128Converter.MathUtilsMaxUint128Overflow.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.claimInterest(uint256(type(uint128).max) + 1);
+        _assertUnchanged(beforeState);
+        assertEq(borrowToken.totalSupply(), supplyBefore);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), recipientBalanceBefore);
+
+        vm.prank(USER);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
+        market.claimInterest(type(uint256).max);
         _assertUnchanged(beforeState);
         assertEq(borrowToken.totalSupply(), supplyBefore);
         assertEq(borrowToken.balanceOf(FEE_RECIPIENT), recipientBalanceBefore);

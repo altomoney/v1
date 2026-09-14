@@ -2,14 +2,16 @@ AltoConvexCreditLineMarket::claimInterest()
 ├── when market is paused
 │   └── it should revert with IsPaused for PAUSE_TYPE
 ├── when fee recipient is zero address
-│   └── it should revert with AltoCreditMarketZeroAddress before caller and amount checks
+│   └── it should revert with AltoCreditMarketZeroAddress before the amount check
 ├── when caller is neither owner nor fee recipient
-│   └── it should revert with AltoCreditMarketUnauthorizedAccount before amount checks
-├── when an authorized caller requests more than claimableFeesAssets
+│   ├── it should allow partial claims and mint only to the fee recipient
+│   ├── it should allow claiming all remaining fees with zero amount
+│   └── it should emit and return zero without minting when no fees are available
+├── when any caller requests more than claimableFeesAssets
 │   ├── when interest fits in uint128
-│   │   └── it should revert with an arithmetic panic without minting or changing accounting
+│   │   └── it should revert with AltoCreditMarketInvalidInput without minting or changing accounting
 │   └── when interest exceeds uint128 max
-│       └── it should revert with MathUtilsMaxUint128Overflow without minting or changing accounting
+│       └── it should revert with AltoCreditMarketInvalidInput without minting or changing accounting
 ├── given caller is owner
 │   ├── when interest is zero
 │   │   ├── it should claim all available fees
