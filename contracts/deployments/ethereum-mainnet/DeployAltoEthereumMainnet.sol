@@ -107,6 +107,12 @@ import {
     UsmRegistryBatchParams,
     UsmRegistryBatchReport
 } from "@alto/deployments/ethereum-mainnet/UsmRegistryBatch.sol";
+import {
+    StandardUsmUpgradeBatch,
+    StandardUsmUpgradeBatchParams,
+    StandardUsmUpgradeBatchReport
+} from "@alto/deployments/ethereum-mainnet/StandardUsmUpgradeBatch.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IMarketRegistry, MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {IUsmRegistry, UsmRegistry} from "@alto/utils/UsmRegistry.sol";
 import {VaultRegistry} from "@alto/utils/VaultRegistry.sol";
@@ -777,6 +783,8 @@ library DeployAltoEthereumMainnet {
             );
         } else if (params.phase == DeploymentPhase.USM_REGISTRY_UPDATE) {
             input = _deployUsmRegistryUpdate(params, input);
+        } else if (params.phase == DeploymentPhase.UPGRADE_STANDARD_USM) {
+            input = _upgradeStandardUsm(input);
         } else {
             revert("Invalid phase");
         }
@@ -834,6 +842,70 @@ library DeployAltoEthereumMainnet {
     {
         input.contracts.marketRegistry = address(new MarketRegistry(params.deployer));
         input.contracts.usmRegistry = address(new UsmRegistry(params.deployer));
+        return input;
+    }
+
+    /// @dev Deploys one `DUSDUsm` implementation per target standard USM and logs timelock
+    ///      batch transactions to upgrade each proxy via `upgradeToAndCall`.
+    function _upgradeStandardUsm(AltoEthereumMainnetInput memory input)
+        internal
+        returns (AltoEthereumMainnetInput memory)
+    {
+        require(input.contracts.timelock != address(0), "Timelock not deployed");
+
+        address[] memory usmProxies = _getStandardUsmsToUpgrade(input);
+
+        StandardUsmUpgradeBatch batch =
+            new StandardUsmUpgradeBatch(StandardUsmUpgradeBatchParams({usmProxies: usmProxies}));
+        StandardUsmUpgradeBatchReport memory report = batch.getReport();
+
+        address timelock = input.contracts.timelock;
+        uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
+        uint256 actionCount = report.usmProxies.length;
+
+        address[] memory targets = new address[](actionCount);
+        uint256[] memory values = new uint256[](actionCount);
+        bytes[] memory payloads = new bytes[](actionCount);
+
+        for (uint256 i; i < actionCount; ++i) {
+            targets[i] = report.usmProxies[i];
+            values[i] = 0;
+            payloads[i] = abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (report.newImplementations[i], bytes("")));
+            input = _setUsmImplementation(input, report.usmProxies[i], report.newImplementations[i]);
+        }
+        SafeTransactionBuilder.writeTimelockBatch("standard-usm-upgrade", timelock, targets, values, payloads, minDelay);
+
+        return input;
+    }
+
+    function _getStandardUsmsToUpgrade(AltoEthereumMainnetInput memory input)
+        internal
+        pure
+        returns (address[] memory usmProxies)
+    {
+        usmProxies = new address[](3);
+        usmProxies[0] = input.contracts.permissionedUsm.dusdUsm;
+        usmProxies[1] = input.contracts.permissionlessFrxusdUsm.dusdUsm;
+        usmProxies[2] = input.contracts.permissionedFrxusdUsm.dusdUsm;
+
+        require(usmProxies[0] != address(0), "permissionedUsm not set");
+        require(usmProxies[1] != address(0), "permissionlessFrxUsdUsm not set");
+        require(usmProxies[2] != address(0), "permissionedFrxUsdUsm not set");
+    }
+
+    function _setUsmImplementation(AltoEthereumMainnetInput memory input, address proxy, address implementation)
+        internal
+        pure
+        returns (AltoEthereumMainnetInput memory)
+    {
+        if (proxy == input.contracts.permissionedUsm.dusdUsm) {
+            input.contracts.permissionedUsm.dusdUsmImplementation = implementation;
+        } else if (proxy == input.contracts.permissionedFrxusdUsm.dusdUsm) {
+            input.contracts.permissionedFrxusdUsm.dusdUsmImplementation = implementation;
+        } else if (proxy == input.contracts.permissionlessFrxusdUsm.dusdUsm) {
+            input.contracts.permissionlessFrxusdUsm.dusdUsmImplementation = implementation;
+        }
+
         return input;
     }
 

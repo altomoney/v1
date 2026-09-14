@@ -40,7 +40,8 @@ enum DeploymentPhase {
     OWNER_FIXED_RATE_IRM_FACTORY, // Phase 31: Deploy the reusable Timelock-owned FixedRateIrm factory
     MARKET_DEPRECATION_PHASE_0, // Phase 32: Freeze ten old markets and apply the T0 fixed rates
     CONVEX_CREDIT_LINE_MARKET, // Phase 33: Deploy the frxUSD/DUSD Convex credit-line market
-    USM_REGISTRY_UPDATE // Phase 34: Deploy updated UsmRegistry, migrate USMs, transfer to timelock
+    USM_REGISTRY_UPDATE, // Phase 34: Deploy updated UsmRegistry, migrate USMs, transfer to timelock
+    UPGRADE_STANDARD_USM // Phase 35: Deploy DUSDUsm implementations and log timelock upgrade batch
 }
 
 enum UsmFinalizeMode {
