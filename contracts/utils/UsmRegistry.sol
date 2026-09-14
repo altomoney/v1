@@ -4,6 +4,8 @@ pragma solidity ^0.8.28;
 import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IUsmRegistry} from "./interfaces/IUsmRegistry.sol";
+import {UsmType} from "@alto/usm/interfaces/IUsmCommon.sol";
+import {IUsm} from "@alto/usm/interfaces/IUsm.sol";
 
 /// @title UsmRegistry
 /// @author GPM
@@ -38,6 +40,30 @@ contract UsmRegistry is AltoOwnable2Step, IUsmRegistry {
     /// @inheritdoc IUsmRegistry
     function getUsmList() external view returns (address[] memory) {
         return _usmList.values();
+    }
+
+    /// @inheritdoc IUsmRegistry
+    function getUsmList(UsmType usmType) external view returns (address[] memory) {
+        uint256 length = _usmList.length();
+        address[] memory allUsms = _usmList.values();
+
+        uint256 count;
+        for (uint256 i = 0; i < length; ++i) {
+            if (IUsm(allUsms[i]).USM_TYPE() == usmType) {
+                ++count;
+            }
+        }
+
+        address[] memory filteredUsms = new address[](count);
+        uint256 index;
+        for (uint256 i = 0; i < length; ++i) {
+            if (IUsm(allUsms[i]).USM_TYPE() == usmType) {
+                filteredUsms[index] = allUsms[i];
+                ++index;
+            }
+        }
+
+        return filteredUsms;
     }
 
     /// @inheritdoc IUsmRegistry

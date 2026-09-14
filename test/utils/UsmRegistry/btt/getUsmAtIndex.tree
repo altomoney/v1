@@ -1,0 +1,9 @@
+UsmRegistry::getUsmAtIndex(uint256)
+├── given USM list is empty
+│   └── when index is 0
+│       └── it should revert with UsmRegistryInvalidIndex
+├── given USM list has USMs
+│   ├── when index is greater than or equal to USM list length
+│   │   └── it should revert with UsmRegistryInvalidIndex
+│   └── when index is less than USM list length
+│       └── it should return the USM at the given index

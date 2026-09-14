@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {UsmType} from "@alto/usm/interfaces/IUsmCommon.sol";
+
 /// @title IUsmRegistry
 /// @author GPM
 /// @custom:contact security@altofoundation.org
@@ -37,6 +39,11 @@ interface IUsmRegistry {
     /// @notice Returns the list of all USMs
     /// @return Array of USM addresses
     function getUsmList() external view returns (address[] memory);
+
+    /// @notice Returns registered USMs of the given type
+    /// @param usmType USM type to include in the result
+    /// @return Array of USM addresses that match `usmType`
+    function getUsmList(UsmType usmType) external view returns (address[] memory);
 
     /// @notice Returns the number of USMs
     /// @return The number of USMs
