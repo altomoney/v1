@@ -17,7 +17,7 @@ import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 import {USDC_MAINNET, FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
-DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.CONVEX_CREDIT_LINE_MARKET;
+DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.USM_REGISTRY_UPDATE; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER, DUSD_VAULT, VAULT_REGISTRY, PERMISSIONLESS_FRXUSD_USM, ALTO_LEVERAGE_SWAPPER_MULTI_TARGET, LIQUIDATION_PERIPHERY, ADVANCED_PERMISSIONS_FRXUSD_USM, UPGRADE_MARKETS_LIQUIDATION_PERIPHERY, UNIVERSAL_REWARDS_DISTRIBUTOR, USM_REGISTRY_UPDATE
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployAltoEthereumMainnetScript is Script {
@@ -584,6 +584,8 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("OwnerFixedRateIrmFactory", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.MARKET_DEPRECATION_PHASE_0) {
             _extractContractABI("FixedRateIrm", abiFolder);
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.USM_REGISTRY_UPDATE) {
+            _extractContractABI("UsmRegistry", abiFolder);
         }
 
         console.log("ABIs extracted to:", abiFolder);

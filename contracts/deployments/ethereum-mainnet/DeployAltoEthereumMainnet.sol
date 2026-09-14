@@ -102,6 +102,11 @@ import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IAltoLeverageSwapper} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {UsmBatch, UsmBatchParams, UsmBatchReport} from "@alto/deployments/ethereum-mainnet/UsmBatch.sol";
 import {VaultBatch, VaultBatchParams, VaultBatchReport} from "@alto/deployments/ethereum-mainnet/VaultBatch.sol";
+import {
+    UsmRegistryBatch,
+    UsmRegistryBatchParams,
+    UsmRegistryBatchReport
+} from "@alto/deployments/ethereum-mainnet/UsmRegistryBatch.sol";
 import {IMarketRegistry, MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {IUsmRegistry, UsmRegistry} from "@alto/utils/UsmRegistry.sol";
 import {VaultRegistry} from "@alto/utils/VaultRegistry.sol";
@@ -770,6 +775,8 @@ library DeployAltoEthereumMainnet {
                 input,
                 params.deployerHasOwnership
             );
+        } else if (params.phase == DeploymentPhase.USM_REGISTRY_UPDATE) {
+            input = _deployUsmRegistryUpdate(params, input);
         } else {
             revert("Invalid phase");
         }
@@ -827,6 +834,25 @@ library DeployAltoEthereumMainnet {
     {
         input.contracts.marketRegistry = address(new MarketRegistry(params.deployer));
         input.contracts.usmRegistry = address(new UsmRegistry(params.deployer));
+        return input;
+    }
+
+    /// @dev Deploys an updated UsmRegistry via batch, migrates all USMs from the previous registry,
+    ///      and transfers ownership to the timelock.
+    function _deployUsmRegistryUpdate(AltoEthereumMainnetParams memory, AltoEthereumMainnetInput memory input)
+        internal
+        returns (AltoEthereumMainnetInput memory)
+    {
+        require(input.contracts.timelock != address(0), "Timelock not deployed");
+        require(input.contracts.usmRegistry != address(0), "Old UsmRegistry not set");
+
+        UsmRegistryBatch batch = new UsmRegistryBatch(
+            UsmRegistryBatchParams({timelock: input.contracts.timelock, oldUsmRegistry: input.contracts.usmRegistry})
+        );
+        UsmRegistryBatchReport memory report = batch.getReport();
+
+        input.contracts.usmRegistry = report.usmRegistry;
+
         return input;
     }
 

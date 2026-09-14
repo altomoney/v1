@@ -39,7 +39,8 @@ enum DeploymentPhase {
     MINT_MARKET_FRXUSD, // Phase 30: Deploy refreshed frxUSD Mint Market
     OWNER_FIXED_RATE_IRM_FACTORY, // Phase 31: Deploy the reusable Timelock-owned FixedRateIrm factory
     MARKET_DEPRECATION_PHASE_0, // Phase 32: Freeze ten old markets and apply the T0 fixed rates
-    CONVEX_CREDIT_LINE_MARKET // Phase 33: Deploy the frxUSD/DUSD Convex credit-line market
+    CONVEX_CREDIT_LINE_MARKET, // Phase 33: Deploy the frxUSD/DUSD Convex credit-line market
+    USM_REGISTRY_UPDATE // Phase 34: Deploy updated UsmRegistry, migrate USMs, transfer to timelock
 }
 
 enum UsmFinalizeMode {
