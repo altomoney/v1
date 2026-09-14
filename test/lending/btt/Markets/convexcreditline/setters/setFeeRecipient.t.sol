@@ -35,7 +35,7 @@ contract AltoConvexCreditLineMarketSetFeeRecipientTest is ConvexCreditLineCommon
         assertEq(market.feeRecipient(), RECEIVER);
     }
 
-    function test_RedirectsExistingFeesAndRemovesOldClaimPermission() external {
+    function test_RedirectsExistingFeesWhenFormerRecipientClaims() external {
         _setOpeningFee(0.1 ether);
         _openPosition(1_000 ether, 100 ether);
         uint256 fees = market.claimableFeesAssets();
@@ -44,12 +44,11 @@ contract AltoConvexCreditLineMarketSetFeeRecipientTest is ConvexCreditLineCommon
         market.setFeeRecipient(RECEIVER);
 
         vm.prank(FEE_RECIPIENT);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
-        market.claimInterest(0);
+        uint256 claimed = market.claimInterest(0);
 
-        vm.prank(RECEIVER);
-        market.claimInterest(0);
+        assertEq(claimed, fees);
         assertEq(borrowToken.balanceOf(RECEIVER), fees);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), 0);
         assertEq(market.claimableFeesAssets(), 0);
     }
 

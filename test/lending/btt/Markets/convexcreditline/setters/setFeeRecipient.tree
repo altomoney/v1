@@ -10,6 +10,6 @@ AltoConvexCreditLineMarket::setFeeRecipient()
     ├── it should emit SetFeeRecipient with old and new addresses
     ├── it should mint only to the new recipient on subsequent claimInterest calls
     ├── it should redirect all already accrued claimableFeesAssets to the new recipient
-    ├── it should remove claim permission from the former recipient unless it is owner
+    ├── it should allow the former recipient to trigger a claim but mint only to the new recipient
     ├── it should not accrue interest or change accounting
     └── it should remain callable while paused or frozen

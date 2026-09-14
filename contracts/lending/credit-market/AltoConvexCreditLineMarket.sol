@@ -143,8 +143,8 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     /// @inheritdoc IAltoConvexCreditLineMarketBase
     function claimInterest(uint256 interest) external nonReentrant whenNotPaused returns (uint256) {
         _requireNonZeroAddress(feeRecipient);
-        if (msg.sender != owner() && msg.sender != feeRecipient) {
-            revert AltoCreditMarketUnauthorizedAccount();
+        if (interest > claimableFeesAssets) {
+            revert AltoCreditMarketInvalidInput();
         }
 
         return _claimInterest(interest);
@@ -393,6 +393,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     /// @return Always zero because this market has no lender supply shares.
     function _applyBorrowOpeningFee(uint256 openingFeeAssets) internal override returns (uint256) {
         claimableFeesAssets += openingFeeAssets.toUint128();
+
         return 0;
     }
 
@@ -408,6 +409,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
         _requireCreditAccount(onBehalf);
 
         _accrueInterest();
+
         if (claimableFeesAssets > 0) {
             _claimInterest(0);
         }
@@ -427,6 +429,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
         }
 
         emit InterestClaimed(feeRecipient, interest);
+
         return interest;
     }
 
