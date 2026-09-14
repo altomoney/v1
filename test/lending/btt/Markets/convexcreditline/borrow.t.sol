@@ -357,9 +357,9 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
         assertEq(mintedAfter, mintedBefore);
     }
 
-    function test_RejectsBorrowTokenReentrancyAtomically() external {
+    function test_RejectsReentrantBorrowFromTokenMintAtomically() external {
         _addCollateral(100 ether);
-        _mockBorrowTokenReentrancy(borrowToken.mint.selector);
+        _mockBorrowTokenReentrancy();
         AccountingState memory beforeState = _state();
 
         vm.prank(CREDIT_ACCOUNT);
