@@ -30,6 +30,10 @@ address constant PAXG_MAINNET = 0x45804880De22913dAFE09f4980848ECE6EcbAf78;
 address constant FRXUSD_MAINNET = 0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29;
 // frxUsd/dUSD Curve pool on mainnet
 address constant FRXUSD_DUSD_CURVE_POOL_MAINNET = 0x104d6a1b97A6CEf88D905d7b865A378d90be932A;
+// Curve StableSwap NG factory that registered the frxUSD/DUSD pool on mainnet
+address constant CURVE_STABLESWAP_NG_FACTORY_MAINNET = 0x6A8cbed756804B16E05E741eDaBd5cB544AE21bf;
+// Curve StableSwap NG implementation used by the registered frxUSD/DUSD pool on mainnet
+address constant FRXUSD_DUSD_CURVE_POOL_IMPLEMENTATION_MAINNET = 0xDCc91f930b42619377C200BA05b7513f2958b202;
 // poolId of frxUsd/dUSD Curve pool on mainnet
 uint256 constant POOL_ID_FRXUSD_DUSD_CURVE_POOL_MAINNET = 565;
 // Convex reward pool with staking token of curve LP token of frxUsd/dUSD poolon mainnet

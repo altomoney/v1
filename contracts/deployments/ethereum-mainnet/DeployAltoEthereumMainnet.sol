@@ -81,6 +81,7 @@ import {
 import {IAdvancedPermissionsUsmFeeStrategy} from "@alto/usm/interfaces/IAdvancedPermissionsUsmFeeStrategy.sol";
 import {MarketUpgradeBatch, MarketUpgradeBatchReport} from "@alto/deployments/ethereum-mainnet/MarketUpgradeBatch.sol";
 import {MarketDeprecationDeployment} from "@alto/deployments/ethereum-mainnet/MarketDeprecationDeployment.sol";
+import {PegResponsiveIrmDeployment} from "@alto/deployments/ethereum-mainnet/PegResponsiveIrmDeployment.sol";
 import {SafeTransactionBuilder} from "@alto/deployments/ethereum-mainnet/SafeTransactionBuilder.sol";
 import {
     MintCurveConvexPositionFactoryBatch,
@@ -742,6 +743,8 @@ library DeployAltoEthereumMainnet {
             input = MarketDeprecationDeployment.deployFactory(input);
         } else if (params.phase == DeploymentPhase.MARKET_DEPRECATION_PHASE_0) {
             input = MarketDeprecationDeployment.generate(params, input);
+        } else if (params.phase == DeploymentPhase.MINT_MARKET_PEG_RESPONSIVE_IRM) {
+            input = PegResponsiveIrmDeployment.generate(input);
         } else if (params.phase == DeploymentPhase.CONVEX_CREDIT_LINE_MARKET) {
             address[] memory rewardTokens = new address[](3);
             rewardTokens[0] = CRV_TOKEN_MAINNET;
@@ -1872,6 +1875,18 @@ library DeployAltoEthereumMainnet {
         }
 
         return input;
+    }
+
+    function preflightPegResponsiveIrmMigration(AltoEthereumMainnetInput memory input) internal view {
+        PegResponsiveIrmDeployment.preflight(input);
+    }
+
+    function reconcilePegResponsiveIrmMigration(AltoEthereumMainnetInput memory input)
+        internal
+        view
+        returns (AltoEthereumMainnetInput memory)
+    {
+        return PegResponsiveIrmDeployment.reconcile(input);
     }
 
     function preflightMarketDeprecationPhase0(

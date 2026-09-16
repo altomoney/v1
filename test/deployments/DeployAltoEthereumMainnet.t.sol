@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
-import {Balance, IMarket, MarketType, Position} from "@alto/lending/interfaces/IMarket.sol";
+import {Balance, IMarket, IMarketBase, MarketType, Position} from "@alto/lending/interfaces/IMarket.sol";
 import {
     DeployAltoEthereumMainnet,
     AltoEthereumMainnetParams,
@@ -22,6 +22,12 @@ import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {AltoLeverageSwapperMultiTarget} from "@alto/lending/leverage/AltoLeverageSwapperMultiTarget.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
+import {PegResponsiveExponentialIrm} from "@alto/lending/irm/PegResponsiveExponentialIrm.sol";
+import {IRMType} from "@alto/lending/interfaces/IIrm.sol";
+import {
+    IPegResponsiveExponentialIrm,
+    PegResponsiveExponentialIrmConfig
+} from "@alto/lending/interfaces/IPegResponsiveExponentialIrm.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
 import {AltoCreditMarketLpOracle} from "@alto/oracles/AltoCreditMarketLpOracle/AltoCreditMarketLpOracle.sol";
@@ -39,6 +45,10 @@ import {
 import {ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/AltoMultiChainlinkLendingOracle.sol";
+import {DusdPegCurveOracle} from "@alto/oracles/DusdPegCurveOracle/DusdPegCurveOracle.sol";
+import {
+    OwnerPegResponsiveExponentialIrmFactory
+} from "@alto/deployments/ethereum-mainnet/OwnerPegResponsiveExponentialIrmFactory.sol";
 import {
     IDcfDlbPriorityLiquidationEngine,
     LiquidationConfiguration
@@ -92,6 +102,15 @@ struct ExpectedMarketParams {
     uint256 dynamicBonusFeeStart;
     uint256 ltvForCompleteLiquidation;
     uint256 liquidationBaseFee;
+}
+
+struct DecodedTimelockBatch {
+    address[] targets;
+    uint256[] values;
+    bytes[] payloads;
+    bytes32 predecessor;
+    bytes32 salt;
+    uint256 delay;
 }
 
 abstract contract DeployAltoEthereumMainnetTestBase is Test {
@@ -195,6 +214,9 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
             _tryParseAddress(json, ".contracts.emergencyControllerImplementation");
         loaded.contracts.referralAdapter = _tryParseAddress(json, ".contracts.referralAdapter");
         loaded.contracts.ownerFixedRateIrmFactory = _tryParseAddress(json, ".contracts.ownerFixedRateIrmFactory");
+        loaded.contracts.ownerPegResponsiveExponentialIrmFactory =
+            _tryParseAddress(json, ".contracts.ownerPegResponsiveExponentialIrmFactory");
+        loaded.contracts.dusdPegCurveOracle = _tryParseAddress(json, ".contracts.dusdPegCurveOracle");
 
         loaded.contracts.wethMarket = _loadMarketContracts(json, "weth");
         loaded.contracts.wstethMarket = _loadMarketContracts(json, "wsteth");
@@ -1101,6 +1123,288 @@ contract DeployConvexCreditLineMarketPhaseTest is DeployMarketPhaseTestBase {
         (uint256 minted, uint256 ceiling) = dusd.minterConfig(market);
         assertEq(minted, 0, "initial minted amount");
         assertEq(ceiling, enabled ? 1_312_500 ether : 0, "DUSD minter ceiling");
+    }
+}
+
+contract DeployPegResponsiveIrmMigrationPhaseTest is DeployAltoEthereumMainnetTestBase {
+    uint256 internal constant FORK_BLOCK = 25_988_862;
+    uint256 internal constant YEAR = 365 days;
+    string internal constant SCHEDULE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-mint-market-peg-responsive-irm-schedule.json";
+    string internal constant EXECUTE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-mint-market-peg-responsive-irm-execute.json";
+
+    bool internal scheduleJsonExisted;
+    bool internal executeJsonExisted;
+    string internal scheduleJsonBefore;
+    string internal executeJsonBefore;
+
+    function setUp() public override {
+        super.setUp();
+        vm.createSelectFork(vm.rpcUrl("ethereum"), FORK_BLOCK);
+        _loadCurrentChainInput();
+
+        params.timelockAdmin = MAINNET_TIMELOCK_ADMIN;
+        params.phase = DeploymentPhase.MINT_MARKET_PEG_RESPONSIVE_IRM;
+
+        scheduleJsonExisted = vm.exists(SCHEDULE_JSON);
+        executeJsonExisted = vm.exists(EXECUTE_JSON);
+        if (scheduleJsonExisted) scheduleJsonBefore = vm.readFile(SCHEDULE_JSON);
+        if (executeJsonExisted) executeJsonBefore = vm.readFile(EXECUTE_JSON);
+    }
+
+    function _restoreOutputFiles() private {
+        _restoreOutputFile(SCHEDULE_JSON, scheduleJsonExisted, scheduleJsonBefore);
+        _restoreOutputFile(EXECUTE_JSON, executeJsonExisted, executeJsonBefore);
+    }
+
+    function test_deployGeneratedTimelockBatchUpdatesAllActiveMintMarketIrms() public {
+        address[] memory markets = _activeMintMarkets();
+        address[] memory oldIrms = _currentIrms(markets);
+
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        _assertFactoryAndOracle();
+
+        PegResponsiveExponentialIrmConfig memory config = _expectedIrmConfig();
+        address[] memory predictedIrms = _predictedIrms(markets, config);
+        _assertGeneratedBatch(markets, predictedIrms, config);
+
+        for (uint256 i; i < predictedIrms.length; ++i) {
+            assertEq(predictedIrms[i].code.length, 0, "IRM deployed before timelock execution");
+            assertEq(IMarketBase(markets[i]).irm(), oldIrms[i], "market IRM changed before execution");
+        }
+
+        _executeSafeFile(SCHEDULE_JSON);
+
+        vm.expectRevert(bytes("Timelock not ready"));
+        this.preflightExternal(input);
+
+        TimelockController timelock = TimelockController(payable(input.contracts.timelock));
+        vm.warp(block.timestamp + timelock.getMinDelay() + 1);
+        DeployAltoEthereumMainnet.preflightPegResponsiveIrmMigration(input);
+
+        _executeSafeFile(EXECUTE_JSON);
+        input = DeployAltoEthereumMainnet.reconcilePegResponsiveIrmMigration(input);
+
+        _assertFinalState(markets, oldIrms, predictedIrms, config);
+        _assertOperationDone(timelock);
+        _restoreOutputFiles();
+    }
+
+    function preflightExternal(AltoEthereumMainnetInput memory deploymentInput) external view {
+        DeployAltoEthereumMainnet.preflightPegResponsiveIrmMigration(deploymentInput);
+    }
+
+    function _assertFactoryAndOracle() private view {
+        address timelock = input.contracts.timelock;
+        OwnerPegResponsiveExponentialIrmFactory factory =
+            OwnerPegResponsiveExponentialIrmFactory(input.contracts.ownerPegResponsiveExponentialIrmFactory);
+        DusdPegCurveOracle oracle = DusdPegCurveOracle(input.contracts.dusdPegCurveOracle);
+
+        assertGt(address(factory).code.length, 0, "factory code");
+        assertEq(factory.owner(), timelock, "factory owner");
+        assertEq(factory.pendingOwner(), address(0), "factory pending owner");
+        assertEq(factory.pegOracle(), address(oracle), "factory peg oracle");
+
+        assertGt(address(oracle).code.length, 0, "oracle code");
+        assertEq(oracle.owner(), timelock, "oracle owner");
+        assertEq(oracle.pendingOwner(), address(0), "oracle pending owner");
+        assertEq(oracle.curvePool(), FRXUSD_DUSD_CURVE_POOL_MAINNET, "oracle Curve pool");
+        (uint256 maExpTime, uint256 aPrecise) = oracle.runtimeConfig();
+        assertEq(maExpTime, 866, "oracle EMA time");
+        assertEq(aPrecise, 100_000, "oracle precise A");
+    }
+
+    function _assertGeneratedBatch(
+        address[] memory markets,
+        address[] memory predictedIrms,
+        PegResponsiveExponentialIrmConfig memory config
+    ) private view {
+        _assertSafeJson(SCHEDULE_JSON, TimelockController.scheduleBatch.selector);
+        _assertSafeJson(EXECUTE_JSON, TimelockController.executeBatch.selector);
+
+        DecodedTimelockBatch memory scheduleBatch = _decodeScheduleBatch(_readSafeTxData(SCHEDULE_JSON));
+        DecodedTimelockBatch memory executeBatch = _decodeExecuteBatch(_readSafeTxData(EXECUTE_JSON));
+
+        assertEq(scheduleBatch.targets.length, markets.length * 2, "schedule target count");
+        assertEq(scheduleBatch.values.length, scheduleBatch.targets.length, "schedule value count");
+        assertEq(scheduleBatch.payloads.length, scheduleBatch.targets.length, "schedule payload count");
+        assertEq(scheduleBatch.predecessor, bytes32(0), "schedule predecessor");
+        assertEq(scheduleBatch.salt, bytes32(0), "schedule salt");
+        assertEq(
+            scheduleBatch.delay, TimelockController(payable(input.contracts.timelock)).getMinDelay(), "schedule delay"
+        );
+
+        assertEq(keccak256(abi.encode(executeBatch.targets)), keccak256(abi.encode(scheduleBatch.targets)), "targets");
+        assertEq(keccak256(abi.encode(executeBatch.values)), keccak256(abi.encode(scheduleBatch.values)), "values");
+        assertEq(
+            keccak256(abi.encode(executeBatch.payloads)), keccak256(abi.encode(scheduleBatch.payloads)), "payloads"
+        );
+        assertEq(executeBatch.predecessor, bytes32(0), "execute predecessor");
+        assertEq(executeBatch.salt, bytes32(0), "execute salt");
+
+        address factory = input.contracts.ownerPegResponsiveExponentialIrmFactory;
+        for (uint256 i; i < markets.length; ++i) {
+            uint256 callIndex = i * 2;
+            assertEq(scheduleBatch.targets[callIndex], factory, "deploy target");
+            assertEq(scheduleBatch.values[callIndex], 0, "deploy value");
+            assertEq(
+                scheduleBatch.payloads[callIndex],
+                abi.encodeCall(OwnerPegResponsiveExponentialIrmFactory.deploy, (markets[i], config)),
+                "deploy payload"
+            );
+
+            assertEq(scheduleBatch.targets[callIndex + 1], markets[i], "setIrm target");
+            assertEq(scheduleBatch.values[callIndex + 1], 0, "setIrm value");
+            assertEq(
+                scheduleBatch.payloads[callIndex + 1],
+                abi.encodeCall(IMarketBase.setIrm, (predictedIrms[i], false)),
+                "setIrm payload"
+            );
+        }
+    }
+
+    function _assertSafeJson(string memory path, bytes4 expectedSelector) private view {
+        assertTrue(vm.exists(path), "Safe JSON must be written");
+        string memory json = vm.readFile(path);
+        assertEq(vm.parseJsonAddress(json, ".transactions[0].to"), input.contracts.timelock, "Safe target");
+        assertEq(vm.parseJsonString(json, ".transactions[0].value"), "0", "Safe value");
+        assertEq(bytes4(vm.parseJsonBytes(json, ".transactions[0].data")), expectedSelector, "Safe selector");
+    }
+
+    function _assertFinalState(
+        address[] memory markets,
+        address[] memory oldIrms,
+        address[] memory predictedIrms,
+        PegResponsiveExponentialIrmConfig memory expectedConfig
+    ) private view {
+        address timelock = input.contracts.timelock;
+        address oracle = input.contracts.dusdPegCurveOracle;
+        OwnerPegResponsiveExponentialIrmFactory factory =
+            OwnerPegResponsiveExponentialIrmFactory(input.contracts.ownerPegResponsiveExponentialIrmFactory);
+
+        for (uint256 i; i < markets.length; ++i) {
+            address irmAddress = predictedIrms[i];
+            PegResponsiveExponentialIrm irm = PegResponsiveExponentialIrm(irmAddress);
+
+            assertNotEq(irmAddress, oldIrms[i], "IRM must change");
+            assertEq(IMarketBase(markets[i]).irm(), irmAddress, "market IRM");
+            assertEq(Ownable(markets[i]).owner(), timelock, "market owner");
+            assertEq(irm.owner(), timelock, "IRM owner");
+            assertEq(irm.pendingOwner(), address(0), "IRM pending owner");
+            assertEq(irm.market(), markets[i], "IRM market");
+            assertEq(irm.pegOracle(), oracle, "IRM peg oracle");
+            assertEq(uint256(irm.IRM_TYPE()), uint256(IRMType.PEG_RESPONSIVE_EXPONENTIAL), "IRM type");
+
+            PegResponsiveExponentialIrmConfig memory actualConfig = IPegResponsiveExponentialIrm(irmAddress).irmConfig();
+            assertEq(keccak256(abi.encode(actualConfig)), keccak256(abi.encode(expectedConfig)), "IRM configuration");
+
+            (address recordedIrm, address recordedOwner, address recordedOracle) = factory.deployments(markets[i]);
+            assertEq(recordedIrm, irmAddress, "factory IRM");
+            assertEq(recordedOwner, timelock, "factory IRM owner");
+            assertEq(recordedOracle, oracle, "factory IRM oracle");
+            assertEq(_storedTargetIrm(i), irmAddress, "reconciled IRM");
+            assertEq(FixedRateIrm(oldIrms[i]).market(), markets[i], "old IRM binding");
+        }
+    }
+
+    function _assertOperationDone(TimelockController timelock) private view {
+        DecodedTimelockBatch memory batch = _decodeScheduleBatch(_readSafeTxData(SCHEDULE_JSON));
+        bytes32 operationId =
+            timelock.hashOperationBatch(batch.targets, batch.values, batch.payloads, batch.predecessor, batch.salt);
+        assertTrue(timelock.isOperationDone(operationId), "timelock operation not done");
+    }
+
+    function _executeSafeFile(string memory path) private {
+        string memory json = vm.readFile(path);
+        address target = vm.parseJsonAddress(json, ".transactions[0].to");
+        bytes memory data = vm.parseJsonBytes(json, ".transactions[0].data");
+        assertEq(target, input.contracts.timelock, "Safe target");
+
+        vm.prank(MAINNET_TIMELOCK_ADMIN);
+        (bool success,) = target.call(data);
+        assertTrue(success, "generated Safe transaction failed");
+    }
+
+    function _decodeScheduleBatch(bytes memory data) private pure returns (DecodedTimelockBatch memory batch) {
+        assertEq(bytes4(data), TimelockController.scheduleBatch.selector, "schedule selector");
+        (batch.targets, batch.values, batch.payloads, batch.predecessor, batch.salt, batch.delay) =
+            abi.decode(_removeSelector(data), (address[], uint256[], bytes[], bytes32, bytes32, uint256));
+    }
+
+    function _decodeExecuteBatch(bytes memory data) private pure returns (DecodedTimelockBatch memory batch) {
+        assertEq(bytes4(data), TimelockController.executeBatch.selector, "execute selector");
+        (batch.targets, batch.values, batch.payloads, batch.predecessor, batch.salt) =
+            abi.decode(_removeSelector(data), (address[], uint256[], bytes[], bytes32, bytes32));
+    }
+
+    function _removeSelector(bytes memory data) private pure returns (bytes memory arguments) {
+        require(data.length >= 4, "missing selector");
+        arguments = new bytes(data.length - 4);
+        for (uint256 i; i < arguments.length; ++i) {
+            arguments[i] = data[i + 4];
+        }
+    }
+
+    function _predictedIrms(address[] memory markets, PegResponsiveExponentialIrmConfig memory config)
+        private
+        view
+        returns (address[] memory irms)
+    {
+        OwnerPegResponsiveExponentialIrmFactory factory =
+            OwnerPegResponsiveExponentialIrmFactory(input.contracts.ownerPegResponsiveExponentialIrmFactory);
+        irms = new address[](markets.length);
+        for (uint256 i; i < markets.length; ++i) {
+            irms[i] = factory.predictIrmAddress(markets[i], config);
+        }
+    }
+
+    function _currentIrms(address[] memory markets) private view returns (address[] memory irms) {
+        irms = new address[](markets.length);
+        for (uint256 i; i < markets.length; ++i) {
+            irms[i] = IMarketBase(markets[i]).irm();
+        }
+    }
+
+    function _activeMintMarkets() private view returns (address[] memory markets) {
+        markets = new address[](6);
+        markets[0] = input.contracts.refreshWethMarket.market;
+        markets[1] = input.contracts.refreshWstethMarket.market;
+        markets[2] = input.contracts.refreshRethMarket.market;
+        markets[3] = input.contracts.refreshSusdeMintMarket.market;
+        markets[4] = input.contracts.refreshSyrupUsdcMintMarket.market;
+        markets[5] = input.contracts.refreshFrxUsdMarket.market;
+    }
+
+    function _storedTargetIrm(uint256 index) private view returns (address) {
+        if (index == 0) return input.contracts.refreshWethMarket.marketIrm;
+        if (index == 1) return input.contracts.refreshWstethMarket.marketIrm;
+        if (index == 2) return input.contracts.refreshRethMarket.marketIrm;
+        if (index == 3) return input.contracts.refreshSusdeMintMarket.marketIrm;
+        if (index == 4) return input.contracts.refreshSyrupUsdcMintMarket.marketIrm;
+        return input.contracts.refreshFrxUsdMarket.marketIrm;
+    }
+
+    function _expectedIrmConfig() private pure returns (PegResponsiveExponentialIrmConfig memory) {
+        return PegResponsiveExponentialIrmConfig({
+            recoveryPrice: 1.001e18,
+            stressPrice: 1e18,
+            baseRate: 0.05e18 / YEAR,
+            stressRate: 0.075e18 / YEAR,
+            maxRate: 8e18 / YEAR,
+            doublingDistance: 0.0025e18,
+            recoveryDelay: 6 hours,
+            maxOracleAge: 30 minutes
+        });
+    }
+
+    function _restoreOutputFile(string memory path, bool existed, string storage previousContents) private {
+        if (existed) {
+            vm.writeFile(path, previousContents);
+        } else if (vm.exists(path)) {
+            vm.removeFile(path);
+        }
     }
 }
 
