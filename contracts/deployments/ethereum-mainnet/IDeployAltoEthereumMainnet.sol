@@ -39,7 +39,8 @@ enum DeploymentPhase {
     MINT_MARKET_FRXUSD, // Phase 30: Deploy refreshed frxUSD Mint Market
     OWNER_FIXED_RATE_IRM_FACTORY, // Phase 31: Deploy the reusable Timelock-owned FixedRateIrm factory
     MARKET_DEPRECATION_PHASE_0, // Phase 32: Freeze ten old markets and apply the T0 fixed rates
-    CONVEX_CREDIT_LINE_MARKET // Phase 33: Deploy the frxUSD/DUSD Convex credit-line market
+    CONVEX_CREDIT_LINE_MARKET, // Phase 33: Deploy the frxUSD/DUSD Convex credit-line market
+    MINT_MARKET_PEG_RESPONSIVE_IRM // Phase 34: Migrate active mint markets to peg-responsive IRMs
 }
 
 enum UsmFinalizeMode {
@@ -124,6 +125,8 @@ struct Contracts {
     address emergencyController;
     address emergencyControllerImplementation;
     address ownerFixedRateIrmFactory;
+    address ownerPegResponsiveExponentialIrmFactory;
+    address dusdPegCurveOracle;
     MintCurveConvexPositionContracts mintCurveConvexPosition;
     MarketContracts frxUsdMarket;
     MarketContracts refreshWethMarket;
