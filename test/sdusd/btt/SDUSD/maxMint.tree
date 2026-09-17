@@ -2,5 +2,9 @@ SDUSD::maxMint
 ├── given PAUSE_TYPE is paused
 │   └── it should return zero for every receiver
 └── given PAUSE_TYPE is not paused
-    ├── it should return the ERC-4626 maximum uint256 value
-    └── it should not vary by receiver
+    ├── when depositCapUsage is below depositCap
+    │   ├── it should convert the remaining DUSD headroom to shares with downward rounding
+    │   ├── it should not vary by receiver
+    │   └── reward vesting may change the share-denominated maximum without consuming DUSD headroom
+    └── when depositCapUsage is equal to or above depositCap
+        └── it should return zero without underflowing

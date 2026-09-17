@@ -21,6 +21,9 @@ struct SDUSDInitParams {
     ///      and minimum supported deposit so that, a supported deposit still mints at least one share.
     ///      A larger value improves that rounding bound but permanently locks more DUSD.
     uint256 seedShares;
+    /// @notice Maximum pooled principal represented by non-seed shares
+    /// @dev Rewards do not consume this cap. The owner may later update it with `setDepositCap`.
+    uint256 depositCap;
     /// @notice Duration over which each notified reward amount is released linearly, from 1 to 30 days
     uint256 rewardDuration;
 }
@@ -82,6 +85,9 @@ interface ISDUSDVaultEvents {
 
     /// @notice Emitted when the reward duration is updated
     event RewardDurationUpdated(uint256 oldDuration, uint256 newDuration);
+
+    /// @notice Emitted when the pooled-principal deposit cap is updated
+    event DepositCapUpdated(uint256 oldDepositCap, uint256 newDepositCap);
 }
 
 /// @title ISDUSDVaultBase
@@ -117,6 +123,11 @@ interface ISDUSDVaultBase is ISDUSDVaultErrors, ISDUSDVaultEvents {
     ///      successful `notifyRewardAmount` call starts a new period.
     function setRewardDuration(uint256 newRewardDuration) external;
 
+    /// @notice Updates the maximum pooled principal represented by non-seed shares
+    /// @dev Only callable by the owner. May be set to zero or below current usage, immediately preventing new
+    ///      deposits and mints without affecting withdrawals, redemptions, or reward accrual.
+    function setDepositCap(uint256 newDepositCap) external;
+
     /// @notice The amount of reward DUSD still locked and not yet counted in `totalAssets`
     function lockedRewardsRemaining() external view returns (uint256);
 
@@ -151,6 +162,16 @@ interface ISDUSDVaultBase is ISDUSDVaultErrors, ISDUSDVaultEvents {
     ///      only permitted while `totalSupply() > seedShares`, i.e. while at least one real staker exists,
     ///      which bounds reward-driven exchange-rate inflation to a single release even if every staker exits.
     function seedShares() external view returns (uint256);
+
+    /// @notice Maximum pooled principal represented by non-seed shares
+    /// @dev Rewards and the required seed deposit do not consume this cap.
+    function depositCap() external view returns (uint256);
+
+    /// @notice Current pooled principal counted against `depositCap`
+    /// @dev Increases by assets supplied through non-seed deposits and mints. Rewards and share transfers leave it
+    ///      unchanged. A withdrawal or redemption removes `depositCapUsage * sharesBurned / nonSeedSupply`, using
+    ///      supply before the burn and rounding down, so withdrawn rewards do not directly reopen cap headroom.
+    function depositCapUsage() external view returns (uint256);
 
     /// @notice The minimum allowed reward release duration
     function MIN_REWARD_DURATION() external view returns (uint256);

@@ -70,6 +70,7 @@ contract ProtocolFeeCollectorFlashBorrower is IERC3156FlashBorrower {
 abstract contract ProtocolFeeCollectorCommon is Test, TestHelperOz5 {
     uint256 internal constant INITIAL_REWARDS_BPS = 3_000;
     uint256 internal constant INITIAL_MINIMUM_REWARD_AMOUNT = 100 ether;
+    uint256 internal constant INITIAL_DEPOSIT_CAP = 115_000 ether;
     uint256 internal constant SEED_SHARES = 1 ether;
     uint256 internal constant REWARD_DURATION = 7 days;
     uint256 internal constant MARKET_MAX_LTV = 0.75 ether;
@@ -172,6 +173,7 @@ abstract contract ProtocolFeeCollectorCommon is Test, TestHelperOz5 {
             dusd: address(dusd),
             rewarder: address(collector),
             seedShares: seedShares,
+            depositCap: INITIAL_DEPOSIT_CAP,
             rewardDuration: rewardDuration
         });
     }

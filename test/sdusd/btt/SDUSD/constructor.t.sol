@@ -75,6 +75,8 @@ contract SDUSD_Initialize_Test is SDUSDCommon {
     function test_InitializesAllConfigurationMetadataAndStateAndEmitsEvents() public {
         vm.expectEmit(true, true, false, true);
         emit OwnershipTransferred(address(0), ADMIN);
+        vm.expectEmit(false, false, false, true);
+        emit ISDUSDVaultEvents.DepositCapUpdated(0, INITIAL_DEPOSIT_CAP);
         vm.expectEmit(true, true, false, true);
         emit IPausable.PauserUpdated(PAUSER, PAUSE_TYPE, true);
         vm.expectEmit(true, true, false, true);
@@ -93,6 +95,8 @@ contract SDUSD_Initialize_Test is SDUSDCommon {
         assertEq(deployed.symbol(), "sDUSD");
         assertEq(deployed.decimals(), dusd.decimals());
         assertEq(deployed.seedShares(), SEED_SHARES);
+        assertEq(deployed.depositCap(), INITIAL_DEPOSIT_CAP);
+        assertEq(deployed.depositCapUsage(), 0);
         assertEq(deployed.rewarder(), address(collector));
         assertEq(deployed.rewardDuration(), REWARD_DURATION);
         assertTrue(deployed.pausers(PAUSER, PAUSE_TYPE));
@@ -118,10 +122,30 @@ contract SDUSD_Initialize_Test is SDUSDCommon {
         assertEq(deployed.rewardDuration(), deployed.MAX_REWARD_DURATION());
     }
 
+    function test_AllowsZeroDepositCap() public {
+        SDUSD deployed = _deployVaultWithCap(SEED_SHARES, REWARD_DURATION, 0);
+        assertEq(deployed.depositCap(), 0);
+        assertEq(deployed.depositCapUsage(), 0);
+    }
+
     function test_DeploymentSetupLocksOneDusdWorthOfSharesAtAddressOne() public view {
         assertEq(vault.seedShares(), 1 ether);
         assertEq(vault.balanceOf(address(1)), 1 ether);
         assertEq(vault.convertToAssets(vault.balanceOf(address(1))), 1 ether);
         assertEq(dusd.balanceOf(address(vault)), vault.accountedAssets());
+    }
+
+    function test_DeploymentSeedDepositIsExcludedFromDepositCapUsage() public {
+        _useEmptyVault();
+        _depositFor(SEED_LOCK, SEED_SHARES);
+
+        assertEq(vault.balanceOf(SEED_LOCK), SEED_SHARES);
+        assertEq(dusd.balanceOf(address(vault)), SEED_SHARES);
+        assertEq(vault.accountedAssets(), SEED_SHARES);
+        assertEq(vault.depositCapUsage(), 0);
+    }
+
+    function test_DeploymentUserDepositAfterSeedConsumesDepositCap() public view {
+        assertEq(vault.depositCapUsage(), SEED_SHARES);
     }
 }

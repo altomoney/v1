@@ -25,6 +25,8 @@ SDUSD::initialize
     ├── it should set the symbol to sDUSD
     ├── it should use the DUSD decimals
     ├── it should set the configured seed shares
+    ├── it should set the configured deposit cap
+    ├── it should emit DepositCapUpdated from zero
     ├── it should set the configured rewarder
     ├── it should emit RewarderUpdated from zero address
     ├── it should set the configured reward duration
@@ -35,15 +37,19 @@ SDUSD::initialize
     ├── it should emit PauserUpdated for admin
     ├── it should leave PAUSE_TYPE unpaused
     ├── it should initialize accounted assets to zero
+    ├── it should initialize deposit cap usage to zero
     ├── it should initialize reward state to zero
     ├── it should initialize total supply to zero
     ├── it should initialize total assets to zero
     ├── it should initialize the exchange rate at one DUSD per sDUSD
     ├── when reward duration equals MIN_REWARD_DURATION
     │   └── it should deploy successfully
-    └── when reward duration equals MAX_REWARD_DURATION
+    ├── when reward duration equals MAX_REWARD_DURATION
+    │   └── it should deploy successfully
+    └── when deposit cap is zero
         └── it should deploy successfully
 
 SDUSD::deployment seed setup
 └── when the deployer completes the required post-initialization seed deposit
-    └── it should mint the configured seed shares to address(1) and fund them with matching DUSD
+    ├── it should mint the configured seed shares to address(1) and fund them with matching DUSD
+    └── it should exclude the seed deposit from deposit cap usage

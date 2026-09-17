@@ -29,6 +29,7 @@ contract SDUSDERC4626ComplianceTest is ERC4626Test {
             dusd: address(dusd),
             rewarder: address(this),
             seedShares: SEED_SHARES,
+            depositCap: 115_000 ether,
             rewardDuration: REWARD_DURATION
         });
         sdusd = SDUSD(address(new ERC1967Proxy(address(implementation), abi.encodeCall(SDUSD.initialize, (params)))));

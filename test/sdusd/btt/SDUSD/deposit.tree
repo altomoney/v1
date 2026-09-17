@@ -6,10 +6,14 @@ SDUSD::deposit
     │   └── it should revert with ERC20InvalidReceiver
     ├── when caller has insufficient DUSD balance or allowance
     │   ├── it should revert with the underlying token transfer error
-    │   └── it should leave accounted assets and share supply unchanged
+    │   └── it should leave accounted assets, deposit cap usage, and share supply unchanged
+    ├── when assets exceeds maxDeposit for receiver
+    │   ├── it should revert with ERC4626ExceededMaxDeposit
+    │   └── it should leave deposit cap usage and vault state unchanged
     ├── when total supply is zero
     │   ├── it should transfer assets from caller to the vault
     │   ├── it should increase accountedAssets by assets
+    │   ├── it should exclude the first deployment seed deposit from depositCapUsage
     │   ├── it should mint all previewed shares to receiver
     │   ├── it should not mint shares to address(1)
     │   ├── it should return the full previewed share amount
@@ -18,6 +22,7 @@ SDUSD::deposit
     └── when total supply is non-zero
         ├── it should transfer assets from caller to the vault
         ├── it should increase accountedAssets by assets
+        ├── it should increase depositCapUsage by the deposited assets
         ├── it should mint the previewed shares to receiver
         ├── it should leave the seed share balance unchanged
         ├── it should return the previewed share amount
@@ -25,6 +30,7 @@ SDUSD::deposit
         ├── it should not decrease the exchange rate because shares round down in favor of the vault
         ├── when assets is zero
         │   ├── it should complete without changing accounting or balances
+        │   ├── it should leave depositCapUsage unchanged
         │   ├── it should emit Deposit with zero assets and shares
         │   └── it should preserve the exchange rate
         ├── when assets is non-zero and the share amount rounds down to zero
@@ -32,7 +38,11 @@ SDUSD::deposit
         │   └── it should leave asset balances, accountedAssets, and share balances unchanged
         ├── when a reward period is active
         │   ├── it should price the deposit using only currently unlocked assets
+        │   ├── rewards should not change depositCapUsage and the deposit should add only its assets
         │   └── it should not decrease the exchange rate when shares round down
+        ├── when assets equals the remaining cap headroom
+        │   ├── it should accept the deposit
+        │   └── it should consume all remaining headroom
         └── when the vault has received a raw DUSD donation
             ├── it should ignore the donation when calculating shares
             ├── it should leave the exchange rate unchanged before the deposit

@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
@@ -64,8 +65,14 @@ contract SDUSD is
     /// @inheritdoc ISDUSDVaultBase
     address public rewarder;
 
+    /// @inheritdoc ISDUSDVaultBase
+    uint256 public depositCap;
+
+    /// @inheritdoc ISDUSDVaultBase
+    uint256 public depositCapUsage;
+
     /// @dev Reserved storage for future upgrades.
-    uint256[43] private __gap;
+    uint256[41] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -93,6 +100,9 @@ contract SDUSD is
         __UUPSUpgradeable_init();
 
         seedShares = params.seedShares;
+
+        depositCap = params.depositCap;
+        emit DepositCapUpdated(0, params.depositCap);
 
         _setPauser(params.pauser, PAUSE_TYPE, true);
         _setPauser(params.admin, PAUSE_TYPE, true);
@@ -172,6 +182,13 @@ contract SDUSD is
         rewardDuration = newRewardDuration;
     }
 
+    /// @inheritdoc ISDUSDVaultBase
+    function setDepositCap(uint256 newDepositCap) external onlyOwner {
+        if (newDepositCap == depositCap) revert SDUSDNoStateChange();
+        emit DepositCapUpdated(depositCap, newDepositCap);
+        depositCap = newDepositCap;
+    }
+
     /// @inheritdoc ERC4626Upgradeable
     /// @dev Blocked while paused.
     function deposit(uint256 assets, address receiver) public override whenNot(PAUSE_TYPE) returns (uint256) {
@@ -185,17 +202,17 @@ contract SDUSD is
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    /// @dev Returns 0 while paused so ERC-4626 integrators see deposits disabled.
-    function maxDeposit(address receiver) public view override returns (uint256) {
+    /// @dev Returns the remaining DUSD cap headroom, or 0 while paused.
+    function maxDeposit(address) public view override returns (uint256) {
         if (paused[PAUSE_TYPE]) return 0;
-        return super.maxDeposit(receiver);
+        return _remainingDepositCap();
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    /// @dev Returns 0 while paused so ERC-4626 integrators see mints disabled.
-    function maxMint(address receiver) public view override returns (uint256) {
+    /// @dev Converts the remaining DUSD cap headroom to shares with downward rounding, or returns 0 while paused.
+    function maxMint(address) public view override returns (uint256) {
         if (paused[PAUSE_TYPE]) return 0;
-        return super.maxMint(receiver);
+        return _convertToShares(_remainingDepositCap(), Math.Rounding.Floor);
     }
 
     /// @inheritdoc IPausable
@@ -213,21 +230,39 @@ contract SDUSD is
     /// @dev Tracks staked principal entering the vault so `totalAssets` reflects deposits without reading
     ///      `balanceOf`. Rejects non-zero deposits that round down to zero shares so assets cannot be accepted
     ///      without giving the receiver ownership in the vault.
+    /// @dev Deployment invariant: immediately after initialization, the deployer deposits exactly `seedShares`
+    ///      DUSD into the empty vault with address(1) as receiver, permanently locking the first minted shares.
+    ///      The first deposit is therefore excluded from `depositCapUsage`.
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         if (assets != 0 && shares == 0) revert SDUSDZeroShares();
+
+        if (totalSupply() != 0) depositCapUsage += assets;
         accountedAssets += assets;
         super._deposit(caller, receiver, assets, shares);
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    /// @dev Tracks principal leaving the vault. Locked rewards are excluded from `totalAssets`, so withdrawals
-    ///      of the liquid portion always have physical DUSD backing and this can never underflow.
+    /// @dev Removes the pooled principal represented by the burned non-seed shares, using supply before the burn.
+    ///      Rewards therefore do not directly reopen deposit-cap headroom. The calculation rounds down so a
+    ///      withdrawal cannot free more principal than the burned shares proportionally represent.
     function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
         internal
         override
     {
+        if (shares != 0) {
+            uint256 principalRemoved = Math.mulDiv(depositCapUsage, shares, totalSupply() - seedShares);
+            depositCapUsage -= principalRemoved;
+        }
+
         accountedAssets -= assets;
         super._withdraw(caller, receiver, owner, assets, shares);
+    }
+
+    /// @dev Returns the unused DUSD deposit headroom without reverting when usage exceeds the configured cap.
+    function _remainingDepositCap() internal view returns (uint256) {
+        uint256 cap = depositCap;
+        uint256 usage = depositCapUsage;
+        return usage < cap ? cap - usage : 0;
     }
 
     /// @dev Restricts UUPS upgrades to the vault owner.

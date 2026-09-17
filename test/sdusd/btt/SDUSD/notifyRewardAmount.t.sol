@@ -99,13 +99,19 @@ contract SDUSD_NotifyRewardAmount_Test is SDUSDCommon {
     }
 
     function test_StartsRewardPeriodAndUpdatesAllAccountingWithoutMintingShares() public {
+        _setDepositCap(vault.depositCapUsage() - 1);
         ExchangeRateSnapshot memory exchangeRateBefore = _snapshotExchangeRate();
         uint256 accountedBefore = vault.accountedAssets();
+        uint256 capUsageBefore = vault.depositCapUsage();
+        uint256 maxDepositBefore = vault.maxDeposit(USER);
         uint256 supplyBefore = vault.totalSupply();
         uint256 userSharesBefore = vault.balanceOf(USER);
         uint256 seedSharesBefore = vault.balanceOf(SEED_LOCK);
         uint256 vaultBalanceBefore = dusd.balanceOf(address(vault));
         uint256 start = block.timestamp;
+
+        assertGt(vault.depositCapUsage(), vault.depositCap());
+        assertEq(maxDepositBefore, 0);
 
         dusd.mint(address(collector), REWARD_AMOUNT);
         vm.prank(address(collector));
@@ -118,6 +124,8 @@ contract SDUSD_NotifyRewardAmount_Test is SDUSDCommon {
         assertEq(dusd.balanceOf(address(vault)), vaultBalanceBefore + REWARD_AMOUNT);
         assertEq(dusd.balanceOf(address(collector)), 0);
         assertEq(vault.accountedAssets(), accountedBefore + REWARD_AMOUNT);
+        assertEq(vault.depositCapUsage(), capUsageBefore);
+        assertEq(vault.maxDeposit(USER), maxDepositBefore);
         assertEq(vault.rewardsForPeriod(), REWARD_AMOUNT);
         assertEq(vault.periodStart(), start);
         assertEq(vault.rewardPeriodFinish(), start + REWARD_DURATION);

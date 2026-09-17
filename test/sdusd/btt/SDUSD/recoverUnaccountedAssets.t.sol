@@ -42,6 +42,8 @@ contract SDUSD_RecoverUnaccountedAssets_Test is SDUSDCommon {
         _donate(DONATION);
         uint256 accountedAssetsBefore = vault.accountedAssets();
         uint256 totalAssetsBefore = vault.totalAssets();
+        uint256 capUsageBefore = vault.depositCapUsage();
+        uint256 maxDepositBefore = vault.maxDeposit(USER);
         uint256 rewarderBalanceBefore = dusd.balanceOf(address(collector));
 
         assertEq(dusd.balanceOf(address(vault)) - accountedAssetsBefore, DONATION);
@@ -57,6 +59,8 @@ contract SDUSD_RecoverUnaccountedAssets_Test is SDUSDCommon {
         assertEq(dusd.balanceOf(address(collector)), rewarderBalanceBefore + DONATION);
         assertEq(vault.accountedAssets(), accountedAssetsBefore);
         assertEq(vault.totalAssets(), totalAssetsBefore);
+        assertEq(vault.depositCapUsage(), capUsageBefore);
+        assertEq(vault.maxDeposit(USER), maxDepositBefore);
     }
 
     function test_ActiveRewardRecoversOnlyDonationAndPreservesLockedRewards() public {

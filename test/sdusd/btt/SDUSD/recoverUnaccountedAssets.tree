@@ -12,7 +12,8 @@ SDUSD::recoverUnaccountedAssets
     │   ├── it should emit UnaccountedAssetsRecovered
     │   ├── it should leave the vault DUSD balance equal to accountedAssets
     │   ├── it should not change accountedAssets
-    │   └── it should not change totalAssets
+    │   ├── it should not change totalAssets
+    │   └── it should not change depositCapUsage or deposit headroom
     ├── when a reward release is active and unaccounted DUSD exists
     │   ├── it should use accountedAssets rather than totalAssets to calculate recoveredAssets
     │   ├── it should recover only the unaccounted DUSD

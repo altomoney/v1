@@ -14,7 +14,8 @@ SDUSD::upgradeToAndCall
         ├── it should emit Upgraded
         ├── it should preserve ownership and pending ownership
         ├── it should preserve pauser permissions and pause state
-        ├── it should preserve the asset, seed shares, rewarder, and next reward duration
+        ├── it should preserve the asset, seed shares, rewarder, next reward duration, and deposit cap
+        ├── it should preserve deposit cap usage and remaining headroom
         ├── it should preserve total supply, accounted assets, and share balances
         ├── it should preserve the active reward amount and period timestamps
         ├── it should preserve locked rewards, total assets, and the exchange rate at the upgrade timestamp
