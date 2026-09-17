@@ -5,6 +5,7 @@ SDUSD::maxDeposit
     ├── when depositCapUsage is below depositCap
     │   ├── it should return depositCap minus depositCapUsage
     │   ├── it should not vary by receiver
-    │   └── rewards, raw DUSD donations, and share transfers should not reduce the DUSD headroom
+    │   ├── rewards, raw DUSD donations, and share transfers should not reduce the DUSD headroom
+    │   └── it should return positive DUSD headroom even when that amount rounds down to zero shares
     └── when depositCapUsage is equal to or above depositCap
         └── it should return zero without underflowing

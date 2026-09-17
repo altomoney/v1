@@ -25,7 +25,10 @@ ProtocolFeeCollector::withdrawLiquidationFees
         │   ├── it should set the configured manual swap receiver as receiver
         │   ├── it should pass empty callback data
         │   └── it should emit LiquidationFeesWithdrawn
-        └── when multiple valid markets are provided
-            ├── it should withdraw each requested amount in array order
-            ├── it should always use the configured manual swap receiver
-            └── it should emit LiquidationFeesWithdrawn once for each market
+        ├── when multiple valid markets are provided
+        │   ├── it should withdraw each requested amount in array order
+        │   ├── it should always use the configured manual swap receiver
+        │   └── it should emit LiquidationFeesWithdrawn once for each market
+        └── when a later market fails validation
+            ├── it should revert with ProtocolFeeCollectorInvalidSource(source)
+            └── it should roll back earlier collateral withdrawals and transfers

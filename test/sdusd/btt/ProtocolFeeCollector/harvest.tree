@@ -73,7 +73,9 @@ ProtocolFeeCollector::harvest
     │   │   └── it should not emit Harvested
     │   └── given source is a registered DUSD USM with the collector as fee recipient
     │       ├── it should call distributeFeesToFeeRecipient
-    │       └── it should emit Harvested with the collector's DUSD balance increase
+    │       ├── it should emit Harvested with the collector's DUSD balance increase
+    │       ├── when swaps are frozen, it should still distribute fees and emit Harvested
+    │       └── when the USM is seized, it should still call fee distribution and emit Harvested
     ├── when the source type is FLASH_MINTER
     │   ├── given source is not the configured flash minter
     │   │   ├── it should emit HarvestingFailed
