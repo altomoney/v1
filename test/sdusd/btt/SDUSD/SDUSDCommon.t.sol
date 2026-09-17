@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {SDUSD} from "@alto/sdusd/SDUSD.sol";
+import {SDUSDInitParams} from "@alto/sdusd/interfaces/ISDUSDVault.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {ProtocolFeeCollectorCommon} from "../ProtocolFeeCollector/ProtocolFeeCollectorCommon.t.sol";
 
@@ -31,6 +32,15 @@ abstract contract SDUSDCommon is ProtocolFeeCollectorCommon {
 
     function _deployVault(uint256 seedShares_, uint256 rewardDuration_) internal returns (SDUSD deployed) {
         deployed = _deploySdusdVault(_sdusdInitParams(seedShares_, rewardDuration_));
+    }
+
+    function _deployVaultWithCap(uint256 seedShares_, uint256 rewardDuration_, uint256 depositCap_)
+        internal
+        returns (SDUSD deployed)
+    {
+        SDUSDInitParams memory params = _sdusdInitParams(seedShares_, rewardDuration_);
+        params.depositCap = depositCap_;
+        deployed = _deploySdusdVault(params);
     }
 
     function _useEmptyVault() internal returns (SDUSD deployed) {
@@ -70,6 +80,11 @@ abstract contract SDUSDCommon is ProtocolFeeCollectorCommon {
     function _pauseVault() internal {
         vm.prank(PAUSER);
         vault.pause(PAUSE_TYPE, true);
+    }
+
+    function _setDepositCap(uint256 newDepositCap) internal {
+        vm.prank(ADMIN);
+        vault.setDepositCap(newDepositCap);
     }
 
     function _donate(uint256 amount) internal {

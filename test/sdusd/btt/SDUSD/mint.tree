@@ -6,11 +6,15 @@ SDUSD::mint
     │   └── it should revert with ERC20InvalidReceiver
     ├── when caller has insufficient DUSD balance or allowance
     │   ├── it should revert with the underlying token transfer error
-    │   └── it should leave accounted assets and share supply unchanged
+    │   └── it should leave accounted assets, deposit cap usage, and share supply unchanged
+    ├── when requested shares exceeds maxMint for receiver
+    │   ├── it should revert with ERC4626ExceededMaxMint
+    │   └── it should leave deposit cap usage and vault state unchanged
     ├── when total supply is zero
     │   ├── it should calculate required assets by rounding up
     │   ├── it should transfer required assets from caller to the vault
     │   ├── it should increase accountedAssets by required assets
+    │   ├── it should exclude the first deployment seed mint from depositCapUsage
     │   ├── it should mint all requested shares to receiver
     │   ├── it should not mint shares to address(1)
     │   ├── it should return the required asset amount
@@ -20,6 +24,7 @@ SDUSD::mint
         ├── it should calculate required assets by rounding up
         ├── it should transfer required assets from caller to the vault
         ├── it should increase accountedAssets by required assets
+        ├── it should increase depositCapUsage by required assets
         ├── it should mint the requested shares to receiver
         ├── it should leave the seed share balance unchanged
         ├── it should return the required asset amount
@@ -27,11 +32,16 @@ SDUSD::mint
         ├── it should not decrease the exchange rate because required assets round up in favor of the vault
         ├── when requested shares is zero
         │   ├── it should complete without changing accounting or balances
+        │   ├── it should leave depositCapUsage unchanged
         │   ├── it should emit Deposit with zero assets and shares
         │   └── it should preserve the exchange rate
         ├── when a reward period is active
         │   ├── it should price the mint using only currently unlocked assets
+        │   ├── rewards should not change depositCapUsage and the mint should add only required assets
         │   └── it should not decrease the exchange rate when required assets round up
+        ├── when requested shares equals maxMint
+        │   ├── it should accept the mint
+        │   └── required assets should not exceed the remaining DUSD headroom
         └── when the vault has received a raw DUSD donation
             ├── it should ignore the donation when calculating required assets
             ├── it should leave the exchange rate unchanged before the mint

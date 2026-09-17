@@ -9,6 +9,7 @@ SDUSD::withdraw
     └── when caller is authorized
         ├── it should calculate shares to burn by rounding up
         ├── it should decrease accountedAssets by the withdrawn assets
+        ├── it should decrease depositCapUsage by depositCapUsage times shares burned divided by pre-burn non-seed supply, rounded down
         ├── it should burn the calculated shares from owner
         ├── it should transfer exactly the requested DUSD assets to receiver
         ├── it should return the burned share amount
@@ -22,6 +23,7 @@ SDUSD::withdraw
         │   └── it should leave the allowance unchanged
         ├── when requested assets is zero
         │   ├── it should complete without changing accounting, token balances, or share balances
+        │   ├── it should leave depositCapUsage unchanged
         │   ├── it should leave the exchange rate unchanged
         │   └── it should emit Withdraw with zero assets and shares
         ├── when PAUSE_TYPE is paused
@@ -31,9 +33,11 @@ SDUSD::withdraw
         │   ├── it should revert above that maximum
         │   ├── it should not make locked rewards withdrawable
         │   ├── it should leave the reward amount and period boundaries unchanged
+        │   ├── it should remove only the pooled principal represented by burned shares rather than all withdrawn assets
         │   └── it should not decrease the remaining holders' exchange rate
         ├── when owner withdraws all available assets
-        │   └── it should leave the permanent seed shares in total supply
+        │   ├── it should leave the permanent seed shares in total supply
+        │   └── it should clear all pooled principal represented by non-seed shares
         └── when the vault has received a raw DUSD donation
             ├── it should not make the donation withdrawable
             ├── it should leave the exchange rate unchanged

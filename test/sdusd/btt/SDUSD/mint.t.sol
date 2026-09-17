@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
@@ -17,6 +18,7 @@ contract SDUSD_Mint_Test is SDUSDCommon {
     }
 
     function test_RevertWhen_ReceiverIsZeroAddress() public {
+        uint256 capUsageBefore = vault.depositCapUsage();
         uint256 assets = vault.previewMint(1 ether);
         dusd.mint(USER, assets);
         vm.startPrank(USER);
@@ -24,12 +26,15 @@ contract SDUSD_Mint_Test is SDUSDCommon {
         vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector, address(0)));
         vault.mint(1 ether, address(0));
         vm.stopPrank();
+
+        assertEq(vault.depositCapUsage(), capUsageBefore);
     }
 
     function test_RevertWhen_AllowanceIsInsufficientAndLeavesStateUnchanged() public {
         uint256 assets = vault.previewMint(1 ether);
         dusd.mint(USER, assets);
         uint256 accountedBefore = vault.accountedAssets();
+        uint256 capUsageBefore = vault.depositCapUsage();
         uint256 supplyBefore = vault.totalSupply();
 
         vm.prank(USER);
@@ -39,12 +44,14 @@ contract SDUSD_Mint_Test is SDUSDCommon {
         vault.mint(1 ether, USER);
 
         assertEq(vault.accountedAssets(), accountedBefore);
+        assertEq(vault.depositCapUsage(), capUsageBefore);
         assertEq(vault.totalSupply(), supplyBefore);
     }
 
     function test_RevertWhen_BalanceIsInsufficientAndLeavesStateUnchanged() public {
         uint256 assets = vault.previewMint(1 ether);
         uint256 accountedBefore = vault.accountedAssets();
+        uint256 capUsageBefore = vault.depositCapUsage();
         uint256 supplyBefore = vault.totalSupply();
         vm.prank(USER);
         dusd.approve(address(vault), assets);
@@ -54,7 +61,26 @@ contract SDUSD_Mint_Test is SDUSDCommon {
         vault.mint(1 ether, USER);
 
         assertEq(vault.accountedAssets(), accountedBefore);
+        assertEq(vault.depositCapUsage(), capUsageBefore);
         assertEq(vault.totalSupply(), supplyBefore);
+    }
+
+    function test_RevertWhen_SharesExceedMaxMintAndLeavesStateUnchanged() public {
+        uint256 usageBefore = vault.depositCapUsage();
+        uint256 accountedBefore = vault.accountedAssets();
+        uint256 supplyBefore = vault.totalSupply();
+        _setDepositCap(usageBefore + 10 ether);
+        uint256 maximum = vault.maxMint(RECEIVER);
+        uint256 requested = maximum + 1;
+
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(ERC4626.ERC4626ExceededMaxMint.selector, RECEIVER, requested, maximum));
+        vault.mint(requested, RECEIVER);
+
+        assertEq(vault.depositCapUsage(), usageBefore);
+        assertEq(vault.accountedAssets(), accountedBefore);
+        assertEq(vault.totalSupply(), supplyBefore);
+        assertEq(vault.balanceOf(RECEIVER), 0);
     }
 
     function test_EmptyVaultMintsAllRequestedSharesToReceiver() public {
@@ -75,6 +101,7 @@ contract SDUSD_Mint_Test is SDUSDCommon {
         assertEq(returnedAssets, requiredAssets);
         assertEq(dusd.balanceOf(address(vault)), requiredAssets);
         assertEq(vault.accountedAssets(), requiredAssets);
+        assertEq(vault.depositCapUsage(), 0);
         assertEq(vault.balanceOf(USER), shares);
         assertEq(vault.balanceOf(SEED_LOCK), 0);
         assertEq(vault.totalSupply(), shares);
@@ -86,6 +113,7 @@ contract SDUSD_Mint_Test is SDUSDCommon {
         uint256 requiredAssets = vault.previewMint(shares);
         assertEq(requiredAssets, _expectedAssets(shares, Math.Rounding.Ceil));
         uint256 accountedBefore = vault.accountedAssets();
+        uint256 capUsageBefore = vault.depositCapUsage();
         uint256 seedBefore = vault.balanceOf(SEED_LOCK);
         uint256 vaultDusdBefore = dusd.balanceOf(address(vault));
         ExchangeRateSnapshot memory exchangeRateBefore = _snapshotExchangeRate();
@@ -103,6 +131,7 @@ contract SDUSD_Mint_Test is SDUSDCommon {
         assertEq(dusd.balanceOf(USER), userDusdBefore - requiredAssets);
         assertEq(dusd.balanceOf(address(vault)), vaultDusdBefore + requiredAssets);
         assertEq(vault.accountedAssets(), accountedBefore + requiredAssets);
+        assertEq(vault.depositCapUsage(), capUsageBefore + requiredAssets);
         assertEq(vault.balanceOf(RECEIVER), shares);
         assertEq(vault.balanceOf(SEED_LOCK), seedBefore);
         _assertExchangeRateNotDecreased(exchangeRateBefore);
@@ -110,6 +139,7 @@ contract SDUSD_Mint_Test is SDUSDCommon {
 
     function test_ZeroShareMintDoesNotChangeStateAndEmitsZeroDeposit() public {
         uint256 accountedBefore = vault.accountedAssets();
+        uint256 capUsageBefore = vault.depositCapUsage();
         uint256 supplyBefore = vault.totalSupply();
         uint256 callerDusdBefore = dusd.balanceOf(address(this));
         uint256 vaultDusdBefore = dusd.balanceOf(address(vault));
@@ -122,6 +152,7 @@ contract SDUSD_Mint_Test is SDUSDCommon {
 
         assertEq(assets, 0);
         assertEq(vault.accountedAssets(), accountedBefore);
+        assertEq(vault.depositCapUsage(), capUsageBefore);
         assertEq(vault.totalSupply(), supplyBefore);
         assertEq(dusd.balanceOf(address(this)), callerDusdBefore);
         assertEq(dusd.balanceOf(address(vault)), vaultDusdBefore);
@@ -135,13 +166,36 @@ contract SDUSD_Mint_Test is SDUSDCommon {
         vm.warp(vault.periodStart() + REWARD_DURATION / 2);
         uint256 shares = 10 ether;
         uint256 expectedAssets = _expectedAssets(shares, Math.Rounding.Ceil);
+        uint256 capUsageBefore = vault.depositCapUsage();
         ExchangeRateSnapshot memory exchangeRateBefore = _snapshotExchangeRate();
 
         uint256 returned = _mintFor(RECEIVER, shares);
 
         assertEq(returned, expectedAssets);
         assertEq(vault.balanceOf(RECEIVER), shares);
+        assertEq(vault.depositCapUsage(), capUsageBefore + expectedAssets);
         _assertExchangeRateNotDecreased(exchangeRateBefore);
+    }
+
+    function test_MintExactlyMaxMintUsesNoMoreThanRemainingHeadroom() public {
+        _notifyRewards(REWARD_AMOUNT);
+        _finishRewardPeriod();
+
+        uint256 usageBefore = vault.depositCapUsage();
+        uint256 headroom = 10 ether;
+        _setDepositCap(usageBefore + headroom);
+        uint256 maximum = vault.maxMint(RECEIVER);
+        uint256 requiredAssets = vault.previewMint(maximum);
+        assertLe(requiredAssets, headroom);
+
+        dusd.mint(USER, requiredAssets);
+        vm.startPrank(USER);
+        dusd.approve(address(vault), requiredAssets);
+        assertEq(vault.mint(maximum, RECEIVER), requiredAssets);
+        vm.stopPrank();
+
+        assertEq(vault.depositCapUsage(), usageBefore + requiredAssets);
+        assertLe(vault.depositCapUsage(), vault.depositCap());
     }
 
     function test_IgnoresRawDonationWhenCalculatingRequiredAssets() public {

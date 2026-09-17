@@ -194,6 +194,7 @@ contract ProtocolFeeCollectorSDUSDForkTest is Test {
             dusd: DUSD_MAINNET,
             rewarder: address(collector),
             seedShares: SEED_ASSETS,
+            depositCap: 115_000 ether,
             rewardDuration: REWARD_DURATION
         });
         sdusd = SDUSD(

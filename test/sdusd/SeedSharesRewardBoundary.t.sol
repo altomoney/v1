@@ -49,6 +49,7 @@ contract SDUSD_SeedSharesRewardBoundary_Test is Test {
             dusd: address(dusd),
             rewarder: REWARDER,
             seedShares: SEED_SHARES,
+            depositCap: 115_000 ether,
             rewardDuration: REWARD_DURATION
         });
         vault = SDUSD(address(new ERC1967Proxy(address(implementation), abi.encodeCall(SDUSD.initialize, (params)))));

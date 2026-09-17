@@ -21,6 +21,8 @@ SDUSD::notifyRewardAmount
         └── when the previous period has finished, amount is non-zero, and real stakers exist
             ├── it should pull exactly amount DUSD from the rewarder
             ├── it should increase accountedAssets by amount
+            ├── it should leave depositCapUsage and DUSD deposit headroom unchanged
+            ├── it should remain available when depositCapUsage is above depositCap
             ├── it should set rewardsForPeriod to amount
             ├── it should set periodStart to the current timestamp
             ├── it should set rewardPeriodFinish to periodStart plus rewardDuration

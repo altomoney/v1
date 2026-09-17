@@ -1,0 +1,17 @@
+SDUSD::setDepositCap
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── when new deposit cap equals the current cap
+    │   └── it should revert with SDUSDNoStateChange
+    └── when new deposit cap is different
+        ├── it should update depositCap without changing depositCapUsage
+        ├── it should emit DepositCapUpdated with the old and new cap
+        ├── when new deposit cap is zero
+        │   └── it should allow the update and disable new deposits and mints
+        ├── when new deposit cap is below current usage
+        │   ├── it should allow the update and disable new deposits and mints
+        │   ├── it should not block withdrawals or redemptions
+        │   └── withdrawals should reopen only the headroom created below the updated cap
+        └── when new deposit cap is above current usage
+            └── it should expose the difference as deposit headroom

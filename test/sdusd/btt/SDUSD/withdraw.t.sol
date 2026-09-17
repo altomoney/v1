@@ -36,6 +36,9 @@ contract SDUSD_Withdraw_Test is SDUSDCommon {
         uint256 expectedShares = _expectedShares(assets, Math.Rounding.Ceil);
         ExchangeRateSnapshot memory rateBefore = _snapshotExchangeRate();
         uint256 accountedBefore = vault.accountedAssets();
+        uint256 usageBefore = vault.depositCapUsage();
+        uint256 nonSeedSupplyBefore = vault.totalSupply() - vault.seedShares();
+        uint256 expectedPrincipalRemoved = Math.mulDiv(usageBefore, expectedShares, nonSeedSupplyBefore);
         uint256 ownerSharesBefore = vault.balanceOf(USER);
         uint256 receiverAssetsBefore = dusd.balanceOf(RECEIVER);
 
@@ -46,6 +49,7 @@ contract SDUSD_Withdraw_Test is SDUSDCommon {
 
         assertEq(burnedShares, expectedShares);
         assertEq(vault.accountedAssets(), accountedBefore - assets);
+        assertEq(vault.depositCapUsage(), usageBefore - expectedPrincipalRemoved);
         assertEq(vault.balanceOf(USER), ownerSharesBefore - expectedShares);
         assertEq(dusd.balanceOf(RECEIVER), receiverAssetsBefore + assets);
         assertEq(vault.allowance(USER, USER), 0);
@@ -74,6 +78,7 @@ contract SDUSD_Withdraw_Test is SDUSDCommon {
     function test_ZeroAssetWithdrawDoesNotChangeStateAndEmitsZeroWithdraw() public {
         ExchangeRateSnapshot memory rateBefore = _snapshotExchangeRate();
         uint256 accountedBefore = vault.accountedAssets();
+        uint256 usageBefore = vault.depositCapUsage();
         uint256 supplyBefore = vault.totalSupply();
         uint256 ownerSharesBefore = vault.balanceOf(USER);
         uint256 vaultAssetsBefore = dusd.balanceOf(address(vault));
@@ -85,6 +90,7 @@ contract SDUSD_Withdraw_Test is SDUSDCommon {
 
         assertEq(shares, 0);
         assertEq(vault.accountedAssets(), accountedBefore);
+        assertEq(vault.depositCapUsage(), usageBefore);
         assertEq(vault.totalSupply(), supplyBefore);
         assertEq(vault.balanceOf(USER), ownerSharesBefore);
         assertEq(dusd.balanceOf(address(vault)), vaultAssetsBefore);
@@ -109,7 +115,11 @@ contract SDUSD_Withdraw_Test is SDUSDCommon {
         uint256 startBefore = vault.periodStart();
         uint256 finishBefore = vault.rewardPeriodFinish();
         uint256 maximum = vault.maxWithdraw(USER);
+        uint256 shares = vault.previewWithdraw(maximum);
+        uint256 usageBefore = vault.depositCapUsage();
+        uint256 expectedPrincipalRemoved = Math.mulDiv(usageBefore, shares, vault.totalSupply() - vault.seedShares());
         assertEq(maximum, vault.convertToAssets(vault.balanceOf(USER)));
+        assertGt(maximum, expectedPrincipalRemoved);
 
         vm.prank(USER);
         vm.expectRevert(abi.encodeWithSelector(ERC4626.ERC4626ExceededMaxWithdraw.selector, USER, maximum + 1, maximum));
@@ -122,6 +132,7 @@ contract SDUSD_Withdraw_Test is SDUSDCommon {
         assertEq(vault.rewardsForPeriod(), rewardAmountBefore);
         assertEq(vault.periodStart(), startBefore);
         assertEq(vault.rewardPeriodFinish(), finishBefore);
+        assertEq(vault.depositCapUsage(), usageBefore - expectedPrincipalRemoved);
         assertEq(dusd.balanceOf(RECEIVER), maximum);
         _assertExchangeRateNotDecreased(rateBefore);
     }
@@ -133,6 +144,7 @@ contract SDUSD_Withdraw_Test is SDUSDCommon {
         assertEq(vault.balanceOf(USER), 0);
         assertEq(vault.totalSupply(), SEED_SHARES);
         assertEq(vault.balanceOf(SEED_LOCK), SEED_SHARES);
+        assertEq(vault.depositCapUsage(), 0);
     }
 
     function test_RawDonationDoesNotIncreaseWithdrawableAssets() public {

@@ -97,6 +97,9 @@ contract SDUSD_UpgradeToAndCall_Test is SDUSDCommon {
         assertEq(vault.seedShares(), SEED_SHARES);
         assertEq(vault.rewarder(), address(collector));
         assertEq(vault.rewardDuration(), nextRewardDuration);
+        assertEq(vault.depositCap(), INITIAL_DEPOSIT_CAP);
+        assertEq(vault.depositCapUsage(), SEED_SHARES);
+        assertEq(vault.maxDeposit(USER), 0);
         assertEq(vault.rewardsForPeriod(), REWARD_AMOUNT);
         assertEq(vault.periodStart(), periodStartBefore);
         assertEq(vault.rewardPeriodFinish(), periodFinishBefore);
@@ -107,6 +110,10 @@ contract SDUSD_UpgradeToAndCall_Test is SDUSDCommon {
         assertEq(vault.convertToAssets(1 ether), exchangeRateBefore);
         assertEq(vault.balanceOf(SEED_LOCK), seedBalanceBefore);
         assertEq(vault.balanceOf(USER), userBalanceBefore);
+
+        vm.prank(ADMIN);
+        vault.pause(PAUSE_TYPE, false);
+        assertEq(vault.maxDeposit(USER), INITIAL_DEPOSIT_CAP - SEED_SHARES);
 
         // The active period continues using its original seven-day span even though the next period is configured
         // to use eight days.
