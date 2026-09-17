@@ -26,6 +26,7 @@ import {PegResponsiveExponentialIrm} from "@alto/lending/irm/PegResponsiveExpone
 import {IRMType} from "@alto/lending/interfaces/IIrm.sol";
 import {
     IPegResponsiveExponentialIrm,
+    IRState,
     PegResponsiveExponentialIrmConfig
 } from "@alto/lending/interfaces/IPegResponsiveExponentialIrm.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
@@ -46,6 +47,8 @@ import {ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/AltoMultiChainlinkLendingOracle.sol";
 import {DusdPegCurveOracle} from "@alto/oracles/DusdPegCurveOracle/DusdPegCurveOracle.sol";
+import {IDusdPegOracle} from "@alto/oracles/interfaces/IDusdPegOracle.sol";
+import {ICurveStableSwapNGOracle} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
 import {
     OwnerPegResponsiveExponentialIrmFactory
 } from "@alto/deployments/ethereum-mainnet/OwnerPegResponsiveExponentialIrmFactory.sol";
@@ -1128,6 +1131,8 @@ contract DeployConvexCreditLineMarketPhaseTest is DeployMarketPhaseTestBase {
 
 contract DeployPegResponsiveIrmMigrationPhaseTest is DeployAltoEthereumMainnetTestBase {
     uint256 internal constant FORK_BLOCK = 25_988_862;
+    uint256 internal constant IRM_VERSION = 1;
+    uint256 internal constant TEST_PEG_PRICE = 0.999e18;
     uint256 internal constant YEAR = 365 days;
     string internal constant SCHEDULE_JSON =
         "contracts/deployments/ethereum-mainnet/output/safe-tx-mint-market-peg-responsive-irm-schedule.json";
@@ -1162,6 +1167,7 @@ contract DeployPegResponsiveIrmMigrationPhaseTest is DeployAltoEthereumMainnetTe
         address[] memory markets = _activeMintMarkets();
         address[] memory oldIrms = _currentIrms(markets);
 
+        _mockCurveObservationTimestamp(uint48(block.timestamp));
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         _assertFactoryAndOracle();
@@ -1182,6 +1188,15 @@ contract DeployPegResponsiveIrmMigrationPhaseTest is DeployAltoEthereumMainnetTe
 
         TimelockController timelock = TimelockController(payable(input.contracts.timelock));
         vm.warp(block.timestamp + timelock.getMinDelay() + 1);
+
+        _mockOracleObservation(uint48(block.timestamp - 30 minutes));
+        DeployAltoEthereumMainnet.preflightPegResponsiveIrmMigration(input);
+
+        _mockOracleObservation(uint48(block.timestamp - 30 minutes - 1));
+        vm.expectRevert(bytes("Stale peg price"));
+        this.preflightExternal(input);
+
+        _mockOracleObservation(uint48(block.timestamp));
         DeployAltoEthereumMainnet.preflightPegResponsiveIrmMigration(input);
 
         _executeSafeFile(EXECUTE_JSON);
@@ -1190,6 +1205,22 @@ contract DeployPegResponsiveIrmMigrationPhaseTest is DeployAltoEthereumMainnetTe
         _assertFinalState(markets, oldIrms, predictedIrms, config);
         _assertOperationDone(timelock);
         _restoreOutputFiles();
+    }
+
+    function _mockCurveObservationTimestamp(uint48 observedAt) private {
+        vm.mockCall(
+            FRXUSD_DUSD_CURVE_POOL_MAINNET,
+            abi.encodeCall(ICurveStableSwapNGOracle.ma_last_time, ()),
+            abi.encode(uint256(observedAt))
+        );
+    }
+
+    function _mockOracleObservation(uint48 observedAt) private {
+        vm.mockCall(
+            input.contracts.dusdPegCurveOracle,
+            abi.encodeCall(IDusdPegOracle.getPrice, ()),
+            abi.encode(TEST_PEG_PRICE, observedAt, true)
+        );
     }
 
     function preflightExternal(AltoEthereumMainnetInput memory deploymentInput) external view {
@@ -1227,7 +1258,7 @@ contract DeployPegResponsiveIrmMigrationPhaseTest is DeployAltoEthereumMainnetTe
         DecodedTimelockBatch memory scheduleBatch = _decodeScheduleBatch(_readSafeTxData(SCHEDULE_JSON));
         DecodedTimelockBatch memory executeBatch = _decodeExecuteBatch(_readSafeTxData(EXECUTE_JSON));
 
-        assertEq(scheduleBatch.targets.length, markets.length * 2, "schedule target count");
+        assertEq(scheduleBatch.targets.length, markets.length * 3, "schedule target count");
         assertEq(scheduleBatch.values.length, scheduleBatch.targets.length, "schedule value count");
         assertEq(scheduleBatch.payloads.length, scheduleBatch.targets.length, "schedule payload count");
         assertEq(scheduleBatch.predecessor, bytes32(0), "schedule predecessor");
@@ -1246,12 +1277,12 @@ contract DeployPegResponsiveIrmMigrationPhaseTest is DeployAltoEthereumMainnetTe
 
         address factory = input.contracts.ownerPegResponsiveExponentialIrmFactory;
         for (uint256 i; i < markets.length; ++i) {
-            uint256 callIndex = i * 2;
+            uint256 callIndex = i * 3;
             assertEq(scheduleBatch.targets[callIndex], factory, "deploy target");
             assertEq(scheduleBatch.values[callIndex], 0, "deploy value");
             assertEq(
                 scheduleBatch.payloads[callIndex],
-                abi.encodeCall(OwnerPegResponsiveExponentialIrmFactory.deploy, (markets[i], config)),
+                abi.encodeCall(OwnerPegResponsiveExponentialIrmFactory.deploy, (markets[i], IRM_VERSION, config)),
                 "deploy payload"
             );
 
@@ -1261,6 +1292,14 @@ contract DeployPegResponsiveIrmMigrationPhaseTest is DeployAltoEthereumMainnetTe
                 scheduleBatch.payloads[callIndex + 1],
                 abi.encodeCall(IMarketBase.setIrm, (predictedIrms[i], false)),
                 "setIrm payload"
+            );
+
+            assertEq(scheduleBatch.targets[callIndex + 2], markets[i], "accrueInterest target");
+            assertEq(scheduleBatch.values[callIndex + 2], 0, "accrueInterest value");
+            assertEq(
+                scheduleBatch.payloads[callIndex + 2],
+                abi.encodeCall(IMarketBase.accrueInterest, ()),
+                "accrueInterest payload"
             );
         }
     }
@@ -1297,16 +1336,28 @@ contract DeployPegResponsiveIrmMigrationPhaseTest is DeployAltoEthereumMainnetTe
             assertEq(irm.pegOracle(), oracle, "IRM peg oracle");
             assertEq(uint256(irm.IRM_TYPE()), uint256(IRMType.PEG_RESPONSIVE_EXPONENTIAL), "IRM type");
 
+            _assertPriceDerivedState(irmAddress, expectedConfig.baseRate);
+
             PegResponsiveExponentialIrmConfig memory actualConfig = IPegResponsiveExponentialIrm(irmAddress).irmConfig();
             assertEq(keccak256(abi.encode(actualConfig)), keccak256(abi.encode(expectedConfig)), "IRM configuration");
 
-            (address recordedIrm, address recordedOwner, address recordedOracle) = factory.deployments(markets[i]);
+            (address recordedIrm, address recordedOwner, address recordedOracle) =
+                factory.deployments(markets[i], IRM_VERSION);
             assertEq(recordedIrm, irmAddress, "factory IRM");
             assertEq(recordedOwner, timelock, "factory IRM owner");
             assertEq(recordedOracle, oracle, "factory IRM oracle");
             assertEq(_storedTargetIrm(i), irmAddress, "reconciled IRM");
             assertEq(FixedRateIrm(oldIrms[i]).market(), markets[i], "old IRM binding");
         }
+    }
+
+    function _assertPriceDerivedState(address irmAddress, uint256 expectedBaseRate) private view {
+        PegResponsiveExponentialIrm irm = PegResponsiveExponentialIrm(irmAddress);
+        IRState memory state = IPegResponsiveExponentialIrm(irmAddress).irState();
+        assertEq(state.borrowRate, irm.targetBorrowRate(TEST_PEG_PRICE), "price-derived borrow rate");
+        assertGt(state.borrowRate, expectedBaseRate, "depeg must increase borrow rate");
+        assertEq(state.lastUpdate, block.timestamp, "IRM checkpoint timestamp");
+        assertTrue(state.stressMode, "depeg must enter stress mode");
     }
 
     function _assertOperationDone(TimelockController timelock) private view {
@@ -1356,7 +1407,7 @@ contract DeployPegResponsiveIrmMigrationPhaseTest is DeployAltoEthereumMainnetTe
             OwnerPegResponsiveExponentialIrmFactory(input.contracts.ownerPegResponsiveExponentialIrmFactory);
         irms = new address[](markets.length);
         for (uint256 i; i < markets.length; ++i) {
-            irms[i] = factory.predictIrmAddress(markets[i], config);
+            irms[i] = factory.predictIrmAddress(markets[i], IRM_VERSION, config);
         }
     }
 
