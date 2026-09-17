@@ -20,11 +20,11 @@ contract OwnerPegResponsiveExponentialIrmFactory is AltoOwnable2Step {
 
     address public pegOracle;
 
-    mapping(address market => Deployment) public deployments;
+    mapping(address market => mapping(uint256 version => Deployment)) public deployments;
 
     event SetPegOracle(address indexed oldPegOracle, address indexed newPegOracle);
     event PegResponsiveExponentialIrmDeployed(
-        address indexed market, address indexed irm, address indexed owner, address pegOracle
+        address indexed market, address indexed irm, address indexed owner, address pegOracle, uint256 version
     );
 
     constructor(address initialOwner, address initialPegOracle) Ownable(initialOwner) {
@@ -36,8 +36,8 @@ contract OwnerPegResponsiveExponentialIrmFactory is AltoOwnable2Step {
         _setPegOracle(newPegOracle);
     }
 
-    /// @notice Deploys one IRM for a market, or returns an exact prior deployment.
-    function deploy(address market, PegResponsiveExponentialIrmConfig calldata config)
+    /// @notice Deploys one IRM for a market version, or returns an exact prior deployment.
+    function deploy(address market, uint256 version, PegResponsiveExponentialIrmConfig calldata config)
         external
         onlyOwner
         returns (address irm)
@@ -45,20 +45,22 @@ contract OwnerPegResponsiveExponentialIrmFactory is AltoOwnable2Step {
         require(market != address(0), "Invalid market");
 
         address irmOwner = owner();
-        Deployment memory existing = deployments[market];
+        Deployment memory existing = deployments[market][version];
         if (existing.irm != address(0)) {
-            _validateExisting(existing, _predictIrmAddress(market, existing.pegOracle, config, irmOwner), irmOwner);
+            _validateExisting(
+                existing, _predictIrmAddress(market, version, existing.pegOracle, config, irmOwner), irmOwner
+            );
             return existing.irm;
         }
 
         address currentPegOracle = pegOracle;
-        irm = address(new PegResponsiveExponentialIrm{salt: _salt(market)}(currentPegOracle, config, irmOwner));
-        deployments[market] = Deployment(irm, irmOwner, currentPegOracle);
+        irm = address(new PegResponsiveExponentialIrm{salt: _salt(market, version)}(currentPegOracle, config, irmOwner));
+        deployments[market][version] = Deployment(irm, irmOwner, currentPegOracle);
 
-        emit PegResponsiveExponentialIrmDeployed(market, irm, irmOwner, currentPegOracle);
+        emit PegResponsiveExponentialIrmDeployed(market, irm, irmOwner, currentPegOracle, version);
     }
 
-    function predictIrmAddress(address market, PegResponsiveExponentialIrmConfig memory config)
+    function predictIrmAddress(address market, uint256 version, PegResponsiveExponentialIrmConfig memory config)
         public
         view
         returns (address)
@@ -66,13 +68,15 @@ contract OwnerPegResponsiveExponentialIrmFactory is AltoOwnable2Step {
         require(market != address(0), "Invalid market");
 
         address irmOwner = owner();
-        Deployment memory existing = deployments[market];
+        Deployment memory existing = deployments[market][version];
         if (existing.irm != address(0)) {
-            _validateExisting(existing, _predictIrmAddress(market, existing.pegOracle, config, irmOwner), irmOwner);
+            _validateExisting(
+                existing, _predictIrmAddress(market, version, existing.pegOracle, config, irmOwner), irmOwner
+            );
             return existing.irm;
         }
 
-        return _predictIrmAddress(market, pegOracle, config, irmOwner);
+        return _predictIrmAddress(market, version, pegOracle, config, irmOwner);
     }
 
     function _setPegOracle(address newPegOracle) private {
@@ -83,6 +87,7 @@ contract OwnerPegResponsiveExponentialIrmFactory is AltoOwnable2Step {
 
     function _predictIrmAddress(
         address market,
+        uint256 version,
         address oracle,
         PegResponsiveExponentialIrmConfig memory config,
         address irmOwner
@@ -92,16 +97,18 @@ contract OwnerPegResponsiveExponentialIrmFactory is AltoOwnable2Step {
         );
 
         return address(
-            uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), _salt(market), initCodeHash))))
+            uint160(
+                uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), _salt(market, version), initCodeHash)))
+            )
         );
     }
 
     function _validateExisting(Deployment memory existing, address expectedIrm, address irmOwner) private view {
-        require(existing.irm == expectedIrm && existing.owner == irmOwner, "Market already deployed");
+        require(existing.irm == expectedIrm && existing.owner == irmOwner, "Version already used");
         require(existing.irm.code.length != 0 && Ownable(existing.irm).owner() == irmOwner, "Invalid deployment");
     }
 
-    function _salt(address market) private pure returns (bytes32) {
-        return keccak256(abi.encode(market));
+    function _salt(address market, uint256 version) private pure returns (bytes32) {
+        return keccak256(abi.encode(market, version));
     }
 }

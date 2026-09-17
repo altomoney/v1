@@ -40,6 +40,7 @@ struct PegResponsiveIrmBatch {
 
 library PegResponsiveIrmDeployment {
     uint256 private constant ACTIVE_MINT_MARKET_COUNT = 6;
+    uint256 private constant IRM_VERSION = 1;
     uint256 private constant YEAR = 365 days;
     string private constant SAFE_BATCH_NAME = "mint-market-peg-responsive-irm";
 
@@ -72,9 +73,9 @@ library PegResponsiveIrmDeployment {
         }
 
         address[] memory markets = _activeMintMarkets(input);
-        address[] memory storedIrms = _storedMintIrms(input);
         _validateFactoryAndOracle(input, oracleConfig);
-        _validateInitialMarkets(input, markets, storedIrms, irmConfig);
+        _validateOracleObservation(input.contracts.dusdPegCurveOracle, irmConfig.maxOracleAge);
+        _validateInitialMarkets(input, markets, irmConfig);
 
         PegResponsiveIrmBatch memory batch = _buildBatch(input, markets, irmConfig);
         SafeTransactionBuilder.writeTimelockBatch(
@@ -92,10 +93,10 @@ library PegResponsiveIrmDeployment {
     function preflight(AltoEthereumMainnetInput memory input) internal view {
         PegResponsiveExponentialIrmConfig memory irmConfig = _irmConfig();
         address[] memory markets = _activeMintMarkets(input);
-        address[] memory storedIrms = _storedMintIrms(input);
 
         _validateFactoryAndOracle(input, _oracleRuntimeConfig());
-        _validateInitialMarkets(input, markets, storedIrms, irmConfig);
+        _validateOracleObservation(input.contracts.dusdPegCurveOracle, irmConfig.maxOracleAge);
+        _validateInitialMarkets(input, markets, irmConfig);
 
         PegResponsiveIrmBatch memory batch = _buildBatch(input, markets, irmConfig);
         TimelockController timelock = TimelockController(payable(input.contracts.timelock));
@@ -112,14 +113,8 @@ library PegResponsiveIrmDeployment {
         address[] memory expectedIrms = _predictedIrms(input, markets, irmConfig);
         for (uint256 i; i < markets.length; ++i) {
             _validateFinalMarket(input, markets[i], expectedIrms[i], irmConfig);
+            _storeReconciledIrm(input, markets[i], expectedIrms[i]);
         }
-
-        input.contracts.refreshWethMarket.marketIrm = expectedIrms[0];
-        input.contracts.refreshWstethMarket.marketIrm = expectedIrms[1];
-        input.contracts.refreshRethMarket.marketIrm = expectedIrms[2];
-        input.contracts.refreshSusdeMintMarket.marketIrm = expectedIrms[3];
-        input.contracts.refreshSyrupUsdcMintMarket.marketIrm = expectedIrms[4];
-        input.contracts.refreshFrxUsdMarket.marketIrm = expectedIrms[5];
         return input;
     }
 
@@ -128,7 +123,7 @@ library PegResponsiveIrmDeployment {
         address[] memory markets,
         PegResponsiveExponentialIrmConfig memory irmConfig
     ) private view returns (PegResponsiveIrmBatch memory batch) {
-        uint256 callCount = markets.length * 2;
+        uint256 callCount = markets.length * 3;
         batch.targets = new address[](callCount);
         batch.values = new uint256[](callCount);
         batch.payloads = new bytes[](callCount);
@@ -136,15 +131,19 @@ library PegResponsiveIrmDeployment {
         OwnerPegResponsiveExponentialIrmFactory factory =
             OwnerPegResponsiveExponentialIrmFactory(input.contracts.ownerPegResponsiveExponentialIrmFactory);
         for (uint256 i; i < markets.length; ++i) {
-            uint256 callIndex = i * 2;
-            address irm = factory.predictIrmAddress(markets[i], irmConfig);
+            uint256 callIndex = i * 3;
+            address market = markets[i];
+            address irm = factory.predictIrmAddress(market, IRM_VERSION, irmConfig);
 
             batch.targets[callIndex] = address(factory);
             batch.payloads[callIndex] =
-                abi.encodeCall(OwnerPegResponsiveExponentialIrmFactory.deploy, (markets[i], irmConfig));
+                abi.encodeCall(OwnerPegResponsiveExponentialIrmFactory.deploy, (market, IRM_VERSION, irmConfig));
 
-            batch.targets[callIndex + 1] = markets[i];
+            batch.targets[callIndex + 1] = market;
             batch.payloads[callIndex + 1] = abi.encodeCall(IMarketBase.setIrm, (irm, false));
+
+            batch.targets[callIndex + 2] = market;
+            batch.payloads[callIndex + 2] = abi.encodeCall(IMarketBase.accrueInterest, ());
         }
     }
 
@@ -179,21 +178,22 @@ library PegResponsiveIrmDeployment {
             maExpTime == oracleConfig.expectedMaExpTime && aPrecise == oracleConfig.expectedAPrecise,
             "Wrong oracle config"
         );
+    }
 
+    function _validateOracleObservation(address oracleAddress, uint48 maxOracleAge) private view {
         (uint256 priceWad, uint48 observedAt, bool valid) = IDusdPegOracle(oracleAddress).getPrice();
         require(
             valid && priceWad != 0 && observedAt != 0 && uint256(observedAt) <= block.timestamp, "Invalid peg price"
         );
+        require(block.timestamp - uint256(observedAt) <= maxOracleAge, "Stale peg price");
     }
 
     function _validateInitialMarkets(
         AltoEthereumMainnetInput memory input,
         address[] memory markets,
-        address[] memory storedIrms,
         PegResponsiveExponentialIrmConfig memory irmConfig
     ) private view {
         require(markets.length == ACTIVE_MINT_MARKET_COUNT, "Expected six mint markets");
-        require(storedIrms.length == markets.length, "Invalid stored IRM count");
 
         OwnerPegResponsiveExponentialIrmFactory factory =
             OwnerPegResponsiveExponentialIrmFactory(input.contracts.ownerPegResponsiveExponentialIrmFactory);
@@ -212,7 +212,6 @@ library PegResponsiveIrmDeployment {
             require(!IPausable(market).paused(PAUSE_TYPE), "Market fully paused");
 
             address currentIrm = marketContract.irm();
-            require(currentIrm == storedIrms[i], "Stored IRM mismatch");
             require(
                 currentIrm.code.length != 0 && Ownable(currentIrm).owner() == input.contracts.timelock,
                 "Wrong IRM owner"
@@ -220,9 +219,9 @@ library PegResponsiveIrmDeployment {
             require(IIrm(currentIrm).IRM_TYPE() == IRMType.FIXED_RATE, "Wrong current IRM type");
             require(FixedRateIrm(currentIrm).market() == market, "Wrong current IRM binding");
 
-            (address deployed,,) = factory.deployments(market);
+            (address deployed,,) = factory.deployments(market, IRM_VERSION);
             require(deployed == address(0), "IRM already deployed");
-            address predicted = factory.predictIrmAddress(market, irmConfig);
+            address predicted = factory.predictIrmAddress(market, IRM_VERSION, irmConfig);
             require(predicted.code.length == 0, "Predicted IRM already deployed");
         }
     }
@@ -246,7 +245,7 @@ library PegResponsiveIrmDeployment {
 
         (address deployed, address irmOwner, address pegOracle) = OwnerPegResponsiveExponentialIrmFactory(
                 input.contracts.ownerPegResponsiveExponentialIrmFactory
-            ).deployments(market);
+            ).deployments(market, IRM_VERSION);
         require(deployed == expectedIrm && irmOwner == input.contracts.timelock, "Wrong factory deployment");
         require(pegOracle == input.contracts.dusdPegCurveOracle, "Wrong factory oracle");
     }
@@ -260,7 +259,7 @@ library PegResponsiveIrmDeployment {
         OwnerPegResponsiveExponentialIrmFactory factory =
             OwnerPegResponsiveExponentialIrmFactory(input.contracts.ownerPegResponsiveExponentialIrmFactory);
         for (uint256 i; i < markets.length; ++i) {
-            irms[i] = factory.predictIrmAddress(markets[i], irmConfig);
+            irms[i] = factory.predictIrmAddress(markets[i], IRM_VERSION, irmConfig);
         }
     }
 
@@ -274,14 +273,22 @@ library PegResponsiveIrmDeployment {
         markets[5] = input.contracts.refreshFrxUsdMarket.market;
     }
 
-    function _storedMintIrms(AltoEthereumMainnetInput memory input) private pure returns (address[] memory irms) {
-        irms = new address[](ACTIVE_MINT_MARKET_COUNT);
-        irms[0] = input.contracts.refreshWethMarket.marketIrm;
-        irms[1] = input.contracts.refreshWstethMarket.marketIrm;
-        irms[2] = input.contracts.refreshRethMarket.marketIrm;
-        irms[3] = input.contracts.refreshSusdeMintMarket.marketIrm;
-        irms[4] = input.contracts.refreshSyrupUsdcMintMarket.marketIrm;
-        irms[5] = input.contracts.refreshFrxUsdMarket.marketIrm;
+    function _storeReconciledIrm(AltoEthereumMainnetInput memory input, address market, address irm) private pure {
+        if (market == input.contracts.refreshWethMarket.market) {
+            input.contracts.refreshWethMarket.marketIrm = irm;
+        } else if (market == input.contracts.refreshWstethMarket.market) {
+            input.contracts.refreshWstethMarket.marketIrm = irm;
+        } else if (market == input.contracts.refreshRethMarket.market) {
+            input.contracts.refreshRethMarket.marketIrm = irm;
+        } else if (market == input.contracts.refreshSusdeMintMarket.market) {
+            input.contracts.refreshSusdeMintMarket.marketIrm = irm;
+        } else if (market == input.contracts.refreshSyrupUsdcMintMarket.market) {
+            input.contracts.refreshSyrupUsdcMintMarket.marketIrm = irm;
+        } else if (market == input.contracts.refreshFrxUsdMarket.market) {
+            input.contracts.refreshFrxUsdMarket.marketIrm = irm;
+        } else {
+            revert("Unknown mint market");
+        }
     }
 
     /// @dev TENTATIVE DEPLOYMENT PARAMETERS: review and update every value before mainnet deployment.

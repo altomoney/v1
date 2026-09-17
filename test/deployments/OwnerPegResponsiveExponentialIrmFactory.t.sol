@@ -17,6 +17,8 @@ import {MockDusdPegOracle} from "@alto-test/lending/btt/mocks/MockDusdPegOracle.
 
 contract OwnerPegResponsiveExponentialIrmFactoryTest is Test {
     uint256 internal constant YEAR = 365 days;
+    uint256 internal constant VERSION = 1;
+    uint256 internal constant SECOND_VERSION = 2;
 
     address internal timelock = makeAddr("timelock");
     address internal market = makeAddr("market");
@@ -50,7 +52,7 @@ contract OwnerPegResponsiveExponentialIrmFactoryTest is Test {
 
     function test_deployIsOwnerOnly() public {
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this)));
-        factory.deploy(market, config);
+        factory.deploy(market, VERSION, config);
     }
 
     function test_setPegOracleIsOwnerOnlyAndRejectsZeroAddress() public {
@@ -67,23 +69,23 @@ contract OwnerPegResponsiveExponentialIrmFactoryTest is Test {
     function test_deployRejectsZeroMarket() public {
         vm.expectRevert(bytes("Invalid market"));
         vm.prank(timelock);
-        factory.deploy(address(0), config);
+        factory.deploy(address(0), VERSION, config);
 
         vm.expectRevert(bytes("Invalid market"));
-        factory.predictIrmAddress(address(0), config);
+        factory.predictIrmAddress(address(0), VERSION, config);
     }
 
     function test_deploysPredictedIrmOwnedByTimelockAndRecordsDeployment() public {
-        address predicted = factory.predictIrmAddress(market, config);
+        address predicted = factory.predictIrmAddress(market, VERSION, config);
         assertEq(predicted.code.length, 0, "predicted IRM must not exist");
 
         vm.prank(timelock);
-        address deployed = factory.deploy(market, config);
+        address deployed = factory.deploy(market, VERSION, config);
 
         assertEq(deployed, predicted, "predicted IRM");
         assertGt(deployed.code.length, 0, "IRM code");
 
-        (address recordedIrm, address recordedOwner, address recordedOracle) = factory.deployments(market);
+        (address recordedIrm, address recordedOwner, address recordedOracle) = factory.deployments(market, VERSION);
         assertEq(recordedIrm, deployed, "recorded IRM");
         assertEq(recordedOwner, timelock, "recorded owner");
         assertEq(recordedOracle, address(pegOracle), "recorded oracle");
@@ -100,73 +102,98 @@ contract OwnerPegResponsiveExponentialIrmFactoryTest is Test {
 
     function test_exactRetryReturnsExistingIrm() public {
         vm.prank(timelock);
-        address deployed = factory.deploy(market, config);
+        address deployed = factory.deploy(market, VERSION, config);
 
-        assertEq(factory.predictIrmAddress(market, config), deployed, "existing prediction");
+        assertEq(factory.predictIrmAddress(market, VERSION, config), deployed, "existing prediction");
 
         vm.prank(timelock);
-        assertEq(factory.deploy(market, config), deployed, "exact retry");
+        assertEq(factory.deploy(market, VERSION, config), deployed, "exact retry");
     }
 
     function test_existingMarketRejectsDifferentConfig() public {
         vm.prank(timelock);
-        factory.deploy(market, config);
+        factory.deploy(market, VERSION, config);
 
         PegResponsiveExponentialIrmConfig memory differentConfig = config;
         differentConfig.recoveryDelay += 1;
 
-        vm.expectRevert(bytes("Market already deployed"));
-        factory.predictIrmAddress(market, differentConfig);
+        vm.expectRevert(bytes("Version already used"));
+        factory.predictIrmAddress(market, VERSION, differentConfig);
 
-        vm.expectRevert(bytes("Market already deployed"));
+        vm.expectRevert(bytes("Version already used"));
         vm.prank(timelock);
-        factory.deploy(market, differentConfig);
+        factory.deploy(market, VERSION, differentConfig);
     }
 
     function test_existingMarketRejectsDifferentFactoryOwner() public {
         vm.prank(timelock);
-        factory.deploy(market, config);
+        factory.deploy(market, VERSION, config);
 
         address newOwner = makeAddr("newOwner");
         vm.prank(timelock);
         factory.transferOwnershipSkip2Step(newOwner);
 
-        vm.expectRevert(bytes("Market already deployed"));
-        factory.predictIrmAddress(market, config);
+        vm.expectRevert(bytes("Version already used"));
+        factory.predictIrmAddress(market, VERSION, config);
 
-        vm.expectRevert(bytes("Market already deployed"));
+        vm.expectRevert(bytes("Version already used"));
         vm.prank(newOwner);
-        factory.deploy(market, config);
+        factory.deploy(market, VERSION, config);
+    }
+
+    function test_newVersionDeploysFreshIrmForSameMarket() public {
+        address firstPrediction = factory.predictIrmAddress(market, VERSION, config);
+        address secondPrediction = factory.predictIrmAddress(market, SECOND_VERSION, config);
+        assertNotEq(firstPrediction, secondPrediction, "versions must have distinct predictions");
+
+        vm.startPrank(timelock);
+        address firstIrm = factory.deploy(market, VERSION, config);
+        address secondIrm = factory.deploy(market, SECOND_VERSION, config);
+        vm.stopPrank();
+
+        assertEq(firstIrm, firstPrediction, "first version prediction");
+        assertEq(secondIrm, secondPrediction, "second version prediction");
+        assertNotEq(firstIrm, secondIrm, "versions must deploy distinct IRMs");
+
+        (address recordedFirstIrm, address firstOwner, address firstOracle) = factory.deployments(market, VERSION);
+        (address recordedSecondIrm, address secondOwner, address secondOracle) =
+            factory.deployments(market, SECOND_VERSION);
+        assertEq(recordedFirstIrm, firstIrm, "first version record");
+        assertEq(recordedSecondIrm, secondIrm, "second version record");
+        assertEq(firstOwner, timelock, "first version owner");
+        assertEq(secondOwner, timelock, "second version owner");
+        assertEq(firstOracle, address(pegOracle), "first version oracle");
+        assertEq(secondOracle, address(pegOracle), "second version oracle");
     }
 
     function test_setPegOracleOnlyAffectsFutureDeployments() public {
-        address oldPredictionForSecondMarket = factory.predictIrmAddress(secondMarket, config);
+        address oldPredictionForSecondMarket = factory.predictIrmAddress(secondMarket, VERSION, config);
 
         vm.prank(timelock);
-        address firstIrm = factory.deploy(market, config);
+        address firstIrm = factory.deploy(market, VERSION, config);
 
         MockDusdPegOracle newOracle = new MockDusdPegOracle();
         vm.prank(timelock);
         factory.setPegOracle(address(newOracle));
 
         assertEq(factory.pegOracle(), address(newOracle), "updated factory oracle");
-        assertEq(factory.predictIrmAddress(market, config), firstIrm, "existing IRM prediction");
+        assertEq(factory.predictIrmAddress(market, VERSION, config), firstIrm, "existing IRM prediction");
 
         vm.prank(timelock);
-        assertEq(factory.deploy(market, config), firstIrm, "existing IRM retry");
+        assertEq(factory.deploy(market, VERSION, config), firstIrm, "existing IRM retry");
 
-        address newPredictionForSecondMarket = factory.predictIrmAddress(secondMarket, config);
+        address newPredictionForSecondMarket = factory.predictIrmAddress(secondMarket, VERSION, config);
         assertNotEq(newPredictionForSecondMarket, oldPredictionForSecondMarket, "future prediction must change");
 
         vm.prank(timelock);
-        address secondIrm = factory.deploy(secondMarket, config);
+        address secondIrm = factory.deploy(secondMarket, VERSION, config);
 
         assertEq(secondIrm, newPredictionForSecondMarket, "new oracle prediction");
         assertEq(PegResponsiveExponentialIrm(secondIrm).owner(), timelock, "new IRM owner");
         assertEq(PegResponsiveExponentialIrm(secondIrm).pegOracle(), address(newOracle), "new IRM oracle");
 
-        (,, address firstRecordedOracle) = factory.deployments(market);
-        (,, address secondRecordedOracle) = factory.deployments(secondMarket);
+        (,, address firstRecordedOracle) = factory.deployments(market, VERSION);
+        (,, address secondRecordedOracle) = factory.deployments(secondMarket, VERSION);
         assertEq(firstRecordedOracle, address(pegOracle), "existing recorded oracle");
         assertEq(secondRecordedOracle, address(newOracle), "new recorded oracle");
     }
