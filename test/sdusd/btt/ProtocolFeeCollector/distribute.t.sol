@@ -4,9 +4,11 @@ pragma solidity ^0.8.28;
 import {Vm} from "forge-std/Vm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
+import {ISDUSDVaultErrors} from "@alto/sdusd/interfaces/ISDUSDVault.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {
-    IProtocolFeeCollectorErrors, IProtocolFeeCollectorEvents
+    IProtocolFeeCollectorErrors,
+    IProtocolFeeCollectorEvents
 } from "@alto/sdusd/interfaces/IProtocolFeeCollector.sol";
 import {ProtocolFeeCollectorCommon} from "./ProtocolFeeCollectorCommon.t.sol";
 
@@ -18,21 +20,22 @@ contract ProtocolFeeCollector_Distribute_Test is ProtocolFeeCollectorCommon {
         collector.distribute();
     }
 
-    function test_RevertWhen_SdusdVaultIsNotSet() public {
+    function test_RevertWhen_SdusdVaultIsNotSetAndRewardAmountIsNonzero() public {
+        uint256 collected = 10 ether;
+        dusd.mint(address(collector), collected);
+        uint256 treasuryBalanceBefore = dusd.balanceOf(TREASURY);
+        uint256 vaultBalanceBefore = dusd.balanceOf(address(sdusdVault));
+        uint256 accountedAssetsBefore = sdusdVault.accountedAssets();
+
         vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorSdusdNotSet.selector);
         collector.distribute();
+
+        _assertFailedDistributionState(
+            collected, treasuryBalanceBefore, vaultBalanceBefore, accountedAssetsBefore, 0, 0
+        );
     }
 
-    function test_RevertWhen_RewardPeriodHasNotFinished() public {
-        _startRewardPeriod(100 ether);
-        dusd.mint(address(collector), 10 ether);
-
-        vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorRewardPeriodNotFinished.selector);
-        collector.distribute();
-    }
-
-    function test_ZeroBalanceSkipsTransfersAndNotificationAndEmitsZeroAmounts() public {
-        _setSdusdVault();
+    function test_ZeroBalanceSkipsVaultChecksTransfersAndNotificationAndEmitsZeroAmounts() public {
         uint256 accountedAssetsBefore = sdusdVault.accountedAssets();
 
         vm.expectEmit(false, false, false, true, address(collector));
@@ -50,9 +53,8 @@ contract ProtocolFeeCollector_Distribute_Test is ProtocolFeeCollectorCommon {
         assertEq(sdusdVault.rewardPeriodFinish(), 0);
     }
 
-    function test_ZeroRewardsBpsTransfersAllDusdToTreasuryWithoutNotification() public {
+    function test_ZeroRewardsBpsTransfersAllDusdToTreasuryWhenVaultIsNotSet() public {
         uint256 collected = 101 ether;
-        _setSdusdVault();
         _setRewardsBps(0);
         dusd.mint(address(collector), collected);
         uint256 accountedAssetsBefore = sdusdVault.accountedAssets();
@@ -67,6 +69,123 @@ contract ProtocolFeeCollector_Distribute_Test is ProtocolFeeCollectorCommon {
         assertEq(sdusdVault.rewardsForPeriod(), 0);
         assertEq(sdusdVault.rewardPeriodFinish(), 0);
         assertEq(dusd.balanceOf(address(collector)), 0);
+    }
+
+    function test_AnyCallerCanDistributeZeroRewardsBpsDuringActiveRewardPeriod() public {
+        _startRewardPeriod(100 ether);
+        _setRewardsBps(0);
+        uint256 collected = 10 ether;
+        dusd.mint(address(collector), collected);
+        uint256 treasuryBalanceBefore = dusd.balanceOf(TREASURY);
+        uint256 rewardsForPeriodBefore = sdusdVault.rewardsForPeriod();
+        uint256 rewardPeriodFinishBefore = sdusdVault.rewardPeriodFinish();
+
+        vm.expectEmit(false, false, false, true, address(collector));
+        emit IProtocolFeeCollectorEvents.Distributed(collected, collected, 0);
+
+        vm.prank(USER);
+        collector.distribute();
+
+        assertEq(dusd.balanceOf(TREASURY), treasuryBalanceBefore + collected);
+        assertEq(dusd.balanceOf(address(collector)), 0);
+        assertEq(sdusdVault.rewardsForPeriod(), rewardsForPeriodBefore);
+        assertEq(sdusdVault.rewardPeriodFinish(), rewardPeriodFinishBefore);
+        assertEq(dusd.allowance(address(collector), address(sdusdVault)), 0);
+    }
+
+    function test_NonzeroRewardsBpsThatRoundsRewardToZeroSkipsVaultChecks() public {
+        uint256 collected = 1;
+        dusd.mint(address(collector), collected);
+
+        vm.expectEmit(false, false, false, true, address(collector));
+        emit IProtocolFeeCollectorEvents.Distributed(collected, collected, 0);
+
+        collector.distribute();
+
+        assertEq(dusd.balanceOf(TREASURY), collected);
+        assertEq(dusd.balanceOf(address(collector)), 0);
+        assertEq(sdusdVault.rewardsForPeriod(), 0);
+        assertEq(sdusdVault.rewardPeriodFinish(), 0);
+    }
+
+    function test_RevertWhen_RewardPeriodHasNotFinishedAndLeavesDistributionStateUnchanged() public {
+        _startRewardPeriod(100 ether);
+        uint256 collected = 10 ether;
+        dusd.mint(address(collector), collected);
+        uint256 treasuryBalanceBefore = dusd.balanceOf(TREASURY);
+        uint256 vaultBalanceBefore = dusd.balanceOf(address(sdusdVault));
+        uint256 accountedAssetsBefore = sdusdVault.accountedAssets();
+        uint256 rewardsForPeriodBefore = sdusdVault.rewardsForPeriod();
+        uint256 rewardPeriodFinishBefore = sdusdVault.rewardPeriodFinish();
+
+        vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorRewardPeriodNotFinished.selector);
+        collector.distribute();
+
+        _assertFailedDistributionState(
+            collected,
+            treasuryBalanceBefore,
+            vaultBalanceBefore,
+            accountedAssetsBefore,
+            rewardsForPeriodBefore,
+            rewardPeriodFinishBefore
+        );
+    }
+
+    function test_RevertWhen_SdusdVaultIsPausedAndLeavesDistributionStateUnchanged() public {
+        _setSdusdVault();
+        vm.prank(PAUSER);
+        sdusdVault.pause(PAUSE_TYPE, true);
+        uint256 collected = 10 ether;
+        dusd.mint(address(collector), collected);
+        uint256 treasuryBalanceBefore = dusd.balanceOf(TREASURY);
+        uint256 vaultBalanceBefore = dusd.balanceOf(address(sdusdVault));
+        uint256 accountedAssetsBefore = sdusdVault.accountedAssets();
+
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
+        collector.distribute();
+
+        _assertFailedDistributionState(
+            collected, treasuryBalanceBefore, vaultBalanceBefore, accountedAssetsBefore, 0, 0
+        );
+    }
+
+    function test_RevertWhen_OnlySeedSharesRemainAndLeavesDistributionStateUnchanged() public {
+        uint256 userShares = sdusdVault.balanceOf(USER);
+        vm.prank(USER);
+        sdusdVault.redeem(userShares, USER, USER);
+        assertEq(sdusdVault.totalSupply(), SEED_SHARES);
+
+        _setSdusdVault();
+        uint256 collected = 10 ether;
+        dusd.mint(address(collector), collected);
+        uint256 treasuryBalanceBefore = dusd.balanceOf(TREASURY);
+        uint256 vaultBalanceBefore = dusd.balanceOf(address(sdusdVault));
+        uint256 accountedAssetsBefore = sdusdVault.accountedAssets();
+
+        vm.expectRevert(ISDUSDVaultErrors.SDUSDNoActiveStakers.selector);
+        collector.distribute();
+
+        _assertFailedDistributionState(
+            collected, treasuryBalanceBefore, vaultBalanceBefore, accountedAssetsBefore, 0, 0
+        );
+    }
+
+    function test_RevertWhen_CollectorIsNotVaultRewarderAndLeavesDistributionStateUnchanged() public {
+        _setSdusdVault();
+        vm.prank(ADMIN);
+        sdusdVault.setRewarder(USER);
+        uint256 collected = 10 ether;
+        dusd.mint(address(collector), collected);
+        uint256 treasuryBalanceBefore = dusd.balanceOf(TREASURY);
+        uint256 vaultBalanceBefore = dusd.balanceOf(address(sdusdVault));
+        uint256 accountedAssetsBefore = sdusdVault.accountedAssets();
+
+        vm.expectRevert(ISDUSDVaultErrors.SDUSDNotRewarder.selector);
+        collector.distribute();
+
+        _assertFailedDistributionState(
+            collected, treasuryBalanceBefore, vaultBalanceBefore, accountedAssetsBefore, 0, 0
+        );
     }
 
     function test_FullRewardsBpsNotifiesAllDusdAndResetsAllowance() public {
@@ -93,7 +212,7 @@ contract ProtocolFeeCollector_Distribute_Test is ProtocolFeeCollectorCommon {
         assertEq(dusd.balanceOf(address(collector)), 0);
     }
 
-    function test_IntermediateRewardsBpsRoundsDownSplitsAndEmits() public {
+    function test_AnyCallerCanDistributeIntermediateRewardsBpsRoundsDownSplitsAndEmits() public {
         uint256 collected = 101;
         uint256 newRewardsBps = 3_333;
         uint256 expectedRewardAmount = 33;
@@ -136,6 +255,23 @@ contract ProtocolFeeCollector_Distribute_Test is ProtocolFeeCollectorCommon {
         assertEq(sdusdVault.rewardsForPeriod(), expectedRewardAmount);
         assertEq(sdusdVault.periodStart(), previousFinish);
         assertEq(sdusdVault.rewardPeriodFinish(), previousFinish + REWARD_DURATION);
+    }
+
+    function _assertFailedDistributionState(
+        uint256 collectorBalance,
+        uint256 treasuryBalance,
+        uint256 vaultBalance,
+        uint256 accountedAssets,
+        uint256 rewardsForPeriod,
+        uint256 rewardPeriodFinish
+    ) internal view {
+        assertEq(dusd.balanceOf(address(collector)), collectorBalance);
+        assertEq(dusd.balanceOf(TREASURY), treasuryBalance);
+        assertEq(dusd.balanceOf(address(sdusdVault)), vaultBalance);
+        assertEq(sdusdVault.accountedAssets(), accountedAssets);
+        assertEq(sdusdVault.rewardsForPeriod(), rewardsForPeriod);
+        assertEq(sdusdVault.rewardPeriodFinish(), rewardPeriodFinish);
+        assertEq(dusd.allowance(address(collector), address(sdusdVault)), 0);
     }
 
     function _assertRewardApprovalSequence(Vm.Log[] memory logs, uint256 rewardAmount) internal view {

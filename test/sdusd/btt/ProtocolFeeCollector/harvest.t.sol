@@ -52,7 +52,7 @@ contract ProtocolFeeCollector_Harvest_Test is ProtocolFeeCollectorCommon {
         (FeeSourceType[] memory sourceTypes, address[] memory sources) =
             _singleSource(FeeSourceType.BORROW_MARKET, address(borrowMarket));
 
-        vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorInvalidSource.selector);
+        _expectInvalidSource(address(borrowMarket));
         collector.harvest(sourceTypes, sources);
     }
 
@@ -61,7 +61,18 @@ contract ProtocolFeeCollector_Harvest_Test is ProtocolFeeCollectorCommon {
         (FeeSourceType[] memory sourceTypes, address[] memory sources) =
             _singleSource(FeeSourceType.BORROW_MARKET, address(wrongTokenBorrowMarket));
 
-        vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorInvalidSource.selector);
+        _expectInvalidSource(address(wrongTokenBorrowMarket));
+        collector.harvest(sourceTypes, sources);
+    }
+
+    function test_RevertWhen_BorrowMarketFeeRecipientIsNotCollectorAndCollectorHasNoPosition() public {
+        _allowBorrowMarket(address(borrowMarket));
+        vm.prank(ADMIN);
+        borrowMarket.setFeeRecipient(TREASURY);
+        (FeeSourceType[] memory sourceTypes, address[] memory sources) =
+            _singleSource(FeeSourceType.BORROW_MARKET, address(borrowMarket));
+
+        _expectInvalidSource(address(borrowMarket));
         collector.harvest(sourceTypes, sources);
     }
 
@@ -163,6 +174,22 @@ contract ProtocolFeeCollector_Harvest_Test is ProtocolFeeCollectorCommon {
         assertEq(dusd.balanceOf(address(borrowMarket)), 0);
     }
 
+    function test_BorrowMarketHarvestsExistingPositionAfterFeeRecipientChanges() public {
+        _allowBorrowMarket(address(borrowMarket));
+        uint256 supplyShares = _supplyBorrowMarket(SUPPLY_ASSETS);
+        assertEq(borrowMarket.position(address(collector)).supplyShares, supplyShares);
+        vm.prank(ADMIN);
+        borrowMarket.setFeeRecipient(TREASURY);
+        (FeeSourceType[] memory sourceTypes, address[] memory sources) =
+            _singleSource(FeeSourceType.BORROW_MARKET, address(borrowMarket));
+        _expectHarvested(FeeSourceType.BORROW_MARKET, address(borrowMarket), SUPPLY_ASSETS);
+
+        collector.harvest(sourceTypes, sources);
+
+        assertEq(borrowMarket.position(address(collector)).supplyShares, 0);
+        assertEq(dusd.balanceOf(address(collector)), SUPPLY_ASSETS);
+    }
+
     function test_BorrowMarketRemovesFullShareBalanceWhenLiquidityIsSufficient() public {
         _allowBorrowMarket(address(borrowMarket));
         uint256 supplyShares = _supplyBorrowMarket(SUPPLY_ASSETS);
@@ -208,7 +235,7 @@ contract ProtocolFeeCollector_Harvest_Test is ProtocolFeeCollectorCommon {
         (FeeSourceType[] memory sourceTypes, address[] memory sources) =
             _singleSource(FeeSourceType.MINT_MARKET, address(mintMarket));
 
-        vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorInvalidSource.selector);
+        _expectInvalidSource(address(mintMarket));
         collector.harvest(sourceTypes, sources);
     }
 
@@ -217,8 +244,25 @@ contract ProtocolFeeCollector_Harvest_Test is ProtocolFeeCollectorCommon {
         (FeeSourceType[] memory sourceTypes, address[] memory sources) =
             _singleSource(FeeSourceType.MINT_MARKET, address(wrongTokenMintMarket));
 
-        vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorInvalidSource.selector);
+        _expectInvalidSource(address(wrongTokenMintMarket));
         collector.harvest(sourceTypes, sources);
+    }
+
+    function test_RevertWhen_MintMarketFeeRecipientIsNotCollector() public {
+        _allowMintMarket(address(mintMarket));
+        uint256 claimableFees = _generateMintMarketFees(100 ether);
+        vm.prank(ADMIN);
+        mintMarket.setFeeRecipient(TREASURY);
+        (FeeSourceType[] memory sourceTypes, address[] memory sources) =
+            _singleSource(FeeSourceType.MINT_MARKET, address(mintMarket));
+        uint256 treasuryBalanceBefore = dusd.balanceOf(TREASURY);
+
+        _expectInvalidSource(address(mintMarket));
+        collector.harvest(sourceTypes, sources);
+
+        assertEq(AltoMintMarket(address(mintMarket)).claimableFeesAssets(), claimableFees);
+        assertEq(dusd.balanceOf(TREASURY), treasuryBalanceBefore);
+        assertEq(dusd.balanceOf(address(collector)), 0);
     }
 
     function test_ValidMintMarketAccruesThenClaimsAllInterestAndEmitsReceivedAmount() public {
@@ -247,7 +291,7 @@ contract ProtocolFeeCollector_Harvest_Test is ProtocolFeeCollectorCommon {
     function test_RevertWhen_UsmIsNotAllowlisted() public {
         (FeeSourceType[] memory sourceTypes, address[] memory sources) = _singleSource(FeeSourceType.USM, address(usm));
 
-        vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorInvalidSource.selector);
+        _expectInvalidSource(address(usm));
         collector.harvest(sourceTypes, sources);
     }
 
@@ -256,8 +300,24 @@ contract ProtocolFeeCollector_Harvest_Test is ProtocolFeeCollectorCommon {
         (FeeSourceType[] memory sourceTypes, address[] memory sources) =
             _singleSource(FeeSourceType.USM, address(wrongTokenUsm));
 
-        vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorInvalidSource.selector);
+        _expectInvalidSource(address(wrongTokenUsm));
         collector.harvest(sourceTypes, sources);
+    }
+
+    function test_RevertWhen_UsmFeeRecipientIsNotCollector() public {
+        _allowUsm(address(usm));
+        uint256 accruedFees = _generateUsmFees(100e6);
+        vm.prank(ADMIN);
+        usm.updateFeeRecipient(TREASURY);
+        (FeeSourceType[] memory sourceTypes, address[] memory sources) = _singleSource(FeeSourceType.USM, address(usm));
+        uint256 treasuryBalanceBefore = dusd.balanceOf(TREASURY);
+
+        _expectInvalidSource(address(usm));
+        collector.harvest(sourceTypes, sources);
+
+        assertEq(usm.getAccruedFees(), accruedFees);
+        assertEq(dusd.balanceOf(TREASURY), treasuryBalanceBefore);
+        assertEq(dusd.balanceOf(address(collector)), 0);
     }
 
     function test_ValidUsmDistributesFeesAndEmitsReceivedAmount() public {
@@ -279,7 +339,7 @@ contract ProtocolFeeCollector_Harvest_Test is ProtocolFeeCollectorCommon {
         (FeeSourceType[] memory sourceTypes, address[] memory sources) =
             _singleSource(FeeSourceType.FLASH_MINTER, address(wrongTokenFlashMinter));
 
-        vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorInvalidSource.selector);
+        _expectInvalidSource(address(wrongTokenFlashMinter));
         collector.harvest(sourceTypes, sources);
     }
 
@@ -289,8 +349,24 @@ contract ProtocolFeeCollector_Harvest_Test is ProtocolFeeCollectorCommon {
         (FeeSourceType[] memory sourceTypes, address[] memory sources) =
             _singleSource(FeeSourceType.FLASH_MINTER, address(wrongTokenFlashMinter));
 
-        vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorInvalidSource.selector);
+        _expectInvalidSource(address(wrongTokenFlashMinter));
         collector.harvest(sourceTypes, sources);
+    }
+
+    function test_RevertWhen_FlashMinterFeeRecipientIsNotCollector() public {
+        uint256 accruedFees = _generateFlashFees(100 ether);
+        vm.prank(ADMIN);
+        flashMinter.updateFeeRecipient(TREASURY);
+        (FeeSourceType[] memory sourceTypes, address[] memory sources) =
+            _singleSource(FeeSourceType.FLASH_MINTER, address(flashMinter));
+        uint256 treasuryBalanceBefore = dusd.balanceOf(TREASURY);
+
+        _expectInvalidSource(address(flashMinter));
+        collector.harvest(sourceTypes, sources);
+
+        assertEq(dusd.balanceOf(address(flashMinter)), accruedFees);
+        assertEq(dusd.balanceOf(TREASURY), treasuryBalanceBefore);
+        assertEq(dusd.balanceOf(address(collector)), 0);
     }
 
     function test_ValidFlashMinterDistributesFeesAndEmitsReceivedAmount() public {

@@ -45,11 +45,17 @@ interface ISDUSDVaultErrors {
     /// @notice Thrown when `notifyRewardAmount` is called with a zero amount
     error SDUSDZeroAmount();
 
+    /// @notice Thrown when a non-zero asset deposit would mint zero shares
+    error SDUSDZeroShares();
+
     /// @notice Thrown when the reward duration is set outside of the allowed bounds
     error SDUSDInvalidRewardDuration();
 
     /// @notice Thrown when the caller attempts an owner-only unpause
     error SDUSDUnauthorized();
+
+    /// @notice Thrown when the permanent lock address holds fewer shares than the configured seed requirement
+    error SDUSDNotSeeded();
 
     /// @notice Thrown when `notifyRewardAmount` is called while only the locked seed shares remain
     ///         (`totalSupply() <= seedShares`), i.e. there are no real stakers to receive rewards
@@ -65,6 +71,11 @@ interface ISDUSDVaultEvents {
     /// @param amount The amount of DUSD added as rewards
     /// @param periodFinish The timestamp at which the new release period ends
     event RewardAdded(uint256 amount, uint256 periodFinish);
+
+    /// @notice Emitted when unaccounted DUSD is recovered to the configured rewarder
+    /// @param receiver The configured rewarder that received the recovered DUSD
+    /// @param amount The amount of unaccounted DUSD recovered
+    event UnaccountedAssetsRecovered(address indexed receiver, uint256 amount);
 
     /// @notice Emitted when the rewarder address is updated
     event RewarderUpdated(address indexed oldRewarder, address indexed newRewarder);
@@ -89,6 +100,13 @@ interface ISDUSDVaultBase is ISDUSDVaultErrors, ISDUSDVaultEvents {
     ///      Reverts unless the previous period has fully finished, so an active release rate is never
     ///      retroactively diluted (strict, no rollover).
     function notifyRewardAmount(uint256 amount) external;
+
+    /// @notice Recovers all DUSD received outside the vault's accounted deposit and reward flows
+    /// @dev Only callable by the owner. Always sends recovered DUSD to the configured rewarder.
+    ///      The recoverable amount is `DUSD.balanceOf(address(this)) - accountedAssets`; using `accountedAssets`
+    ///      rather than `totalAssets()` prevents locked rewards from being recovered during an active period.
+    /// @return recoveredAssets The amount of unaccounted DUSD sent to the configured rewarder
+    function recoverUnaccountedAssets() external returns (uint256 recoveredAssets);
 
     /// @notice Updates the rewarder allowed to call `notifyRewardAmount`
     function setRewarder(address newRewarder) external;
@@ -122,7 +140,8 @@ interface ISDUSDVaultBase is ISDUSDVaultErrors, ISDUSDVaultEvents {
     /// @notice DUSD accounted as belonging to the vault, excluding raw token donations
     /// @dev Includes staked principal (deposits minus withdrawals) and all reward DUSD received through
     ///      `notifyRewardAmount`, whether locked or already released. Raw DUSD transfers are deliberately not
-    ///      tracked, so donations cannot inflate `totalAssets` outside the linear release schedule.
+    ///      tracked, so donations cannot inflate `totalAssets` outside the linear release schedule and may be
+    ///      returned to the configured rewarder through `recoverUnaccountedAssets`.
     function accountedAssets() external view returns (uint256);
 
     /// @notice The share amount deployment must mint to address(1) through an explicit seed deposit. New

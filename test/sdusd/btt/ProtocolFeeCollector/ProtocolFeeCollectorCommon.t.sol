@@ -14,6 +14,7 @@ import {SDUSD} from "@alto/sdusd/SDUSD.sol";
 import {SDUSDInitParams} from "@alto/sdusd/interfaces/ISDUSDVault.sol";
 import {
     FeeSourceType,
+    IProtocolFeeCollectorErrors,
     IProtocolFeeCollectorEvents,
     ProtocolFeeCollectorInitParams
 } from "@alto/sdusd/interfaces/IProtocolFeeCollector.sol";
@@ -206,8 +207,9 @@ abstract contract ProtocolFeeCollectorCommon is Test, TestHelperOz5 {
         internal
         returns (ProtocolFeeCollector deployed)
     {
-        ERC1967Proxy proxy =
-            new ERC1967Proxy(address(implementation), abi.encodeCall(ProtocolFeeCollector.initialize, (params)));
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(implementation), abi.encodeCall(ProtocolFeeCollector.initialize, (params))
+        );
         deployed = ProtocolFeeCollector(address(proxy));
     }
 
@@ -244,6 +246,7 @@ abstract contract ProtocolFeeCollectorCommon is Test, TestHelperOz5 {
             collateralToken: address(collateralToken),
             irm: address(0),
             owner: ADMIN,
+            emergencyAdmin: PAUSER,
             oracle: address(oracle),
             maxLtv: MARKET_MAX_LTV,
             feeRecipient: TREASURY,
@@ -417,6 +420,12 @@ abstract contract ProtocolFeeCollectorCommon is Test, TestHelperOz5 {
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].emitter == emitter && logs[i].topics.length != 0 && logs[i].topics[0] == topic0) count++;
         }
+    }
+
+    function _expectInvalidSource(address source) internal {
+        vm.expectRevert(
+            abi.encodeWithSelector(IProtocolFeeCollectorErrors.ProtocolFeeCollectorInvalidSource.selector, source)
+        );
     }
 
     function _expectHarvested(FeeSourceType sourceType, address source, uint256 amount) internal {

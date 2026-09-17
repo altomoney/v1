@@ -2,33 +2,47 @@ ProtocolFeeCollector::distribute
 ├── given PAUSE_TYPE is paused
 │   └── it should revert with IsPaused
 └── given PAUSE_TYPE is not paused
-    ├── when the sDUSD vault is not set
-    │   └── it should revert with ProtocolFeeCollectorSdusdNotSet
-    ├── when the sDUSD reward period has not finished
-    │   └── it should revert with ProtocolFeeCollectorRewardPeriodNotFinished
-    └── when the sDUSD reward period has finished
-        ├── it should be callable by any address
-        ├── when the collector DUSD balance is zero
-        │   ├── it should not transfer DUSD to the treasury
-        │   ├── it should not call notifyRewardAmount
-        │   └── it should emit Distributed with zero amounts
-        ├── when rewardsBps is zero
-        │   ├── it should transfer all collected DUSD to the configured treasury
-        │   ├── it should not call notifyRewardAmount
-        │   └── it should emit Distributed with a zero reward amount
-        ├── when rewardsBps equals PERCENTAGE_PRECISION
-        │   ├── it should not transfer DUSD to the treasury
-        │   ├── it should notify the configured sDUSD vault of all collected DUSD
-        │   ├── it should reset the sDUSD allowance to zero
-        │   └── it should emit Distributed with a zero treasury amount
-        ├── when rewardsBps is between zero and PERCENTAGE_PRECISION
-        │   ├── it should calculate rewardAmount by rounding down
-        │   ├── it should calculate treasuryAmount as collected minus rewardAmount
-        │   ├── it should transfer treasuryAmount to the configured treasury
-        │   ├── it should approve only rewardAmount to the configured sDUSD vault
-        │   ├── it should call notifyRewardAmount with rewardAmount
-        │   ├── it should reset the sDUSD allowance to zero
-        │   ├── it should leave the collector with zero distributed DUSD
-        │   └── it should emit Distributed with the collected, treasury, and reward amounts
-        └── when block timestamp equals rewardPeriodFinish
-            └── it should allow distribution
+    ├── it should be callable by any address
+    ├── when the calculated rewardAmount is zero
+    │   ├── it should not require the sDUSD vault to be set
+    │   ├── it should not check rewardPeriodFinish
+    │   ├── when nonzero rewardsBps rounds rewardAmount down to zero, it should still skip the vault checks
+    │   ├── it should not call notifyRewardAmount
+    │   ├── it should transfer all nonzero collected DUSD to the configured treasury
+    │   ├── it should emit Distributed with a zero reward amount
+    │   └── when the collector DUSD balance is zero
+    │       ├── it should not transfer DUSD to the treasury
+    │       └── it should emit Distributed with zero amounts
+    └── when the calculated rewardAmount is nonzero
+        ├── when the sDUSD vault is not set
+        │   ├── it should revert with ProtocolFeeCollectorSdusdNotSet
+        │   └── it should leave the treasury allocation in the collector
+        ├── when the sDUSD reward period has not finished
+        │   ├── it should revert with ProtocolFeeCollectorRewardPeriodNotFinished
+        │   └── it should leave the treasury allocation in the collector
+        └── when the sDUSD reward period has finished
+            ├── when block timestamp equals rewardPeriodFinish
+            │   └── it should allow distribution
+            ├── when the sDUSD vault is paused
+            │   ├── it should revert with IsPaused
+            │   └── it should leave the treasury allocation in the collector
+            ├── when only the locked seed shares remain in the sDUSD vault
+            │   ├── it should revert with SDUSDNoActiveStakers
+            │   └── it should leave the treasury allocation in the collector
+            ├── when the collector is not the sDUSD vault's configured rewarder
+            │   ├── it should revert with SDUSDNotRewarder
+            │   └── it should leave the treasury allocation in the collector
+            ├── when rewardsBps equals PERCENTAGE_PRECISION
+            │   ├── it should not transfer DUSD to the treasury
+            │   ├── it should notify the configured sDUSD vault of all collected DUSD
+            │   ├── it should reset the sDUSD allowance to zero
+            │   └── it should emit Distributed with a zero treasury amount
+            └── when rewardsBps is between zero and PERCENTAGE_PRECISION
+                ├── it should calculate rewardAmount by rounding down
+                ├── it should calculate treasuryAmount as collected minus rewardAmount
+                ├── it should transfer treasuryAmount to the configured treasury
+                ├── it should approve only rewardAmount to the configured sDUSD vault
+                ├── it should call notifyRewardAmount with rewardAmount
+                ├── it should reset the sDUSD allowance to zero
+                ├── it should leave the collector with zero distributed DUSD
+                └── it should emit Distributed with the collected, treasury, and reward amounts

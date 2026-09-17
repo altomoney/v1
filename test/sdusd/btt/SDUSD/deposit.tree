@@ -27,6 +27,9 @@ SDUSD::deposit
         │   ├── it should complete without changing accounting or balances
         │   ├── it should emit Deposit with zero assets and shares
         │   └── it should preserve the exchange rate
+        ├── when assets is non-zero and the share amount rounds down to zero
+        │   ├── it should revert with SDUSDZeroShares
+        │   └── it should leave asset balances, accountedAssets, and share balances unchanged
         ├── when a reward period is active
         │   ├── it should price the deposit using only currently unlocked assets
         │   └── it should not decrease the exchange rate when shares round down

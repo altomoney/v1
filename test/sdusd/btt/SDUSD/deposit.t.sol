@@ -7,6 +7,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {ISDUSDVaultErrors} from "@alto/sdusd/interfaces/ISDUSDVault.sol";
 import {SDUSDCommon} from "./SDUSDCommon.t.sol";
 
 contract SDUSD_Deposit_Test is SDUSDCommon {
@@ -124,6 +125,32 @@ contract SDUSD_Deposit_Test is SDUSDCommon {
         assertEq(vault.balanceOf(RECEIVER), receiverSharesBefore);
         assertEq(vault.balanceOf(SEED_LOCK), seedSharesBefore);
         _assertExchangeRateUnchanged(exchangeRateBefore);
+    }
+
+    function test_RevertWhen_NonZeroAssetsRoundDownToZeroSharesAndLeavesStateUnchanged() public {
+        _notifyRewards(REWARD_AMOUNT);
+        _finishRewardPeriod();
+
+        uint256 assets = 1;
+        assertEq(vault.previewDeposit(assets), 0);
+
+        uint256 accountedBefore = vault.accountedAssets();
+        uint256 supplyBefore = vault.totalSupply();
+        uint256 vaultDusdBefore = dusd.balanceOf(address(vault));
+        uint256 receiverSharesBefore = vault.balanceOf(RECEIVER);
+        dusd.mint(USER, assets);
+
+        vm.startPrank(USER);
+        dusd.approve(address(vault), assets);
+        vm.expectRevert(ISDUSDVaultErrors.SDUSDZeroShares.selector);
+        vault.deposit(assets, RECEIVER);
+        vm.stopPrank();
+
+        assertEq(dusd.balanceOf(USER), assets);
+        assertEq(dusd.balanceOf(address(vault)), vaultDusdBefore);
+        assertEq(vault.accountedAssets(), accountedBefore);
+        assertEq(vault.totalSupply(), supplyBefore);
+        assertEq(vault.balanceOf(RECEIVER), receiverSharesBefore);
     }
 
     function test_PricesDepositUsingOnlyUnlockedAssetsDuringRewardPeriod() public {

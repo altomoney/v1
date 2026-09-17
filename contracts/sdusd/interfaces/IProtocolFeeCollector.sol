@@ -57,7 +57,8 @@ interface IProtocolFeeCollectorErrors {
     error ProtocolFeeCollectorZeroAddress();
 
     /// @notice Thrown when a source fails validation for the given source type
-    error ProtocolFeeCollectorInvalidSource();
+    /// @param source The source address that failed validation
+    error ProtocolFeeCollectorInvalidSource(address source);
 
     /// @notice Thrown when `rewardsBps` is set above 10_000(i.e. percentage precision)
     error ProtocolFeeCollectorInvalidRewardsBps();
@@ -138,7 +139,10 @@ interface IProtocolFeeCollectorBase is IProtocolFeeCollectorErrors, IProtocolFee
     function harvest(FeeSourceType[] calldata sourceTypes, address[] calldata sources) external;
 
     /// @notice Splits the collected DUSD between the treasury and the sDUSD vault
-    /// @dev Only callable once the active sDUSD vault's reward release period has ended
+    /// @dev A configured vault and a finished reward period are required only when the calculated vault reward
+    ///      is nonzero. The treasury transfer and vault notification are atomic: if `notifyRewardAmount` reverts,
+    ///      including when the vault is paused or only its locked seed shares remain, the treasury transfer is
+    ///      rolled back and its allocation remains in this collector until a distribution can succeed.
     function distribute() external;
 
     /// @notice Withdraws liquidation fee collateral from markets to the manual swap receiver
