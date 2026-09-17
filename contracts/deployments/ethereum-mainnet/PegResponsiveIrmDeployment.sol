@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import {AltoEthereumMainnetInput} from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
+import {
+    AltoEthereumMainnetInput,
+    MarketContracts
+} from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 import {
     CURVE_STABLESWAP_NG_FACTORY_MAINNET,
     FRXUSD_DUSD_CURVE_POOL_IMPLEMENTATION_MAINNET,
@@ -72,7 +75,7 @@ library PegResponsiveIrmDeployment {
                 address(new OwnerPegResponsiveExponentialIrmFactory(timelock, input.contracts.dusdPegCurveOracle));
         }
 
-        address[] memory markets = _activeMintMarkets(input);
+        MarketContracts[] memory markets = _activeMintMarkets(input);
         _validateFactoryAndOracle(input, oracleConfig);
         _validateOracleObservation(input.contracts.dusdPegCurveOracle, irmConfig.maxOracleAge);
         _validateInitialMarkets(input, markets, irmConfig);
@@ -92,7 +95,7 @@ library PegResponsiveIrmDeployment {
 
     function preflight(AltoEthereumMainnetInput memory input) internal view {
         PegResponsiveExponentialIrmConfig memory irmConfig = _irmConfig();
-        address[] memory markets = _activeMintMarkets(input);
+        MarketContracts[] memory markets = _activeMintMarkets(input);
 
         _validateFactoryAndOracle(input, _oracleRuntimeConfig());
         _validateOracleObservation(input.contracts.dusdPegCurveOracle, irmConfig.maxOracleAge);
@@ -109,18 +112,18 @@ library PegResponsiveIrmDeployment {
         PegResponsiveExponentialIrmConfig memory irmConfig = _irmConfig();
         _validateFactoryAndOracle(input, _oracleRuntimeConfig());
 
-        address[] memory markets = _activeMintMarkets(input);
+        MarketContracts[] memory markets = _activeMintMarkets(input);
         address[] memory expectedIrms = _predictedIrms(input, markets, irmConfig);
         for (uint256 i; i < markets.length; ++i) {
-            _validateFinalMarket(input, markets[i], expectedIrms[i], irmConfig);
-            _storeReconciledIrm(input, markets[i], expectedIrms[i]);
+            _validateFinalMarket(input, markets[i].market, expectedIrms[i], irmConfig);
+            markets[i].marketIrm = expectedIrms[i];
         }
         return input;
     }
 
     function _buildBatch(
         AltoEthereumMainnetInput memory input,
-        address[] memory markets,
+        MarketContracts[] memory markets,
         PegResponsiveExponentialIrmConfig memory irmConfig
     ) private view returns (PegResponsiveIrmBatch memory batch) {
         uint256 callCount = markets.length * 3;
@@ -132,7 +135,7 @@ library PegResponsiveIrmDeployment {
             OwnerPegResponsiveExponentialIrmFactory(input.contracts.ownerPegResponsiveExponentialIrmFactory);
         for (uint256 i; i < markets.length; ++i) {
             uint256 callIndex = i * 3;
-            address market = markets[i];
+            address market = markets[i].market;
             address irm = factory.predictIrmAddress(market, IRM_VERSION, irmConfig);
 
             batch.targets[callIndex] = address(factory);
@@ -190,7 +193,7 @@ library PegResponsiveIrmDeployment {
 
     function _validateInitialMarkets(
         AltoEthereumMainnetInput memory input,
-        address[] memory markets,
+        MarketContracts[] memory markets,
         PegResponsiveExponentialIrmConfig memory irmConfig
     ) private view {
         require(markets.length == ACTIVE_MINT_MARKET_COUNT, "Expected six mint markets");
@@ -198,10 +201,10 @@ library PegResponsiveIrmDeployment {
         OwnerPegResponsiveExponentialIrmFactory factory =
             OwnerPegResponsiveExponentialIrmFactory(input.contracts.ownerPegResponsiveExponentialIrmFactory);
         for (uint256 i; i < markets.length; ++i) {
-            address market = markets[i];
+            address market = markets[i].market;
             require(market != address(0), "Invalid mint market");
             for (uint256 j; j < i; ++j) {
-                require(markets[j] != market, "Duplicate mint market");
+                require(markets[j].market != market, "Duplicate mint market");
             }
 
             IMarketBase marketContract = IMarketBase(market);
@@ -252,43 +255,30 @@ library PegResponsiveIrmDeployment {
 
     function _predictedIrms(
         AltoEthereumMainnetInput memory input,
-        address[] memory markets,
+        MarketContracts[] memory markets,
         PegResponsiveExponentialIrmConfig memory irmConfig
     ) private view returns (address[] memory irms) {
         irms = new address[](markets.length);
         OwnerPegResponsiveExponentialIrmFactory factory =
             OwnerPegResponsiveExponentialIrmFactory(input.contracts.ownerPegResponsiveExponentialIrmFactory);
         for (uint256 i; i < markets.length; ++i) {
-            irms[i] = factory.predictIrmAddress(markets[i], IRM_VERSION, irmConfig);
+            irms[i] = factory.predictIrmAddress(markets[i].market, IRM_VERSION, irmConfig);
         }
     }
 
-    function _activeMintMarkets(AltoEthereumMainnetInput memory input) private pure returns (address[] memory markets) {
-        markets = new address[](ACTIVE_MINT_MARKET_COUNT);
-        markets[0] = input.contracts.refreshWethMarket.market;
-        markets[1] = input.contracts.refreshWstethMarket.market;
-        markets[2] = input.contracts.refreshRethMarket.market;
-        markets[3] = input.contracts.refreshSusdeMintMarket.market;
-        markets[4] = input.contracts.refreshSyrupUsdcMintMarket.market;
-        markets[5] = input.contracts.refreshFrxUsdMarket.market;
-    }
-
-    function _storeReconciledIrm(AltoEthereumMainnetInput memory input, address market, address irm) private pure {
-        if (market == input.contracts.refreshWethMarket.market) {
-            input.contracts.refreshWethMarket.marketIrm = irm;
-        } else if (market == input.contracts.refreshWstethMarket.market) {
-            input.contracts.refreshWstethMarket.marketIrm = irm;
-        } else if (market == input.contracts.refreshRethMarket.market) {
-            input.contracts.refreshRethMarket.marketIrm = irm;
-        } else if (market == input.contracts.refreshSusdeMintMarket.market) {
-            input.contracts.refreshSusdeMintMarket.marketIrm = irm;
-        } else if (market == input.contracts.refreshSyrupUsdcMintMarket.market) {
-            input.contracts.refreshSyrupUsdcMintMarket.marketIrm = irm;
-        } else if (market == input.contracts.refreshFrxUsdMarket.market) {
-            input.contracts.refreshFrxUsdMarket.marketIrm = irm;
-        } else {
-            revert("Unknown mint market");
-        }
+    /// @dev Entries reference the input structs so reconciliation updates the returned input.
+    function _activeMintMarkets(AltoEthereumMainnetInput memory input)
+        private
+        pure
+        returns (MarketContracts[] memory markets)
+    {
+        markets = new MarketContracts[](ACTIVE_MINT_MARKET_COUNT);
+        markets[0] = input.contracts.refreshWethMarket;
+        markets[1] = input.contracts.refreshWstethMarket;
+        markets[2] = input.contracts.refreshRethMarket;
+        markets[3] = input.contracts.refreshSusdeMintMarket;
+        markets[4] = input.contracts.refreshSyrupUsdcMintMarket;
+        markets[5] = input.contracts.refreshFrxUsdMarket;
     }
 
     /// @dev TENTATIVE DEPLOYMENT PARAMETERS: review and update every value before mainnet deployment.
