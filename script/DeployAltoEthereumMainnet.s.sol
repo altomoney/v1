@@ -17,7 +17,7 @@ import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 import {USDC_MAINNET, FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
-DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.CONVEX_CREDIT_LINE_MARKET;
+DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.MINT_MARKET_PEG_RESPONSIVE_IRM;
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployAltoEthereumMainnetScript is Script {
@@ -40,6 +40,19 @@ contract DeployAltoEthereumMainnetScript is Script {
         _extractABIs();
 
         console.log("Deployment completed successfully");
+    }
+
+    function preflightPegResponsiveIrmMigration() public {
+        _loadCurrentChainInput();
+        DeployAltoEthereumMainnet.preflightPegResponsiveIrmMigration(input);
+        console.log("Peg-responsive IRM migration preflight passed");
+    }
+
+    function reconcilePegResponsiveIrmMigration() public {
+        _loadCurrentChainInput();
+        input = DeployAltoEthereumMainnet.reconcilePegResponsiveIrmMigration(input);
+        _writeInputToJson();
+        console.log("Peg-responsive IRM migration reconciliation passed");
     }
 
     function preflightMarketDeprecationPhase0() public {
@@ -143,6 +156,12 @@ contract DeployAltoEthereumMainnetScript is Script {
         contractsJson = vm.serializeAddress("contracts", "addressChange", input.contracts.addressChange);
         contractsJson =
             vm.serializeAddress("contracts", "ownerFixedRateIrmFactory", input.contracts.ownerFixedRateIrmFactory);
+        contractsJson = vm.serializeAddress(
+            "contracts",
+            "ownerPegResponsiveExponentialIrmFactory",
+            input.contracts.ownerPegResponsiveExponentialIrmFactory
+        );
+        contractsJson = vm.serializeAddress("contracts", "dusdPegCurveOracle", input.contracts.dusdPegCurveOracle);
 
         // Serialize market contracts using helper
         contractsJson = _serializeMarketContracts(contractsJson, "weth", input.contracts.wethMarket);
@@ -366,6 +385,9 @@ contract DeployAltoEthereumMainnetScript is Script {
         loadedInput.contracts.referralAdapter = _tryParseAddress(json, ".contracts.referralAdapter");
         loadedInput.contracts.addressChange = _tryParseAddress(json, ".contracts.addressChange");
         loadedInput.contracts.ownerFixedRateIrmFactory = _tryParseAddress(json, ".contracts.ownerFixedRateIrmFactory");
+        loadedInput.contracts.ownerPegResponsiveExponentialIrmFactory =
+            _tryParseAddress(json, ".contracts.ownerPegResponsiveExponentialIrmFactory");
+        loadedInput.contracts.dusdPegCurveOracle = _tryParseAddress(json, ".contracts.dusdPegCurveOracle");
 
         // Load market contracts using helper
         loadedInput.contracts.wethMarket = _loadMarketContracts(json, "weth");
@@ -584,6 +606,10 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("OwnerFixedRateIrmFactory", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.MARKET_DEPRECATION_PHASE_0) {
             _extractContractABI("FixedRateIrm", abiFolder);
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.MINT_MARKET_PEG_RESPONSIVE_IRM) {
+            _extractContractABI("OwnerPegResponsiveExponentialIrmFactory", abiFolder);
+            _extractContractABI("DusdPegCurveOracle", abiFolder);
+            _extractContractABI("PegResponsiveExponentialIrm", abiFolder);
         }
 
         console.log("ABIs extracted to:", abiFolder);
