@@ -176,7 +176,8 @@ contract ProtocolFeeCollectorSDUSDForkTest is Test {
             flashMinter: FLASH_MINTER_MAINNET,
             treasury: TREASURY,
             manualSwapReceiver: TREASURY,
-            rewardsBps: REWARDS_BPS
+            rewardsBps: REWARDS_BPS,
+            minimumRewardAmount: 100 ether
         });
         collector = ProtocolFeeCollector(
             address(

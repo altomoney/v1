@@ -1,0 +1,11 @@
+ProtocolFeeCollector::setMinimumRewardAmount
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── when new minimum reward amount is zero
+    │   └── it should revert with ProtocolFeeCollectorInvalidMinimumRewardAmount
+    ├── when new minimum reward amount equals the current value
+    │   └── it should revert with ProtocolFeeCollectorNoStateChange
+    └── when new minimum reward amount is nonzero and different
+        ├── it should update minimumRewardAmount
+        └── it should emit MinimumRewardAmountUpdated

@@ -86,6 +86,14 @@ contract ProtocolFeeCollector_Initialize_Test is ProtocolFeeCollectorCommon {
         _deployCollector(params);
     }
 
+    function test_RevertWhen_MinimumRewardAmountIsZero() public {
+        ProtocolFeeCollectorInitParams memory params = _validInitParams();
+        params.minimumRewardAmount = 0;
+
+        vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorInvalidMinimumRewardAmount.selector);
+        _deployCollector(params);
+    }
+
     function test_InitializesAllConfigurationAndRoles() public view {
         assertEq(collector.owner(), ADMIN);
         assertEq(collector.pendingOwner(), address(0));
@@ -101,6 +109,7 @@ contract ProtocolFeeCollector_Initialize_Test is ProtocolFeeCollectorCommon {
         assertEq(collector.sdusdVault(), address(0));
         assertFalse(collector.paused(PAUSE_TYPE));
         assertEq(collector.rewardsBps(), INITIAL_REWARDS_BPS);
+        assertEq(collector.minimumRewardAmount(), INITIAL_MINIMUM_REWARD_AMOUNT);
     }
 
     function test_EmitsAllConfigurationAndRoleEvents() public {
@@ -126,6 +135,8 @@ contract ProtocolFeeCollector_Initialize_Test is ProtocolFeeCollectorCommon {
         emit IProtocolFeeCollectorEvents.ManualSwapReceiverUpdated(address(0), MANUAL_SWAP_RECEIVER);
         vm.expectEmit(false, false, false, true);
         emit IProtocolFeeCollectorEvents.RewardsBpsUpdated(0, INITIAL_REWARDS_BPS);
+        vm.expectEmit(false, false, false, true);
+        emit IProtocolFeeCollectorEvents.MinimumRewardAmountUpdated(0, INITIAL_MINIMUM_REWARD_AMOUNT);
 
         _deployCollector(params);
     }

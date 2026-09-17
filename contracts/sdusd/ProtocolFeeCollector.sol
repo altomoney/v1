@@ -76,8 +76,11 @@ contract ProtocolFeeCollector is
     /// @inheritdoc IProtocolFeeCollectorBase
     uint256 public rewardsBps;
 
+    /// @inheritdoc IProtocolFeeCollectorBase
+    uint256 public minimumRewardAmount;
+
     /// upgrade gap
-    uint256[41] private __gap;
+    uint256[40] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -114,6 +117,7 @@ contract ProtocolFeeCollector is
         if (params.rewardsBps != 0) {
             _setRewardsBps(params.rewardsBps);
         }
+        _setMinimumRewardAmount(params.minimumRewardAmount);
     }
 
     /// @inheritdoc IProtocolFeeCollectorBase
@@ -133,39 +137,27 @@ contract ProtocolFeeCollector is
         uint256 balanceBefore = IERC20(dusd).balanceOf(address(this));
 
         if (sourceType == FeeSourceType.BORROW_MARKET) {
-            IMarketStaticTypes market = IMarketStaticTypes(source);
-            if (!marketRegistry.isBorrowMarket(source) || market.borrowToken() != dusd) {
-                revert ProtocolFeeCollectorInvalidSource(source);
+            if (!_validateAndHarvestBorrowMarket(source)) {
+                emit HarvestingFailed(sourceType, source);
+                return;
             }
-            _harvestBorrowMarket(source);
         } else if (sourceType == FeeSourceType.MINT_MARKET) {
-            IMarketStaticTypes market = IMarketStaticTypes(source);
-            if (
-                !marketRegistry.isMintMarket(source) || market.borrowToken() != dusd
-                    || market.feeRecipient() != address(this)
-            ) {
-                revert ProtocolFeeCollectorInvalidSource(source);
+            if (!_validateAndHarvestMintMarket(source)) {
+                emit HarvestingFailed(sourceType, source);
+                return;
             }
-            market.accrueInterest();
-            IAltoMintMarketFees(source).claimInterest(0);
         } else if (sourceType == FeeSourceType.USM) {
-            IStableTokenFacilitator facilitator = IStableTokenFacilitator(source);
-            if (
-                !usmRegistry.isUsm(source) || IUsm(source).STABLE_TOKEN() != dusd
-                    || facilitator.getFeeRecipient() != address(this)
-            ) {
-                revert ProtocolFeeCollectorInvalidSource(source);
+            if (!_validateAndHarvestUsm(source)) {
+                emit HarvestingFailed(sourceType, source);
+                return;
             }
-            facilitator.distributeFeesToFeeRecipient();
         } else if (sourceType == FeeSourceType.FLASH_MINTER) {
-            IStableTokenFacilitator facilitator = IStableTokenFacilitator(source);
-            if (
-                source != flashMinter || address(IDUSDFlashMinter(source).DUSD()) != dusd
-                    || facilitator.getFeeRecipient() != address(this)
-            ) {
-                revert ProtocolFeeCollectorInvalidSource(source);
+            if (!_validateAndHarvestFlashMinter(source)) {
+                emit HarvestingFailed(sourceType, source);
+                return;
             }
-            facilitator.distributeFeesToFeeRecipient();
+        } else {
+            revert ProtocolFeeCollectorInvalidSource(source);
         }
 
         uint256 dusdReceived = IERC20(dusd).balanceOf(address(this)) - balanceBefore;
@@ -174,10 +166,19 @@ contract ProtocolFeeCollector is
 
     /// @inheritdoc IProtocolFeeCollectorBase
     function distribute() external whenNot(PAUSE_TYPE) {
+        _harvestAll();
+
         IERC20 _dusd = IERC20(dusd);
         uint256 collected = _dusd.balanceOf(address(this));
         // round down for the vault in favor of treasury
         uint256 rewardAmount = collected.divideWithRounding(rewardsBps, PERCENTAGE_PRECISION, false);
+
+        uint256 _minimumRewardAmount = minimumRewardAmount;
+        if (rewardAmount != 0 && rewardAmount < _minimumRewardAmount) {
+            emit DistributionDeferred(collected, rewardAmount, _minimumRewardAmount);
+            return;
+        }
+
         uint256 treasuryAmount = collected - rewardAmount;
 
         address _sdusdVault = sdusdVault;
@@ -241,6 +242,11 @@ contract ProtocolFeeCollector is
     }
 
     /// @inheritdoc IProtocolFeeCollectorBase
+    function setMinimumRewardAmount(uint256 newMinimumRewardAmount) external onlyOwner {
+        _setMinimumRewardAmount(newMinimumRewardAmount);
+    }
+
+    /// @inheritdoc IProtocolFeeCollectorBase
     function setSdusdVault(address newSdusdVault) external onlyOwner {
         if (newSdusdVault == address(0)) revert ProtocolFeeCollectorZeroAddress();
         if (newSdusdVault == sdusdVault) revert ProtocolFeeCollectorNoStateChange();
@@ -286,10 +292,34 @@ contract ProtocolFeeCollector is
         if (!_paused && msg.sender != owner()) revert ProtocolFeeCollectorUnauthorized();
     }
 
-    /// @dev Withdraws the collector's currently available DUSD supply from a borrow market.
+    /// @dev Harvests every source configured by the market registry, USM registry, and flash-minter setting.
+    function _harvestAll() internal {
+        address[] memory borrowMarkets = marketRegistry.getBorrowMarkets();
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            _harvest(FeeSourceType.BORROW_MARKET, borrowMarkets[i]);
+        }
+
+        address[] memory mintMarkets = marketRegistry.getMintMarkets();
+        for (uint256 i; i < mintMarkets.length; ++i) {
+            _harvest(FeeSourceType.MINT_MARKET, mintMarkets[i]);
+        }
+
+        address[] memory usms = usmRegistry.getUsmList();
+        for (uint256 i; i < usms.length; ++i) {
+            _harvest(FeeSourceType.USM, usms[i]);
+        }
+
+        _harvest(FeeSourceType.FLASH_MINTER, flashMinter);
+    }
+
+    /// @dev Validates a borrow market and withdraws the collector's currently available DUSD supply from it.
     /// @param source The borrow market to withdraw from
-    function _harvestBorrowMarket(address source) internal {
+    /// @return harvestingPassed Whether the source passed validation and its harvest completed
+    function _validateAndHarvestBorrowMarket(address source) internal returns (bool harvestingPassed) {
         IMarketStaticTypes market = IMarketStaticTypes(source);
+        if (!marketRegistry.isBorrowMarket(source) || market.borrowToken() != dusd || market.paused(PAUSE_TYPE)) {
+            return false;
+        }
 
         // Accrue first so the collector's supply shares convert to up-to-date assets.
         // Accruing interest on borrow markets may change the supply shares of the fee recipient(i.e. this contract)
@@ -298,10 +328,7 @@ contract ProtocolFeeCollector is
 
         (uint128 supplyShares,,) = market.position(address(this));
         if (supplyShares == 0) {
-            if (market.feeRecipient() != address(this)) {
-                revert ProtocolFeeCollectorInvalidSource(source);
-            }
-            return;
+            return market.feeRecipient() == address(this);
         }
 
         (uint128 totalSupplyAssets, uint128 totalSupplyShares) = market.totalSupply();
@@ -309,12 +336,12 @@ contract ProtocolFeeCollector is
 
         uint256 claimableAssets = uint256(supplyShares).convertToAssetsDown(totalSupplyAssets, totalSupplyShares);
 
-        if (claimableAssets == 0) return;
+        if (claimableAssets == 0) return true;
 
         // Cap by the market's actual borrow-token balance, which is what `removeSupply` physically transfers.
         uint256 availableLiquidity = Math.min(totalSupplyAssets - totalBorrowedAssets, IERC20(dusd).balanceOf(source));
 
-        if (availableLiquidity == 0) return;
+        if (availableLiquidity == 0) return true;
 
         if (claimableAssets <= availableLiquidity) {
             // Enough free liquidity: withdraw the full share balance.
@@ -348,6 +375,57 @@ contract ProtocolFeeCollector is
             // so the market always has enough of our shares to burn.
             market.removeSupply(availableLiquidity, 0, address(this), address(this));
         }
+
+        return true;
+    }
+
+    /// @dev Validates a mint market and claims all currently available DUSD fees from it.
+    /// @param source The mint market to harvest from
+    /// @return harvestingPassed Whether the source passed validation and its harvest completed
+    function _validateAndHarvestMintMarket(address source) internal returns (bool harvestingPassed) {
+        IMarketStaticTypes market = IMarketStaticTypes(source);
+        if (
+            !marketRegistry.isMintMarket(source) || market.borrowToken() != dusd
+                || market.feeRecipient() != address(this) || market.paused(PAUSE_TYPE)
+        ) {
+            return false;
+        }
+
+        market.accrueInterest();
+        IAltoMintMarketFees(source).claimInterest(0);
+        return true;
+    }
+
+    /// @dev Validates a USM and distributes its currently available DUSD fees to the collector.
+    /// @param source The USM to harvest from
+    /// @return harvestingPassed Whether the source passed validation and its harvest completed
+    function _validateAndHarvestUsm(address source) internal returns (bool harvestingPassed) {
+        IStableTokenFacilitator facilitator = IStableTokenFacilitator(source);
+        if (
+            !usmRegistry.isUsm(source) || IUsm(source).STABLE_TOKEN() != dusd
+                || facilitator.getFeeRecipient() != address(this)
+        ) {
+            return false;
+        }
+
+        facilitator.distributeFeesToFeeRecipient();
+        return true;
+    }
+
+    /// @dev Validates the configured flash minter and distributes its available DUSD fees to the collector.
+    /// @param source The flash minter to harvest from
+    /// @return harvestingPassed Whether the source passed validation and its harvest completed
+    function _validateAndHarvestFlashMinter(address source) internal returns (bool harvestingPassed) {
+        IStableTokenFacilitator facilitator = IStableTokenFacilitator(source);
+        if (
+            source != flashMinter || address(IDUSDFlashMinter(source).DUSD()) != dusd
+                || facilitator.getFeeRecipient() != address(this)
+        ) {
+            return false;
+        }
+
+        facilitator.distributeFeesToFeeRecipient();
+        return true;
     }
 
     /// @notice Sets the treasury address used for collector treasury allocations.
@@ -412,6 +490,15 @@ contract ProtocolFeeCollector is
         if (newRewardsBps == rewardsBps) revert ProtocolFeeCollectorNoStateChange();
         emit RewardsBpsUpdated(rewardsBps, newRewardsBps);
         rewardsBps = newRewardsBps;
+    }
+
+    /// @notice Sets the minimum nonzero reward required to start a new sDUSD reward period.
+    /// @param newMinimumRewardAmount New minimum reward amount denominated in DUSD.
+    function _setMinimumRewardAmount(uint256 newMinimumRewardAmount) internal {
+        if (newMinimumRewardAmount == 0) revert ProtocolFeeCollectorInvalidMinimumRewardAmount();
+        if (newMinimumRewardAmount == minimumRewardAmount) revert ProtocolFeeCollectorNoStateChange();
+        emit MinimumRewardAmountUpdated(minimumRewardAmount, newMinimumRewardAmount);
+        minimumRewardAmount = newMinimumRewardAmount;
     }
 
     /// @notice Enforces UUPS upgrade authorization.

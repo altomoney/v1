@@ -35,6 +35,8 @@ struct ProtocolFeeCollectorInitParams {
     address manualSwapReceiver;
     /// @notice The reward allocation in basis points to transfer to sdusd vault
     uint256 rewardsBps;
+    /// @notice The minimum nonzero DUSD reward required to start a new sDUSD reward period
+    uint256 minimumRewardAmount;
 }
 
 /// @title IAltoMintMarketFees
@@ -62,6 +64,9 @@ interface IProtocolFeeCollectorErrors {
 
     /// @notice Thrown when `rewardsBps` is set above 10_000(i.e. percentage precision)
     error ProtocolFeeCollectorInvalidRewardsBps();
+
+    /// @notice Thrown when the minimum reward amount is set to zero
+    error ProtocolFeeCollectorInvalidMinimumRewardAmount();
 
     /// @notice Thrown when the sDUSD vault has not been configured yet during distribution of rewards
     error ProtocolFeeCollectorSdusdNotSet();
@@ -91,11 +96,22 @@ interface IProtocolFeeCollectorEvents {
     /// @param dusdReceived The amount of DUSD received by the collector contract as a result of the harvest
     event Harvested(FeeSourceType indexed sourceType, address indexed source, uint256 dusdReceived);
 
+    /// @notice Emitted when a source fails validation and is skipped during harvesting
+    /// @param sourceType The type of the source that failed validation
+    /// @param source The address of the source that failed validation
+    event HarvestingFailed(FeeSourceType indexed sourceType, address indexed source);
+
     /// @notice Emitted when collected DUSD is distributed to the treasury and sDUSD vault
     /// @param collected The total DUSD balance distributed
     /// @param treasuryAmount The amount sent to the treasury
     /// @param rewardAmount The amount sent to the sDUSD vault as rewards
     event Distributed(uint256 collected, uint256 treasuryAmount, uint256 rewardAmount);
+
+    /// @notice Emitted when distribution is deferred because the calculated reward is below the configured minimum
+    /// @param collected The total DUSD retained in the collector
+    /// @param rewardAmount The calculated reward allocation
+    /// @param minimumRewardAmount The minimum reward required to start a new reward period
+    event DistributionDeferred(uint256 collected, uint256 rewardAmount, uint256 minimumRewardAmount);
 
     /// @notice Emitted when liquidation fee collateral is withdrawn to the manual swap receiver
     /// @param market The market the collateral was withdrawn from
@@ -124,6 +140,11 @@ interface IProtocolFeeCollectorEvents {
     /// @notice Emitted when the rewards bps is updated
     event RewardsBpsUpdated(uint256 oldRewardsBps, uint256 newRewardsBps);
 
+    /// @notice Emitted when the minimum reward amount is updated
+    /// @param oldMinimumRewardAmount The previous minimum reward amount
+    /// @param newMinimumRewardAmount The new minimum reward amount
+    event MinimumRewardAmountUpdated(uint256 oldMinimumRewardAmount, uint256 newMinimumRewardAmount);
+
     /// @notice Emitted when a collateral operator's permission is set or unset
     event CollateralOperatorSet(address indexed operator, bool allowed);
 }
@@ -134,15 +155,20 @@ interface IProtocolFeeCollectorEvents {
 /// @notice State-changing functions of the ProtocolFeeCollector contract
 interface IProtocolFeeCollectorBase is IProtocolFeeCollectorErrors, IProtocolFeeCollectorEvents {
     /// @notice Harvests currently available DUSD fees from validated sources into the collector
+    /// @dev Invalid or paused borrow- and mint-market sources, invalid USMs, and invalid flash minters are skipped and
+    ///      emit `HarvestingFailed` instead of reverting or emitting `Harvested`. Execution failures from otherwise
+    ///      valid sources still revert.
     /// @param sourceTypes The types of the sources being harvested
     /// @param sources The addresses of the sources being harvested, aligned with `sourceTypes`
     function harvest(FeeSourceType[] calldata sourceTypes, address[] calldata sources) external;
 
-    /// @notice Splits the collected DUSD between the treasury and the sDUSD vault
-    /// @dev A configured vault and a finished reward period are required only when the calculated vault reward
-    ///      is nonzero. The treasury transfer and vault notification are atomic: if `notifyRewardAmount` reverts,
-    ///      including when the vault is paused or only its locked seed shares remain, the treasury transfer is
-    ///      rolled back and its allocation remains in this collector until a distribution can succeed.
+    /// @notice Harvests every configured source, then splits collected DUSD between the treasury and sDUSD vault
+    /// @dev Invalid sources and paused markets are skipped. When a nonzero calculated reward is below
+    ///      `minimumRewardAmount`, the entire balance remains in the collector for a later call. A configured vault
+    ///      and a finished reward period are required only when the calculated vault reward is nonzero. The treasury
+    ///      transfer and vault notification are atomic: if `notifyRewardAmount` reverts, including when the vault is
+    ///      paused or only its locked seed shares remain, the treasury transfer is rolled back and its allocation
+    ///      remains in this collector until a distribution can succeed.
     function distribute() external;
 
     /// @notice Withdraws liquidation fee collateral from markets to the manual swap receiver
@@ -155,6 +181,10 @@ interface IProtocolFeeCollectorBase is IProtocolFeeCollectorErrors, IProtocolFee
 
     /// @notice Updates the reward allocation in basis points (0 to 10_000)
     function setRewardsBps(uint256 newRewardsBps) external;
+
+    /// @notice Updates the minimum nonzero DUSD reward required to start a new sDUSD reward period
+    /// @dev The minimum cannot be set to zero
+    function setMinimumRewardAmount(uint256 newMinimumRewardAmount) external;
 
     /// @notice Updates the sDUSD vault address
     /// @dev sDUSD vault is recipient of fees collected from sources
@@ -209,6 +239,9 @@ interface IProtocolFeeCollectorBase is IProtocolFeeCollectorErrors, IProtocolFee
 
     /// @notice The reward allocation in basis points applied on the next distribution
     function rewardsBps() external view returns (uint256);
+
+    /// @notice The minimum nonzero DUSD reward required to start a new sDUSD reward period
+    function minimumRewardAmount() external view returns (uint256);
 }
 
 /// @title IProtocolFeeCollector

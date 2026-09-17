@@ -5,21 +5,27 @@ ProtocolFeeCollector::harvest
     ├── when sourceTypes and sources lengths do not match
     │   └── it should revert with ProtocolFeeCollectorLengthMismatch
     ├── when both arrays are empty
-    │   └── it should complete without emitting Harvested
+    │   └── it should complete without emitting Harvested or HarvestingFailed
     ├── when the source type is BORROW_MARKET
-    │   ├── given source is not an allowlisted borrow market
-    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource(source)
+    │   ├── given source is not a registered borrow market
+    │   │   ├── it should emit HarvestingFailed
+    │   │   └── it should not emit Harvested
     │   ├── given source borrow token is not DUSD
-    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource(source)
+    │   │   ├── it should emit HarvestingFailed
+    │   │   └── it should not emit Harvested
+    │   ├── given source is paused for PAUSE_TYPE
+    │   │   ├── it should emit HarvestingFailed without accruing or withdrawing
+    │   │   └── it should not emit Harvested
     │   ├── given source fee recipient is not the collector
     │   │   ├── and the collector has zero supply shares
-    │   │   │   └── it should revert with ProtocolFeeCollectorInvalidSource(source)
+    │   │   │   ├── it should emit HarvestingFailed after accrual
+    │   │   │   └── it should not emit Harvested or call removeSupply
     │   │   └── and the collector has existing supply shares
     │   │       └── it should still withdraw the collector's existing position
-    │   └── given source is an allowlisted DUSD borrow market
+    │   └── given source is a registered unpaused DUSD borrow market
     │       ├── it should accrue market interest before reading the collector position
     │       ├── it should harvest fee shares created for the collector during accrual
-    │       ├── when the collector has zero supply shares
+    │       ├── when the collector has zero supply shares and is the fee recipient
     │       │   ├── it should not call removeSupply
     │       │   └── it should emit Harvested with zero DUSD received
     │       ├── when the collector supply shares convert to zero assets
@@ -39,37 +45,53 @@ ProtocolFeeCollector::harvest
     │           ├── it should send the withdrawn DUSD to the collector
     │           └── it should emit Harvested with the collector's DUSD balance increase
     ├── when the source type is MINT_MARKET
-    │   ├── given source is not an allowlisted mint market
-    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource(source)
+    │   ├── given source is not a registered mint market
+    │   │   ├── it should emit HarvestingFailed
+    │   │   └── it should not emit Harvested
     │   ├── given source borrow token is not DUSD
-    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource(source)
+    │   │   ├── it should emit HarvestingFailed
+    │   │   └── it should not emit Harvested
     │   ├── given source fee recipient is not the collector
-    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource(source) without claiming fees
-    │   └── given source is an allowlisted DUSD mint market
+    │   │   ├── it should emit HarvestingFailed without claiming fees
+    │   │   └── it should not emit Harvested
+    │   ├── given source is paused for PAUSE_TYPE
+    │   │   ├── it should emit HarvestingFailed without accruing or claiming
+    │   │   └── it should not emit Harvested
+    │   └── given source is a registered unpaused DUSD mint market with the collector as fee recipient
     │       ├── it should accrue market interest before claiming fees
     │       ├── it should call claimInterest with zero to claim all fees
     │       └── it should emit Harvested with the collector's DUSD balance increase
     ├── when the source type is USM
-    │   ├── given source is not an allowlisted USM
-    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource(source)
+    │   ├── given source is not a registered USM
+    │   │   ├── it should emit HarvestingFailed
+    │   │   └── it should not emit Harvested
     │   ├── given source stable token is not DUSD
-    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource(source)
+    │   │   ├── it should emit HarvestingFailed
+    │   │   └── it should not emit Harvested
     │   ├── given source fee recipient is not the collector
-    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource(source) without distributing fees
-    │   └── given source is an allowlisted DUSD USM
+    │   │   ├── it should emit HarvestingFailed without distributing fees
+    │   │   └── it should not emit Harvested
+    │   └── given source is a registered DUSD USM with the collector as fee recipient
     │       ├── it should call distributeFeesToFeeRecipient
     │       └── it should emit Harvested with the collector's DUSD balance increase
     ├── when the source type is FLASH_MINTER
     │   ├── given source is not the configured flash minter
-    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource(source)
+    │   │   ├── it should emit HarvestingFailed
+    │   │   └── it should not emit Harvested
     │   ├── given source DUSD token is not the configured DUSD
-    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource(source)
+    │   │   ├── it should emit HarvestingFailed
+    │   │   └── it should not emit Harvested
     │   ├── given source fee recipient is not the collector
-    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource(source) without distributing fees
-    │   └── given source is the configured DUSD flash minter
+    │   │   ├── it should emit HarvestingFailed without distributing fees
+    │   │   └── it should not emit Harvested
+    │   └── given source is the configured DUSD flash minter with the collector as fee recipient
     │       ├── it should call distributeFeesToFeeRecipient
     │       └── it should emit Harvested with the collector's DUSD balance increase
-    └── when multiple valid sources are provided
-        ├── it should harvest each source in array order
-        ├── it should emit Harvested once for each source
+    ├── when a valid source execution reverts
+    │   └── it should propagate the revert
+    └── when multiple sources are provided
+        ├── it should process each source in array order
+        ├── it should continue after a source fails validation
+        ├── it should emit Harvested once for each successful source
+        ├── it should emit HarvestingFailed once for each invalid source
         └── it should be callable by any address
