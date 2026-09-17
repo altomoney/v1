@@ -10,9 +10,9 @@ ProtocolFeeCollector::withdrawLiquidationFees
         ├── when both arrays are empty
         │   └── it should complete without emitting LiquidationFeesWithdrawn
         ├── when a market is neither an allowlisted borrow market nor mint market
-        │   └── it should revert with ProtocolFeeCollectorInvalidSource
+        │   └── it should revert with ProtocolFeeCollectorInvalidSource(source)
         ├── when an allowlisted market borrow token is not DUSD
-        │   └── it should revert with ProtocolFeeCollectorInvalidSource
+        │   └── it should revert with ProtocolFeeCollectorInvalidSource(source)
         ├── when an allowlisted DUSD borrow market is provided
         │   ├── it should call removeCollateral for the requested amount
         │   ├── it should set the collector as onBehalf

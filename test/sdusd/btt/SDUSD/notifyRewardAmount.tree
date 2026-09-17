@@ -7,8 +7,10 @@ SDUSD::notifyRewardAmount
     └── when caller is the configured rewarder
         ├── when the previous reward period is active
         │   └── it should revert with SDUSDRewardPeriodNotFinished
-        ├── when the vault has no share supply
-        │   └── it should revert with SDUSDNoActiveStakers
+        ├── when address(1) holds fewer shares than seedShares
+        │   ├── it should revert with SDUSDNotSeeded
+        │   └── when user-owned total supply exceeds seedShares
+        │       └── it should still revert with SDUSDNotSeeded
         ├── when all real stakers have exited and only seed shares remain
         │   └── it should revert with SDUSDNoActiveStakers
         ├── when amount is zero

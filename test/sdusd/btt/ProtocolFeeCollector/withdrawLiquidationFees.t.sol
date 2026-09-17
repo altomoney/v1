@@ -5,7 +5,8 @@ import {Vm} from "forge-std/Vm.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {
-    IProtocolFeeCollectorErrors, IProtocolFeeCollectorEvents
+    IProtocolFeeCollectorErrors,
+    IProtocolFeeCollectorEvents
 } from "@alto/sdusd/interfaces/IProtocolFeeCollector.sol";
 import {IMarket, IMarketBase, Position} from "@alto/lending/interfaces/IMarket.sol";
 import {ProtocolFeeCollectorCommon} from "./ProtocolFeeCollectorCommon.t.sol";
@@ -53,7 +54,7 @@ contract ProtocolFeeCollector_WithdrawLiquidationFees_Test is ProtocolFeeCollect
         (address[] memory markets, uint256[] memory amounts) = _singleMarket(address(borrowMarket), 1);
 
         vm.prank(COLLATERAL_OPERATOR);
-        vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorInvalidSource.selector);
+        _expectInvalidSource(address(borrowMarket));
         collector.withdrawLiquidationFees(markets, amounts);
     }
 
@@ -62,7 +63,7 @@ contract ProtocolFeeCollector_WithdrawLiquidationFees_Test is ProtocolFeeCollect
         (address[] memory markets, uint256[] memory amounts) = _singleMarket(address(wrongTokenBorrowMarket), 1);
 
         vm.prank(COLLATERAL_OPERATOR);
-        vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorInvalidSource.selector);
+        _expectInvalidSource(address(wrongTokenBorrowMarket));
         collector.withdrawLiquidationFees(markets, amounts);
     }
 

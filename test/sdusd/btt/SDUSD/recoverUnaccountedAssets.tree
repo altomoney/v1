@@ -1,0 +1,24 @@
+SDUSD::recoverUnaccountedAssets
+├── when caller is not the owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is the owner
+    ├── when DUSD balance equals accountedAssets
+    │   ├── it should return zero
+    │   ├── it should not transfer DUSD
+    │   └── it should not emit UnaccountedAssetsRecovered
+    ├── when unaccounted DUSD exists
+    │   ├── it should calculate recoveredAssets as DUSD balance minus accountedAssets
+    │   ├── it should transfer exactly recoveredAssets to the configured rewarder
+    │   ├── it should emit UnaccountedAssetsRecovered
+    │   ├── it should leave the vault DUSD balance equal to accountedAssets
+    │   ├── it should not change accountedAssets
+    │   └── it should not change totalAssets
+    ├── when a reward release is active and unaccounted DUSD exists
+    │   ├── it should use accountedAssets rather than totalAssets to calculate recoveredAssets
+    │   ├── it should recover only the unaccounted DUSD
+    │   ├── it should leave all locked rewards in the vault
+    │   └── it should leave all reward accounting unchanged
+    ├── when the configured rewarder has changed
+    │   └── it should transfer recovered DUSD to the current configured rewarder
+    └── when PAUSE_TYPE is paused
+        └── it should allow recovery

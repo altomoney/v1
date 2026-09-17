@@ -133,26 +133,39 @@ contract ProtocolFeeCollector is
         uint256 balanceBefore = IERC20(dusd).balanceOf(address(this));
 
         if (sourceType == FeeSourceType.BORROW_MARKET) {
-            if (!marketRegistry.isBorrowMarket(source) || IMarketStaticTypes(source).borrowToken() != dusd) {
-                revert ProtocolFeeCollectorInvalidSource();
+            IMarketStaticTypes market = IMarketStaticTypes(source);
+            if (!marketRegistry.isBorrowMarket(source) || market.borrowToken() != dusd) {
+                revert ProtocolFeeCollectorInvalidSource(source);
             }
             _harvestBorrowMarket(source);
         } else if (sourceType == FeeSourceType.MINT_MARKET) {
-            if (!marketRegistry.isMintMarket(source) || IMarketStaticTypes(source).borrowToken() != dusd) {
-                revert ProtocolFeeCollectorInvalidSource();
+            IMarketStaticTypes market = IMarketStaticTypes(source);
+            if (
+                !marketRegistry.isMintMarket(source) || market.borrowToken() != dusd
+                    || market.feeRecipient() != address(this)
+            ) {
+                revert ProtocolFeeCollectorInvalidSource(source);
             }
-            IMarketStaticTypes(source).accrueInterest();
+            market.accrueInterest();
             IAltoMintMarketFees(source).claimInterest(0);
         } else if (sourceType == FeeSourceType.USM) {
-            if (!usmRegistry.isUsm(source) || IUsm(source).STABLE_TOKEN() != dusd) {
-                revert ProtocolFeeCollectorInvalidSource();
+            IStableTokenFacilitator facilitator = IStableTokenFacilitator(source);
+            if (
+                !usmRegistry.isUsm(source) || IUsm(source).STABLE_TOKEN() != dusd
+                    || facilitator.getFeeRecipient() != address(this)
+            ) {
+                revert ProtocolFeeCollectorInvalidSource(source);
             }
-            IStableTokenFacilitator(source).distributeFeesToFeeRecipient();
+            facilitator.distributeFeesToFeeRecipient();
         } else if (sourceType == FeeSourceType.FLASH_MINTER) {
-            if (source != flashMinter || address(IDUSDFlashMinter(source).DUSD()) != dusd) {
-                revert ProtocolFeeCollectorInvalidSource();
+            IStableTokenFacilitator facilitator = IStableTokenFacilitator(source);
+            if (
+                source != flashMinter || address(IDUSDFlashMinter(source).DUSD()) != dusd
+                    || facilitator.getFeeRecipient() != address(this)
+            ) {
+                revert ProtocolFeeCollectorInvalidSource(source);
             }
-            IStableTokenFacilitator(source).distributeFeesToFeeRecipient();
+            facilitator.distributeFeesToFeeRecipient();
         }
 
         uint256 dusdReceived = IERC20(dusd).balanceOf(address(this)) - balanceBefore;
@@ -161,23 +174,23 @@ contract ProtocolFeeCollector is
 
     /// @inheritdoc IProtocolFeeCollectorBase
     function distribute() external whenNot(PAUSE_TYPE) {
-        address _sdusdVault = sdusdVault;
-        if (_sdusdVault == address(0)) revert ProtocolFeeCollectorSdusdNotSet();
-        if (block.timestamp < ISDUSDVault(_sdusdVault).rewardPeriodFinish()) {
-            revert ProtocolFeeCollectorRewardPeriodNotFinished();
-        }
-
         IERC20 _dusd = IERC20(dusd);
         uint256 collected = _dusd.balanceOf(address(this));
         // round down for the vault in favor of treasury
         uint256 rewardAmount = collected.divideWithRounding(rewardsBps, PERCENTAGE_PRECISION, false);
         uint256 treasuryAmount = collected - rewardAmount;
 
+        address _sdusdVault = sdusdVault;
         if (treasuryAmount != 0) {
             _dusd.safeTransfer(treasury, treasuryAmount);
         }
 
         if (rewardAmount != 0) {
+            if (_sdusdVault == address(0)) revert ProtocolFeeCollectorSdusdNotSet();
+            if (block.timestamp < ISDUSDVault(_sdusdVault).rewardPeriodFinish()) {
+                revert ProtocolFeeCollectorRewardPeriodNotFinished();
+            }
+
             // sdusdVault will pull the rewardAmount from this contract
             _dusd.forceApprove(_sdusdVault, rewardAmount);
             ISDUSDVault(_sdusdVault).notifyRewardAmount(rewardAmount);
@@ -204,11 +217,11 @@ contract ProtocolFeeCollector is
             address market = markets[i];
 
             if (!registry.isBorrowMarket(market) && !registry.isMintMarket(market)) {
-                revert ProtocolFeeCollectorInvalidSource();
+                revert ProtocolFeeCollectorInvalidSource(market);
             }
 
             if (IMarketStaticTypes(market).borrowToken() != dusd) {
-                revert ProtocolFeeCollectorInvalidSource();
+                revert ProtocolFeeCollectorInvalidSource(market);
             }
 
             IMarketStaticTypes(market).removeCollateral(amounts[i], address(this), receiver, "");
@@ -284,7 +297,12 @@ contract ProtocolFeeCollector is
         market.accrueInterest();
 
         (uint128 supplyShares,,) = market.position(address(this));
-        if (supplyShares == 0) return;
+        if (supplyShares == 0) {
+            if (market.feeRecipient() != address(this)) {
+                revert ProtocolFeeCollectorInvalidSource(source);
+            }
+            return;
+        }
 
         (uint128 totalSupplyAssets, uint128 totalSupplyShares) = market.totalSupply();
         (uint128 totalBorrowedAssets,) = market.totalBorrowed();

@@ -124,6 +124,7 @@ contract SDUSD is
     function notifyRewardAmount(uint256 amount) external whenNot(PAUSE_TYPE) {
         if (msg.sender != rewarder) revert SDUSDNotRewarder();
         if (block.timestamp < rewardPeriodFinish) revert SDUSDRewardPeriodNotFinished();
+        if (balanceOf(address(1)) < seedShares) revert SDUSDNotSeeded();
         // Refuse to start a release when only the locked seed remains: with no real stakers the rewards would
         // accrue entirely to the irrecoverable seed shares, and repeated releases could inflate the exchange
         // rate unbounded. Requiring real supply bounds any reward-driven inflation to a single release.
@@ -139,6 +140,18 @@ contract SDUSD is
         rewardPeriodFinish = finish;
 
         emit RewardAdded(amount, finish);
+    }
+
+    /// @inheritdoc ISDUSDVaultBase
+    function recoverUnaccountedAssets() external onlyOwner returns (uint256 recoveredAssets) {
+        IERC20 assetToken = IERC20(asset());
+        recoveredAssets = assetToken.balanceOf(address(this)) - accountedAssets;
+
+        if (recoveredAssets != 0) {
+            address receiver = rewarder;
+            assetToken.safeTransfer(receiver, recoveredAssets);
+            emit UnaccountedAssetsRecovered(receiver, recoveredAssets);
+        }
     }
 
     /// @inheritdoc ISDUSDVaultBase
@@ -198,8 +211,10 @@ contract SDUSD is
 
     /// @inheritdoc ERC4626Upgradeable
     /// @dev Tracks staked principal entering the vault so `totalAssets` reflects deposits without reading
-    ///      `balanceOf`.
+    ///      `balanceOf`. Rejects non-zero deposits that round down to zero shares so assets cannot be accepted
+    ///      without giving the receiver ownership in the vault.
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
+        if (assets != 0 && shares == 0) revert SDUSDZeroShares();
         accountedAssets += assets;
         super._deposit(caller, receiver, assets, shares);
     }

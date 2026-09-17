@@ -42,4 +42,25 @@ contract SDUSDERC4626ComplianceTest is ERC4626Test {
         _vaultMayBeEmpty = true;
         _unlimitedAmount = true;
     }
+
+    function setUpYield(Init memory init) public override {
+        // sDUSD has no loss-reporting mechanism, and raw balance changes are intentionally excluded from its
+        // accounting. Exercise positive yield through the real reward path, then let it fully unlock so the
+        // generic ERC-4626 properties observe the requested realized yield.
+        vm.assume(init.yield >= 0);
+
+        uint256 gain = uint256(init.yield);
+        if (gain == 0) return;
+
+        // Rewards cannot be started while only the permanently locked seed shares exist.
+        vm.assume(sdusd.totalSupply() > SEED_SHARES);
+
+        // Keep the mock token mint within its arithmetic domain; all other reward-path failures should surface.
+        vm.assume(gain <= type(uint256).max - dusd.totalSupply());
+
+        dusd.mint(address(this), gain);
+        dusd.approve(address(sdusd), gain);
+        sdusd.notifyRewardAmount(gain);
+        vm.warp(sdusd.rewardPeriodFinish());
+    }
 }
