@@ -51,6 +51,9 @@ ProtocolFeeCollector::distribute
                 ├── when the sDUSD vault is paused
                 │   ├── it should revert with IsPaused
                 │   └── it should leave the treasury allocation in the collector
+                ├── when the configured sDUSD vault has not received its required seed deposit
+                │   ├── it should revert with SDUSDNotSeeded
+                │   └── it should leave the treasury allocation in the collector
                 ├── when only the locked seed shares remain in the sDUSD vault
                 │   ├── it should revert with SDUSDNoActiveStakers
                 │   └── it should leave the treasury allocation in the collector

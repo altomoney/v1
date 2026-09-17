@@ -354,6 +354,42 @@ contract ProtocolFeeCollector_Harvest_Test is ProtocolFeeCollectorCommon {
         assertEq(dusd.balanceOf(address(collector)), feeAmount);
     }
 
+    function test_FrozenUsmStillDistributesFeesAndEmitsReceivedAmount() public {
+        _allowUsm(address(usm));
+        uint256 feeAmount = _generateUsmFees(100e6);
+        vm.startPrank(ADMIN);
+        usm.grantRole(usm.SWAP_FREEZER_ROLE(), ADMIN);
+        usm.setSwapFreeze(true);
+        vm.stopPrank();
+        (FeeSourceType[] memory sourceTypes, address[] memory sources) = _singleSource(FeeSourceType.USM, address(usm));
+
+        vm.expectCall(
+            address(usm), abi.encodeWithSelector(IStableTokenFacilitator.distributeFeesToFeeRecipient.selector)
+        );
+        _expectHarvested(FeeSourceType.USM, address(usm), feeAmount);
+        collector.harvest(sourceTypes, sources);
+
+        assertEq(usm.getAccruedFees(), 0);
+        assertEq(dusd.balanceOf(address(collector)), feeAmount);
+    }
+
+    function test_SeizedUsmStillCallsFeeDistributionAndEmitsHarvested() public {
+        _allowUsm(address(usm));
+        vm.startPrank(ADMIN);
+        usm.grantRole(usm.LIQUIDATOR_ROLE(), ADMIN);
+        usm.seize();
+        vm.stopPrank();
+        (FeeSourceType[] memory sourceTypes, address[] memory sources) = _singleSource(FeeSourceType.USM, address(usm));
+
+        vm.expectCall(
+            address(usm), abi.encodeWithSelector(IStableTokenFacilitator.distributeFeesToFeeRecipient.selector)
+        );
+        _expectHarvested(FeeSourceType.USM, address(usm), 0);
+        collector.harvest(sourceTypes, sources);
+
+        assertEq(dusd.balanceOf(address(collector)), 0);
+    }
+
     function test_UnconfiguredFlashMinterEmitsHarvestingFailedAndSkips() public {
         _assertHarvestSkipped(FeeSourceType.FLASH_MINTER, address(wrongTokenFlashMinter));
     }

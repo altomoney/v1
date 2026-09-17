@@ -150,4 +150,24 @@ contract ProtocolFeeCollector_WithdrawLiquidationFees_Test is ProtocolFeeCollect
         assertEq(borrowMarket.position(address(collector)).collateralAssets, 0);
         assertEq(mintMarket.position(address(collector)).collateralAssets, 0);
     }
+
+    function test_RevertWhen_LaterMarketIsInvalidAndRollsBackEarlierWithdrawal() public {
+        uint256 amount = 10 ether;
+        _allowBorrowMarket(address(borrowMarket));
+        _addCollectorCollateral(borrowMarket, amount);
+
+        address[] memory markets = new address[](2);
+        markets[0] = address(borrowMarket);
+        markets[1] = address(wrongTokenBorrowMarket);
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = amount;
+        amounts[1] = 1;
+
+        vm.prank(COLLATERAL_OPERATOR);
+        _expectInvalidSource(address(wrongTokenBorrowMarket));
+        collector.withdrawLiquidationFees(markets, amounts);
+
+        assertEq(borrowMarket.position(address(collector)).collateralAssets, amount);
+        assertEq(collateralToken.balanceOf(MANUAL_SWAP_RECEIVER), 0);
+    }
 }

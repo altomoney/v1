@@ -215,6 +215,21 @@ contract ProtocolFeeCollector_Distribute_Test is ProtocolFeeCollectorCommon {
         );
     }
 
+    function test_RevertWhen_SdusdVaultIsNotSeededAndLeavesDistributionStateUnchanged() public {
+        sdusdVault = _deploySdusdVault(_sdusdInitParams(SEED_SHARES, REWARD_DURATION));
+        vm.prank(ADMIN);
+        collector.setSdusdVault(address(sdusdVault));
+
+        uint256 collected = 400 ether;
+        dusd.mint(address(collector), collected);
+        uint256 treasuryBalanceBefore = dusd.balanceOf(TREASURY);
+
+        vm.expectRevert(ISDUSDVaultErrors.SDUSDNotSeeded.selector);
+        collector.distribute();
+
+        _assertFailedDistributionState(collected, treasuryBalanceBefore, 0, 0, 0, 0);
+    }
+
     function test_RevertWhen_OnlySeedSharesRemainAndLeavesDistributionStateUnchanged() public {
         uint256 userShares = sdusdVault.balanceOf(USER);
         vm.prank(USER);

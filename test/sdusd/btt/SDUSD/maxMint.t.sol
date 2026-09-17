@@ -45,4 +45,13 @@ contract SDUSD_MaxMint_Test is SDUSDCommon {
         assertEq(vault.maxMint(USER), expected);
         assertLt(vault.maxMint(USER), sharesBefore);
     }
+
+    function test_ReturnsZeroWhenPositiveAssetHeadroomRoundsDownToZeroShares() public {
+        _notifyRewards(REWARD_AMOUNT);
+        _finishRewardPeriod();
+        _setDepositCap(vault.depositCapUsage() + 1);
+
+        assertEq(vault.maxDeposit(USER), 1);
+        assertEq(vault.maxMint(USER), 0);
+    }
 }
