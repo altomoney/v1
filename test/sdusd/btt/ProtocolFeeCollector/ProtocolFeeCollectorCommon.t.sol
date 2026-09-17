@@ -69,6 +69,7 @@ contract ProtocolFeeCollectorFlashBorrower is IERC3156FlashBorrower {
 
 abstract contract ProtocolFeeCollectorCommon is Test, TestHelperOz5 {
     uint256 internal constant INITIAL_REWARDS_BPS = 3_000;
+    uint256 internal constant INITIAL_MINIMUM_REWARD_AMOUNT = 100 ether;
     uint256 internal constant SEED_SHARES = 1 ether;
     uint256 internal constant REWARD_DURATION = 7 days;
     uint256 internal constant MARKET_MAX_LTV = 0.75 ether;
@@ -199,7 +200,8 @@ abstract contract ProtocolFeeCollectorCommon is Test, TestHelperOz5 {
             flashMinter: address(flashMinter),
             treasury: TREASURY,
             manualSwapReceiver: MANUAL_SWAP_RECEIVER,
-            rewardsBps: INITIAL_REWARDS_BPS
+            rewardsBps: INITIAL_REWARDS_BPS,
+            minimumRewardAmount: INITIAL_MINIMUM_REWARD_AMOUNT
         });
     }
 
@@ -431,5 +433,10 @@ abstract contract ProtocolFeeCollectorCommon is Test, TestHelperOz5 {
     function _expectHarvested(FeeSourceType sourceType, address source, uint256 amount) internal {
         vm.expectEmit(true, true, false, true, address(collector));
         emit IProtocolFeeCollectorEvents.Harvested(sourceType, source, amount);
+    }
+
+    function _expectHarvestingFailed(FeeSourceType sourceType, address source) internal {
+        vm.expectEmit(true, true, false, true, address(collector));
+        emit IProtocolFeeCollectorEvents.HarvestingFailed(sourceType, source);
     }
 }
