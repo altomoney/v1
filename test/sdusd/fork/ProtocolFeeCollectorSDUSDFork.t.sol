@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -28,7 +29,8 @@ import {FlashFee} from "@alto/usm/interfaces/IDUSDFlashMinter.sol";
 import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
 /// @dev End-to-end mainnet-fork coverage for the live Alto fee sources feeding freshly deployed
-/// ProtocolFeeCollector and SDUSD proxies, using fees already present at the pinned block.
+/// ProtocolFeeCollector and SDUSD proxies, using fees already present at the pinned block and liquidation fees
+/// generated after the collector becomes the markets' fee recipient.
 contract ProtocolFeeCollectorSDUSDForkTest is Test {
     using SafeERC20 for IERC20;
 
@@ -56,6 +58,8 @@ contract ProtocolFeeCollectorSDUSDForkTest is Test {
     address internal USER_FOUR = makeAddr("UserFour");
     address internal HARVEST_CALLER = makeAddr("HarvestCaller");
     address internal DISTRIBUTION_CALLER = makeAddr("DistributionCaller");
+    address internal LIQUIDATION_BORROWER = makeAddr("LiquidationBorrower");
+    address internal LIQUIDATOR = makeAddr("Liquidator");
 
     IDUSD internal dusd;
     IMarketRegistry internal marketRegistry;
@@ -93,7 +97,7 @@ contract ProtocolFeeCollectorSDUSDForkTest is Test {
         _deployCollectorAndVault();
         _seedVaultAndCreateInitialPositions();
         _configureAllFeeRecipients();
-        _cacheLiquidationFeeCollateralAndPinOracles();
+        _createAndCacheLiquidationFeeCollateral();
         _assertDeploymentConfiguration();
     }
 
@@ -261,22 +265,55 @@ contract ProtocolFeeCollectorSDUSDForkTest is Test {
         assertEq(flashMinter.getFeeRecipient(), address(collector));
     }
 
-    function _cacheLiquidationFeeCollateralAndPinOracles() internal {
-        for (uint256 i; i < allMarkets.length; ++i) {
-            IMarket market = IMarket(allMarkets[i]);
-            Position memory collectorPosition = market.position(address(collector));
-            uint256 amount = collectorPosition.collateralAssets;
-            if (amount == 0) continue;
+    function _createAndCacheLiquidationFeeCollateral() internal {
+        IMarket market = IMarket(borrowMarkets[0]);
+        address collateral = market.collateralToken();
+        address oracle = market.oracle();
 
-            address collateral = market.collateralToken();
-            uint256 oraclePrice = ILendingOracle(market.oracle()).getPrice();
-            vm.mockCall(market.oracle(), abi.encodeCall(ILendingOracle.getPrice, ()), abi.encode(oraclePrice));
+        assertEq(market.feeRecipient(), address(collector));
+        assertEq(market.position(address(collector)).collateralAssets, 0, "collector already owns collateral");
 
-            liquidationFeeMarkets.push(address(market));
-            liquidationFeeAmounts.push(amount);
-            marketOraclePrices.push(oraclePrice);
-            treasuryCollateralBalancesBefore.push(IERC20(collateral).balanceOf(TREASURY));
-        }
+        uint256 collateralAmount = 10 ** IERC20Metadata(collateral).decimals();
+        uint256 oraclePrice = ILendingOracle(oracle).getPrice();
+        uint256 collateralValue = Math.mulDiv(collateralAmount, oraclePrice, LENDING_ORACLE_PRICE_PRECISION);
+        uint256 borrowAmount = collateralValue / 2;
+
+        // Add deterministic DUSD liquidity so the freshly created position does not depend on available fork liquidity.
+        uint256 suppliedDusd = borrowAmount + 10_000 ether;
+        _mintDusd(address(this), suppliedDusd);
+        IERC20(DUSD_MAINNET).forceApprove(address(market), suppliedDusd);
+        market.addSupply(suppliedDusd, 0, address(this));
+
+        deal(collateral, LIQUIDATION_BORROWER, collateralAmount);
+        vm.startPrank(LIQUIDATION_BORROWER);
+        IERC20(collateral).forceApprove(address(market), collateralAmount);
+        market.addCollateral(collateralAmount, LIQUIDATION_BORROWER);
+        market.borrow(borrowAmount, 0, LIQUIDATION_BORROWER, LIQUIDATION_BORROWER, "");
+        vm.stopPrank();
+
+        // Halving the collateral price moves the position from roughly 50% LTV to above 100% after its opening fee.
+        uint256 liquidationOraclePrice = oraclePrice / 2;
+        vm.mockCall(oracle, abi.encodeCall(ILendingOracle.getPrice, ()), abi.encode(liquidationOraclePrice));
+
+        _mintDusd(LIQUIDATOR, borrowAmount * 2);
+        vm.startPrank(LIQUIDATOR);
+        IERC20(DUSD_MAINNET).forceApprove(address(market), type(uint256).max);
+        (,, uint256 protocolFee) = market.liquidate(LIQUIDATION_BORROWER, "", "");
+        vm.stopPrank();
+
+        assertGt(protocolFee, 0, "liquidation produced no protocol collateral fee");
+        assertEq(
+            market.position(address(collector)).collateralAssets,
+            protocolFee,
+            "liquidation fee was not credited to collector"
+        );
+
+        liquidationFeeMarkets.push(address(market));
+        liquidationFeeAmounts.push(protocolFee);
+        marketOraclePrices.push(liquidationOraclePrice);
+        treasuryCollateralBalancesBefore.push(IERC20(collateral).balanceOf(TREASURY));
+
+        assertEq(liquidationFeeMarkets.length, 1, "liquidation market was not cached");
     }
 
     function _harvestEveryFeeSource() internal returns (uint256 harvested) {
@@ -325,7 +362,7 @@ contract ProtocolFeeCollectorSDUSDForkTest is Test {
         address[] memory markets = liquidationFeeMarkets;
         uint256[] memory amounts = liquidationFeeAmounts;
 
-        if (markets.length == 0) return 0;
+        assertGt(markets.length, 0, "no generated liquidation fee collateral");
 
         vm.prank(COLLATERAL_OPERATOR);
         collector.withdrawLiquidationFees(markets, amounts);
