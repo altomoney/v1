@@ -497,6 +497,19 @@ contract ProtocolFeeCollector_Harvest_Test is ProtocolFeeCollectorCommon {
         assertEq(dusd.balanceOf(address(collector)), usmFee);
     }
 
+    function test_RevertWhen_CalldataContainsUnsupportedSourceType() public {
+        uint256[] memory rawSourceTypes = new uint256[](1);
+        rawSourceTypes[0] = type(uint8).max;
+        address[] memory sources = new address[](1);
+        sources[0] = address(borrowMarket);
+
+        (bool success, bytes memory revertData) =
+            address(collector).call(abi.encodeWithSelector(collector.harvest.selector, rawSourceTypes, sources));
+
+        assertFalse(success);
+        assertEq(revertData.length, 0);
+    }
+
     function test_RevertWhen_ValidSourceExecutionReverts() public {
         _allowBorrowMarket(address(borrowMarket));
         (FeeSourceType[] memory sourceTypes, address[] memory sources) =

@@ -11,9 +11,10 @@ import {
     IProtocolFeeCollectorErrors,
     IProtocolFeeCollectorEvents
 } from "@alto/sdusd/interfaces/IProtocolFeeCollector.sol";
-import {Position} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, Position} from "@alto/lending/interfaces/IMarket.sol";
 import {IStableTokenFacilitator} from "@alto/usm/interfaces/IStableTokenFacilitator.sol";
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
+import {IUsmRegistry} from "@alto/utils/interfaces/IUsmRegistry.sol";
 import {ProtocolFeeCollectorCommon} from "./ProtocolFeeCollectorCommon.t.sol";
 
 contract ProtocolFeeCollector_Distribute_Test is ProtocolFeeCollectorCommon {
@@ -375,6 +376,52 @@ contract ProtocolFeeCollector_Distribute_Test is ProtocolFeeCollectorCommon {
         assertEq(sdusdVault.rewardsForPeriod(), rewardAmount);
     }
 
+    function test_AutomaticallyHarvestsMultipleSourcesWithinEachRegistryInOrder() public {
+        IMarket secondBorrowMarket = _deployBorrowMarket(address(dusd));
+        IMarket secondMintMarket = _deployMintMarket(address(dusd));
+        IStableTokenFacilitator secondUsm = IStableTokenFacilitator(address(_deployUsm(address(dusd))));
+
+        vm.startPrank(ADMIN);
+        secondBorrowMarket.setFeeRecipient(address(collector));
+        secondMintMarket.setFeeRecipient(address(collector));
+        secondUsm.updateFeeRecipient(address(collector));
+        _configureDusdFacilitator(address(secondMintMarket));
+        _configureDusdFacilitator(address(secondUsm));
+        vm.stopPrank();
+
+        _allowBorrowMarket(address(borrowMarket));
+        _allowBorrowMarket(address(secondBorrowMarket));
+        _allowMintMarket(address(mintMarket));
+        _allowMintMarket(address(secondMintMarket));
+        _allowUsm(address(usm));
+        _allowUsm(address(secondUsm));
+
+        vm.recordLogs();
+        collector.distribute();
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        FeeSourceType[] memory expectedTypes = new FeeSourceType[](7);
+        expectedTypes[0] = FeeSourceType.BORROW_MARKET;
+        expectedTypes[1] = FeeSourceType.BORROW_MARKET;
+        expectedTypes[2] = FeeSourceType.MINT_MARKET;
+        expectedTypes[3] = FeeSourceType.MINT_MARKET;
+        expectedTypes[4] = FeeSourceType.USM;
+        expectedTypes[5] = FeeSourceType.USM;
+        expectedTypes[6] = FeeSourceType.FLASH_MINTER;
+
+        address[] memory expectedSources = new address[](7);
+        expectedSources[0] = address(borrowMarket);
+        expectedSources[1] = address(secondBorrowMarket);
+        expectedSources[2] = address(mintMarket);
+        expectedSources[3] = address(secondMintMarket);
+        expectedSources[4] = address(usm);
+        expectedSources[5] = address(secondUsm);
+        expectedSources[6] = address(flashMinter);
+
+        _assertHarvestSequence(logs, expectedTypes, expectedSources, new uint256[](7));
+        _assertDistributedEvent(logs, 0, 0, 0);
+    }
+
     function test_AutomaticallyEmitsHarvestedForEveryValidZeroFeeSource() public {
         _allowBorrowMarket(address(borrowMarket));
         _allowMintMarket(address(mintMarket));
@@ -428,6 +475,27 @@ contract ProtocolFeeCollector_Distribute_Test is ProtocolFeeCollectorCommon {
         assertEq(dusd.balanceOf(address(collector)), 0);
     }
 
+    function test_InvalidConfiguredFlashMinterDoesNotBlockTreasuryDistribution() public {
+        uint256 collected = 250 ether;
+        _setRewardsBps(0);
+        dusd.mint(address(collector), collected);
+        vm.prank(ADMIN);
+        flashMinter.updateFeeRecipient(TREASURY);
+
+        vm.recordLogs();
+        collector.distribute();
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        uint256 failureIndex = _findCollectorEvent(logs, IProtocolFeeCollectorEvents.HarvestingFailed.selector, 0);
+        assertEq(uint256(logs[failureIndex].topics[1]), uint256(FeeSourceType.FLASH_MINTER));
+        assertEq(address(uint160(uint256(logs[failureIndex].topics[2]))), address(flashMinter));
+        assertEq(_countLogs(logs, IProtocolFeeCollectorEvents.HarvestingFailed.selector, address(collector)), 1);
+        assertEq(_countLogs(logs, IProtocolFeeCollectorEvents.Harvested.selector, address(collector)), 0);
+        _assertDistributedEvent(logs, collected, collected, 0);
+        assertEq(dusd.balanceOf(TREASURY), collected);
+        assertEq(dusd.balanceOf(address(collector)), 0);
+    }
+
     function test_RevertFromConfiguredSourceRollsBackEarlierHarvestsAndDistribution() public {
         _allowBorrowMarket(address(borrowMarket));
         uint256 supplyShares = _supplyBorrowMarket(500 ether);
@@ -447,7 +515,7 @@ contract ProtocolFeeCollector_Distribute_Test is ProtocolFeeCollectorCommon {
         assertEq(dusd.balanceOf(TREASURY), 0);
     }
 
-    function test_RevertWhen_RegistryGetterReverts() public {
+    function test_RevertWhen_GetBorrowMarketsRevertsBeforeHarvesting() public {
         bytes memory reason = abi.encodeWithSignature("Error(string)", "registry failed");
         vm.mockCallRevert(
             address(marketRegistry), abi.encodeWithSelector(IMarketRegistry.getBorrowMarkets.selector), reason
@@ -455,6 +523,38 @@ contract ProtocolFeeCollector_Distribute_Test is ProtocolFeeCollectorCommon {
 
         vm.expectRevert(reason);
         collector.distribute();
+    }
+
+    function test_RevertWhen_GetMintMarketsRevertsAndRollsBackBorrowHarvest() public {
+        _allowBorrowMarket(address(borrowMarket));
+        uint256 supplyShares = _supplyBorrowMarket(500 ether);
+        bytes memory reason = abi.encodeWithSignature("Error(string)", "mint registry getter failed");
+        vm.mockCallRevert(
+            address(marketRegistry), abi.encodeWithSelector(IMarketRegistry.getMintMarkets.selector), reason
+        );
+
+        vm.expectRevert(reason);
+        collector.distribute();
+
+        Position memory remainingPosition = borrowMarket.position(address(collector));
+        assertEq(remainingPosition.supplyShares, supplyShares);
+        assertEq(dusd.balanceOf(address(collector)), 0);
+        assertEq(dusd.balanceOf(TREASURY), 0);
+    }
+
+    function test_RevertWhen_GetUsmListRevertsAndRollsBackMarketHarvests() public {
+        _allowBorrowMarket(address(borrowMarket));
+        uint256 supplyShares = _supplyBorrowMarket(500 ether);
+        bytes memory reason = abi.encodeWithSignature("Error(string)", "USM registry getter failed");
+        vm.mockCallRevert(address(usmRegistry), abi.encodeWithSelector(IUsmRegistry.getUsmList.selector), reason);
+
+        vm.expectRevert(reason);
+        collector.distribute();
+
+        Position memory remainingPosition = borrowMarket.position(address(collector));
+        assertEq(remainingPosition.supplyShares, supplyShares);
+        assertEq(dusd.balanceOf(address(collector)), 0);
+        assertEq(dusd.balanceOf(TREASURY), 0);
     }
 
     function _assertFailedDistributionState(

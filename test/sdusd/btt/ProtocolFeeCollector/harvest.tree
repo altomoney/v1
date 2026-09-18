@@ -89,6 +89,8 @@ ProtocolFeeCollector::harvest
     │   └── given source is the configured DUSD flash minter with the collector as fee recipient
     │       ├── it should call distributeFeesToFeeRecipient
     │       └── it should emit Harvested with the collector's DUSD balance increase
+    ├── when calldata contains a source type outside the FeeSourceType enum
+    │   └── it should revert without data during ABI decoding before entering harvest
     ├── when a valid source execution reverts
     │   └── it should propagate the revert
     └── when multiple sources are provided
