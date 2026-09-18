@@ -58,7 +58,10 @@ interface IProtocolFeeCollectorErrors {
     /// @notice Thrown when a provided address is the zero address
     error ProtocolFeeCollectorZeroAddress();
 
-    /// @notice Thrown when a source fails validation for the given source type
+    /// @notice Thrown when a source must be rejected rather than skipped
+    /// @dev Harvest validation failures for recognized source types emit `HarvestingFailed` and are skipped. This
+    ///      error is used when a liquidation-fee withdrawal references an unregistered market or a market whose
+    ///      borrow token is not DUSD, and when harvest dispatch receives an unsupported source type.
     /// @param source The source address that failed validation
     error ProtocolFeeCollectorInvalidSource(address source);
 
@@ -172,6 +175,10 @@ interface IProtocolFeeCollectorBase is IProtocolFeeCollectorErrors, IProtocolFee
     function distribute() external;
 
     /// @notice Withdraws liquidation fee collateral from markets to the manual swap receiver
+    /// @dev Only a configured collateral operator may call this function. Every market must be registered as a borrow
+    ///      or mint market and use DUSD as its borrow token. Collateral is always sent to the configured
+    ///      `manualSwapReceiver`; neither the caller nor the input arrays can select another receiver. The complete
+    ///      batch is atomic, so a failure for any market rolls back all earlier withdrawals in the same call.
     /// @param markets The markets to withdraw collateral fees from
     /// @param amounts The amounts of collateral to withdraw, aligned with `markets`
     function withdrawLiquidationFees(address[] calldata markets, uint256[] calldata amounts) external;
@@ -187,21 +194,29 @@ interface IProtocolFeeCollectorBase is IProtocolFeeCollectorErrors, IProtocolFee
     function setMinimumRewardAmount(uint256 newMinimumRewardAmount) external;
 
     /// @notice Updates the sDUSD vault address
-    /// @dev sDUSD vault is recipient of fees collected from sources
-    /// @dev It is not advisable to update this with new vault once we have staker on old sDUSD vaults
-    ///     because there will be two reward sources
+    /// @dev The configured sDUSD vault receives future reward allocations. Replacing a vault does not migrate its
+    ///      existing users, shares, assets, or reward state; the old vault remains a separate legacy vault and stops
+    ///      receiving new rewards from this collector.
     function setSdusdVault(address newSdusdVault) external;
 
     /// @notice Updates the manual swap receiver address
     function setManualSwapReceiver(address newManualSwapReceiver) external;
 
     /// @notice Updates the flash minter address
+    /// @dev Harvest all fees from the current flash minter before replacing it. Once replaced, its remaining fees
+    ///      cannot be harvested through this collector unless the old address is configured again.
     function setFlashMinter(address newFlashMinter) external;
 
     /// @notice Updates the market registry address
+    /// @dev Before replacing the registry, or removing a market from the current registry, harvest all DUSD fee
+    ///      positions and withdraw all liquidation-fee collateral held for this collector. Positions in a market that
+    ///      is absent from the configured registry are inaccessible through the collector until it is registered again.
     function setMarketRegistry(address newMarketRegistry) external;
 
     /// @notice Updates the USM registry address
+    /// @dev Before replacing the registry, or removing a USM from the current registry, distribute all accrued fees
+    ///      from that USM. Fees in a USM absent from the configured registry are inaccessible through the collector
+    ///      until it is registered again.
     function setUsmRegistry(address newUsmRegistry) external;
 
     /// @notice Sets whether an address may withdraw liquidation fee collateral

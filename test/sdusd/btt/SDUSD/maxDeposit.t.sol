@@ -42,13 +42,14 @@ contract SDUSD_MaxDeposit_Test is SDUSDCommon {
         assertEq(vault.maxDeposit(RECEIVER), expected);
     }
 
-    function test_ReturnsPositiveHeadroomEvenWhenItRoundsDownToZeroShares() public {
+    function test_ReturnsZeroWhenRemainingHeadroomRoundsDownToZeroShares() public {
         _notifyRewards(REWARD_AMOUNT);
         _finishRewardPeriod();
         _setDepositCap(vault.depositCapUsage() + 1);
 
-        assertEq(vault.maxDeposit(USER), 1);
+        assertEq(vault.depositCap() - vault.depositCapUsage(), 1);
         assertEq(vault.previewDeposit(1), 0);
+        assertEq(vault.maxDeposit(USER), 0);
         assertEq(vault.maxMint(USER), 0);
     }
 }
