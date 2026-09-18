@@ -130,10 +130,20 @@ contract ProtocolFeeCollector is
         }
     }
 
-    /// @dev Harvests currently available DUSD fees from a single validated source into the collector.
+    /// @dev Isolates each source so validation or execution reverts cannot roll back other harvests.
     /// @param sourceType The type of the source being harvested
     /// @param source The address of the source being harvested
     function _harvest(FeeSourceType sourceType, address source) internal {
+        try this.harvestSource(sourceType, source) {}
+        catch {
+            emit HarvestingFailed(sourceType, source);
+        }
+    }
+
+    /// @inheritdoc IProtocolFeeCollectorBase
+    function harvestSource(FeeSourceType sourceType, address source) external {
+        if (msg.sender != address(this)) revert ProtocolFeeCollectorUnauthorized();
+
         uint256 balanceBefore = IERC20(dusd).balanceOf(address(this));
 
         if (sourceType == FeeSourceType.BORROW_MARKET) {

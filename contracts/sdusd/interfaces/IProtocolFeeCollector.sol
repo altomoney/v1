@@ -77,8 +77,8 @@ interface IProtocolFeeCollectorErrors {
     /// @notice Thrown when distribute is called before the active reward release period of sDUSD vault has ended
     error ProtocolFeeCollectorRewardPeriodNotFinished();
 
-    /// @notice Thrown when the caller lacks the required collateral-operator permission or attempts an
-    ///         owner-only unpause
+    /// @notice Thrown when the caller lacks collateral-operator permission, attempts an owner-only unpause,
+    ///         or calls the source-isolation entrypoint from outside the collector
     error ProtocolFeeCollectorUnauthorized();
 
     /// @notice Thrown when a setter is called with a value equal to the current one
@@ -99,9 +99,9 @@ interface IProtocolFeeCollectorEvents {
     /// @param dusdReceived The amount of DUSD received by the collector contract as a result of the harvest
     event Harvested(FeeSourceType indexed sourceType, address indexed source, uint256 dusdReceived);
 
-    /// @notice Emitted when a source fails validation and is skipped during harvesting
-    /// @param sourceType The type of the source that failed validation
-    /// @param source The address of the source that failed validation
+    /// @notice Emitted when a source fails validation or reverts during harvesting and is skipped
+    /// @param sourceType The type of the failed source
+    /// @param source The address of the failed source
     event HarvestingFailed(FeeSourceType indexed sourceType, address indexed source);
 
     /// @notice Emitted when collected DUSD is distributed to the treasury and sDUSD vault
@@ -159,14 +159,21 @@ interface IProtocolFeeCollectorEvents {
 interface IProtocolFeeCollectorBase is IProtocolFeeCollectorErrors, IProtocolFeeCollectorEvents {
     /// @notice Harvests currently available DUSD fees from validated sources into the collector
     /// @dev Invalid or paused borrow- and mint-market sources, invalid USMs, and invalid flash minters are skipped and
-    ///      emit `HarvestingFailed` instead of reverting or emitting `Harvested`. Execution failures from otherwise
-    ///      valid sources still revert.
+    ///      emit `HarvestingFailed` instead of reverting or emitting `Harvested`. Reverts during a source's validation
+    ///      or execution are isolated to that source, emit `HarvestingFailed`, and do not stop later sources.
     /// @param sourceTypes The types of the sources being harvested
     /// @param sources The addresses of the sources being harvested, aligned with `sourceTypes`
     function harvest(FeeSourceType[] calldata sourceTypes, address[] calldata sources) external;
 
+    /// @notice Validates and harvests one source inside a separate call frame
+    /// @dev Only callable by this collector. The harvest and distribution paths catch reverts from this call so
+    ///      a failed source rolls back its own changes without reverting other sources.
+    /// @param sourceType The type of the source being harvested
+    /// @param source The address of the source being harvested
+    function harvestSource(FeeSourceType sourceType, address source) external;
+
     /// @notice Harvests every configured source, then splits collected DUSD between the treasury and sDUSD vault
-    /// @dev Invalid sources and paused markets are skipped. When a nonzero calculated reward is below
+    /// @dev Invalid sources, paused markets and sources that revert are skipped. When a nonzero calculated reward is below
     ///      `minimumRewardAmount`, the entire balance remains in the collector for a later call. A configured vault
     ///      and a finished reward period are required only when the calculated vault reward is nonzero. The treasury
     ///      transfer and vault notification are atomic: if `notifyRewardAmount` reverts, including when the vault is
