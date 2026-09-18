@@ -21,7 +21,7 @@ import {ISDUSDVaultStaticTypes, ISDUSDVaultBase, SDUSDInitParams} from "./interf
 /// @notice UUPS-upgradeable ERC-4626 vault where users stake DUSD to receive non-rebasing sDUSD shares. Protocol
 ///         revenue is delivered by the ProtocolFeeCollector through `notifyRewardAmount` and is released
 ///         linearly over a configurable period, smoothing the exchange rate.
-/// @dev Uses internal asset accounting (`_accountedAssets`) rather than `DUSD.balanceOf(this)` so that raw
+/// @dev Uses internal asset accounting (`accountedAssets`) rather than `DUSD.balanceOf(this)` so that raw
 ///      DUSD transfers cannot bypass the linear release schedule. Rewards never mint shares; they only
 ///      increase the assets backing existing shares as they unlock. Shares use 18 decimals (no virtual
 ///      offset); inflation resistance instead comes from ignoring raw donations, requiring deployment to make
@@ -202,10 +202,13 @@ contract SDUSD is
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    /// @dev Returns the remaining DUSD cap headroom, or 0 while paused.
+    /// @dev Returns the remaining DUSD cap headroom, or 0 while paused or when the complete remaining headroom would
+    ///      round down to zero shares and therefore cannot be deposited.
     function maxDeposit(address) public view override returns (uint256) {
         if (paused[PAUSE_TYPE]) return 0;
-        return _remainingDepositCap();
+
+        uint256 remainingDepositCap = _remainingDepositCap();
+        return _convertToShares(remainingDepositCap, Math.Rounding.Floor) == 0 ? 0 : remainingDepositCap;
     }
 
     /// @inheritdoc ERC4626Upgradeable

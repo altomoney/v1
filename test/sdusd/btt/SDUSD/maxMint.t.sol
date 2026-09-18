@@ -51,7 +51,8 @@ contract SDUSD_MaxMint_Test is SDUSDCommon {
         _finishRewardPeriod();
         _setDepositCap(vault.depositCapUsage() + 1);
 
-        assertEq(vault.maxDeposit(USER), 1);
+        assertEq(vault.depositCap() - vault.depositCapUsage(), 1);
+        assertEq(vault.maxDeposit(USER), 0);
         assertEq(vault.maxMint(USER), 0);
     }
 }

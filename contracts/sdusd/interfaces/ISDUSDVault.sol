@@ -100,11 +100,11 @@ interface ISDUSDVaultBase is ISDUSDVaultErrors, ISDUSDVaultEvents {
 
     /// @notice Notifies the vault of a new DUSD reward amount to release linearly
     /// @param amount The amount of DUSD reward being added
-    /// @dev The vault pulls `amount` of DUSD from the caller via `transferFrom`, so the caller
-    ///      must approve the vault beforehand.
-    /// @dev Pulls `amount` DUSD from the configured rewarder and starts a fresh linear release period.
-    ///      Reverts unless the previous period has fully finished, so an active release rate is never
-    ///      retroactively diluted (strict, no rollover).
+    /// @dev Callable only by the configured rewarder while reward notification is not paused. `amount` must be nonzero,
+    ///      the previous period must have fully finished, address(1) must hold at least `seedShares`, and total supply
+    ///      must exceed `seedShares` so at least one non-seed share exists. The vault pulls `amount` DUSD from the
+    ///      rewarder via `transferFrom`, so the rewarder must approve the vault beforehand. A successful call starts a
+    ///      fresh release period; rewards from an active period are never rolled over or retroactively diluted.
     function notifyRewardAmount(uint256 amount) external;
 
     /// @notice Recovers all DUSD received outside the vault's accounted deposit and reward flows
