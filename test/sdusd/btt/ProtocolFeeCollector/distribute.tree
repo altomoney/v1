@@ -9,16 +9,26 @@ ProtocolFeeCollector::distribute
     │   ├── it should harvest registered mint markets in registry order
     │   ├── it should harvest registered USMs in registry order
     │   ├── it should harvest the configured flash minter last
+    │   ├── when multiple sources exist in each registry
+    │   │   └── it should finish each registry in order before moving to the next source type
     │   ├── it should include all successfully harvested DUSD in collected
     │   ├── it should emit Harvested for valid sources including zero-fee sources
     │   ├── when a configured source is invalid or a market is paused
     │   │   ├── it should emit HarvestingFailed without emitting Harvested for that source
-    │   │   └── it should continue harvesting later configured sources
+    │   │   ├── it should continue harvesting later configured sources
+    │   │   └── when the configured flash minter is invalid
+    │   │       └── it should continue to the distribution split
     │   ├── when a valid source execution reverts
     │   │   ├── it should propagate the revert
     │   │   └── it should roll back earlier harvests and distribution
-    │   └── when a registry getter reverts
-    │       └── it should propagate the revert
+    │   ├── when the borrow-market registry getter reverts
+    │   │   └── it should propagate the revert before harvesting any source
+    │   ├── when the mint-market registry getter reverts
+    │   │   ├── it should propagate the revert
+    │   │   └── it should roll back earlier borrow-market harvests
+    │   └── when the USM registry getter reverts
+    │       ├── it should propagate the revert
+    │       └── it should roll back earlier market harvests
     ├── when the calculated rewardAmount is zero
     │   ├── it should not require the sDUSD vault to be set
     │   ├── it should not check rewardPeriodFinish

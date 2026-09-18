@@ -88,6 +88,21 @@ contract ProtocolFeeCollector_WithdrawLiquidationFees_Test is ProtocolFeeCollect
         assertEq(collateralToken.balanceOf(MANUAL_SWAP_RECEIVER), amount);
     }
 
+    function test_WithdrawsExistingBorrowMarketCollateralAfterFeeRecipientChanges() public {
+        uint256 amount = 25 ether;
+        _allowBorrowMarket(address(borrowMarket));
+        _addCollectorCollateral(borrowMarket, amount);
+        vm.prank(ADMIN);
+        borrowMarket.setFeeRecipient(TREASURY);
+        (address[] memory markets, uint256[] memory amounts) = _singleMarket(address(borrowMarket), amount);
+
+        vm.prank(COLLATERAL_OPERATOR);
+        collector.withdrawLiquidationFees(markets, amounts);
+
+        assertEq(borrowMarket.position(address(collector)).collateralAssets, 0);
+        assertEq(collateralToken.balanceOf(MANUAL_SWAP_RECEIVER), amount);
+    }
+
     function test_WithdrawsFromMintMarketWithFixedArgumentsAndEmitsEvent() public {
         uint256 amount = 30 ether;
         _allowMintMarket(address(mintMarket));
@@ -168,6 +183,36 @@ contract ProtocolFeeCollector_WithdrawLiquidationFees_Test is ProtocolFeeCollect
         collector.withdrawLiquidationFees(markets, amounts);
 
         assertEq(borrowMarket.position(address(collector)).collateralAssets, amount);
+        assertEq(collateralToken.balanceOf(MANUAL_SWAP_RECEIVER), 0);
+    }
+
+    function test_RevertWhen_LaterValidMarketExecutionFailsAndRollsBackEarlierWithdrawal() public {
+        uint256 amount = 10 ether;
+        _allowBorrowMarket(address(borrowMarket));
+        _allowMintMarket(address(mintMarket));
+        _addCollectorCollateral(borrowMarket, amount);
+        _addCollectorCollateral(mintMarket, amount);
+
+        address[] memory markets = new address[](2);
+        markets[0] = address(borrowMarket);
+        markets[1] = address(mintMarket);
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = amount;
+        amounts[1] = amount;
+
+        bytes memory reason = abi.encodeWithSignature("Error(string)", "remove collateral failed");
+        vm.mockCallRevert(
+            address(mintMarket),
+            abi.encodeCall(IMarketBase.removeCollateral, (amount, address(collector), MANUAL_SWAP_RECEIVER, bytes(""))),
+            reason
+        );
+
+        vm.prank(COLLATERAL_OPERATOR);
+        vm.expectRevert(reason);
+        collector.withdrawLiquidationFees(markets, amounts);
+
+        assertEq(borrowMarket.position(address(collector)).collateralAssets, amount);
+        assertEq(mintMarket.position(address(collector)).collateralAssets, amount);
         assertEq(collateralToken.balanceOf(MANUAL_SWAP_RECEIVER), 0);
     }
 }

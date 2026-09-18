@@ -19,6 +19,8 @@ ProtocolFeeCollector::withdrawLiquidationFees
         │   ├── it should set the configured manual swap receiver as receiver
         │   ├── it should pass empty callback data
         │   └── it should emit LiquidationFeesWithdrawn
+        ├── when an allowlisted DUSD borrow market's fee recipient has changed
+        │   └── it should still withdraw existing liquidation fee collateral
         ├── when an allowlisted DUSD mint market is provided
         │   ├── it should call removeCollateral for the requested amount
         │   ├── it should set the collector as onBehalf
@@ -29,6 +31,9 @@ ProtocolFeeCollector::withdrawLiquidationFees
         │   ├── it should withdraw each requested amount in array order
         │   ├── it should always use the configured manual swap receiver
         │   └── it should emit LiquidationFeesWithdrawn once for each market
-        └── when a later market fails validation
-            ├── it should revert with ProtocolFeeCollectorInvalidSource(source)
+        ├── when a later market fails validation
+        │   ├── it should revert with ProtocolFeeCollectorInvalidSource(source)
+        │   └── it should roll back earlier collateral withdrawals and transfers
+        └── when removeCollateral reverts for a valid later market
+            ├── it should propagate the revert
             └── it should roll back earlier collateral withdrawals and transfers
