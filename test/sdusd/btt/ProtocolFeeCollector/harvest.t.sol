@@ -9,7 +9,7 @@ import {
     IProtocolFeeCollectorErrors,
     IProtocolFeeCollectorEvents
 } from "@alto/sdusd/interfaces/IProtocolFeeCollector.sol";
-import {IMarket, IMarketBase, IMarketEvents, Position} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, IMarketBase, IMarketEvents, Position, Balance} from "@alto/lending/interfaces/IMarket.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
@@ -510,15 +510,87 @@ contract ProtocolFeeCollector_Harvest_Test is ProtocolFeeCollectorCommon {
         assertEq(revertData.length, 0);
     }
 
-    function test_RevertWhen_ValidSourceExecutionReverts() public {
+    function test_ValidSourceExecutionRevertEmitsHarvestingFailedAndSkips() public {
         _allowBorrowMarket(address(borrowMarket));
-        (FeeSourceType[] memory sourceTypes, address[] memory sources) =
-            _singleSource(FeeSourceType.BORROW_MARKET, address(borrowMarket));
         bytes memory reason = abi.encodeWithSignature("Error(string)", "accrual failed");
         vm.mockCallRevert(address(borrowMarket), abi.encodeCall(IMarketBase.accrueInterest, ()), reason);
 
-        vm.expectRevert(reason);
+        _assertHarvestSkipped(FeeSourceType.BORROW_MARKET, address(borrowMarket));
+    }
+
+    function test_ValidationGetterRevertEmitsHarvestingFailedAndSkips() public {
+        _allowBorrowMarket(address(borrowMarket));
+        vm.mockCallRevert(address(borrowMarket), abi.encodeWithSignature("borrowToken()"), bytes(""));
+
+        _assertHarvestSkipped(FeeSourceType.BORROW_MARKET, address(borrowMarket));
+    }
+
+    function test_BatchPreservesEarlierHarvestAndContinuesAfterMintCeilingFailure() public {
+        _allowMintMarket(address(mintMarket));
+        _allowUsm(address(usm));
+        vm.prank(ADMIN);
+        dusd.setMinterCeiling(address(mintMarket), 1_000 ether);
+        uint256 mintFees = _generateMintMarketFees(1_000 ether);
+        uint256 flashFees = _generateFlashFees(100 ether);
+        uint256 usmFees = _generateUsmFees(100e6);
+        FeeSourceType[] memory sourceTypes = new FeeSourceType[](3);
+        sourceTypes[0] = FeeSourceType.FLASH_MINTER;
+        sourceTypes[1] = FeeSourceType.MINT_MARKET;
+        sourceTypes[2] = FeeSourceType.USM;
+        address[] memory sources = new address[](3);
+        sources[0] = address(flashMinter);
+        sources[1] = address(mintMarket);
+        sources[2] = address(usm);
+
+        _expectHarvested(FeeSourceType.FLASH_MINTER, address(flashMinter), flashFees);
+        _expectHarvestingFailed(FeeSourceType.MINT_MARKET, address(mintMarket));
+        _expectHarvested(FeeSourceType.USM, address(usm), usmFees);
         collector.harvest(sourceTypes, sources);
+
+        assertEq(dusd.balanceOf(address(collector)), flashFees + usmFees);
+        assertEq(AltoMintMarket(address(mintMarket)).claimableFeesAssets(), mintFees);
+        assertEq(usm.getAccruedFees(), 0);
+        assertEq(dusd.balanceOf(address(flashMinter)), 0);
+    }
+
+    function test_FailedMintClaimRollsBackItsAccrualAndCanBeRetried() public {
+        _allowMintMarket(address(mintMarket));
+        vm.prank(ADMIN);
+        dusd.setMinterCeiling(address(mintMarket), 1_000 ether);
+        uint256 openingFees = _generateMintMarketFees(1_000 ether);
+        FixedRateIrm irm = new FixedRateIrm(BORROW_RATE, ADMIN);
+        vm.prank(ADMIN);
+        mintMarket.setIrm(address(irm), false);
+        Balance memory borrowedBefore = mintMarket.totalBorrowed();
+        vm.warp(block.timestamp + 365 days);
+
+        _assertHarvestSkipped(FeeSourceType.MINT_MARKET, address(mintMarket));
+
+        Balance memory borrowedAfter = mintMarket.totalBorrowed();
+        assertEq(borrowedAfter.assets, borrowedBefore.assets);
+        assertEq(borrowedAfter.shares, borrowedBefore.shares);
+        assertEq(AltoMintMarket(address(mintMarket)).claimableFeesAssets(), openingFees);
+        assertEq(dusd.balanceOf(address(collector)), 0);
+
+        vm.prank(ADMIN);
+        dusd.setMinterCeiling(address(mintMarket), 10_000 ether);
+        (FeeSourceType[] memory sourceTypes, address[] memory sources) =
+            _singleSource(FeeSourceType.MINT_MARKET, address(mintMarket));
+        collector.harvest(sourceTypes, sources);
+
+        assertGt(dusd.balanceOf(address(collector)), openingFees);
+        assertEq(AltoMintMarket(address(mintMarket)).claimableFeesAssets(), 0);
+    }
+
+    function test_RevertWhen_HarvestSourceIsCalledDirectly() public {
+        _allowMintMarket(address(mintMarket));
+        uint256 fees = _generateMintMarketFees(100 ether);
+        vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorUnauthorized.selector);
+        vm.prank(USER);
+        collector.harvestSource(FeeSourceType.MINT_MARKET, address(mintMarket));
+
+        assertEq(AltoMintMarket(address(mintMarket)).claimableFeesAssets(), fees);
+        assertEq(dusd.balanceOf(address(collector)), 0);
     }
 
     function _assertHarvestSkipped(FeeSourceType sourceType, address source) internal {

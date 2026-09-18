@@ -12,6 +12,7 @@ import {
     IProtocolFeeCollectorEvents
 } from "@alto/sdusd/interfaces/IProtocolFeeCollector.sol";
 import {IMarket, Position} from "@alto/lending/interfaces/IMarket.sol";
+import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {IStableTokenFacilitator} from "@alto/usm/interfaces/IStableTokenFacilitator.sol";
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
 import {IUsmRegistry} from "@alto/utils/interfaces/IUsmRegistry.sol";
@@ -496,9 +497,10 @@ contract ProtocolFeeCollector_Distribute_Test is ProtocolFeeCollectorCommon {
         assertEq(dusd.balanceOf(address(collector)), 0);
     }
 
-    function test_RevertFromConfiguredSourceRollsBackEarlierHarvestsAndDistribution() public {
+    function test_RevertFromConfiguredSourcePreservesEarlierHarvestsAndDistribution() public {
         _allowBorrowMarket(address(borrowMarket));
-        uint256 supplyShares = _supplyBorrowMarket(500 ether);
+        _supplyBorrowMarket(500 ether);
+        _setSdusdVault();
         bytes memory reason = abi.encodeWithSignature("Error(string)", "flash harvest failed");
         vm.mockCallRevert(
             address(flashMinter),
@@ -506,13 +508,52 @@ contract ProtocolFeeCollector_Distribute_Test is ProtocolFeeCollectorCommon {
             reason
         );
 
-        vm.expectRevert(reason);
+        _expectHarvestingFailed(FeeSourceType.FLASH_MINTER, address(flashMinter));
         collector.distribute();
 
         Position memory remainingPosition = borrowMarket.position(address(collector));
-        assertEq(remainingPosition.supplyShares, supplyShares);
+        assertEq(remainingPosition.supplyShares, 0);
         assertEq(dusd.balanceOf(address(collector)), 0);
-        assertEq(dusd.balanceOf(TREASURY), 0);
+        assertEq(dusd.balanceOf(TREASURY), 350 ether);
+        assertEq(sdusdVault.rewardsForPeriod(), 150 ether);
+    }
+
+    function test_ExhaustedMintCeilingDoesNotBlockLaterSourcesOrExistingRewards() public {
+        _setSdusdVault();
+        _allowMintMarket(address(mintMarket));
+        _allowUsm(address(usm));
+        vm.prank(ADMIN);
+        dusd.setMinterCeiling(address(mintMarket), 1_000 ether);
+        uint256 mintFees = _generateMintMarketFees(1_000 ether);
+        uint256 usmFees = _generateUsmFees(10_000e6);
+        dusd.mint(address(collector), 1_000 ether);
+        uint256 collected = 1_000 ether + usmFees;
+        uint256 reward = collected * INITIAL_REWARDS_BPS / 10_000;
+
+        _expectHarvestingFailed(FeeSourceType.MINT_MARKET, address(mintMarket));
+        collector.distribute();
+
+        assertEq(AltoMintMarket(address(mintMarket)).claimableFeesAssets(), mintFees);
+        assertEq(usm.getAccruedFees(), 0);
+        assertEq(dusd.balanceOf(address(collector)), 0);
+        assertEq(dusd.balanceOf(TREASURY), collected - reward);
+        assertEq(sdusdVault.rewardsForPeriod(), reward);
+    }
+
+    function test_ExhaustedMintCeilingDoesNotBlockTreasuryOnlyDistribution() public {
+        _setRewardsBps(0);
+        _allowMintMarket(address(mintMarket));
+        vm.prank(ADMIN);
+        dusd.setMinterCeiling(address(mintMarket), 1_000 ether);
+        uint256 mintFees = _generateMintMarketFees(1_000 ether);
+        dusd.mint(address(collector), 1_000 ether);
+
+        _expectHarvestingFailed(FeeSourceType.MINT_MARKET, address(mintMarket));
+        collector.distribute();
+
+        assertEq(AltoMintMarket(address(mintMarket)).claimableFeesAssets(), mintFees);
+        assertEq(dusd.balanceOf(address(collector)), 0);
+        assertEq(dusd.balanceOf(TREASURY), 1_000 ether);
     }
 
     function test_RevertWhen_GetBorrowMarketsRevertsBeforeHarvesting() public {
