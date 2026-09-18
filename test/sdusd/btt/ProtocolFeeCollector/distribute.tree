@@ -19,8 +19,9 @@ ProtocolFeeCollector::distribute
     │   │   └── when the configured flash minter is invalid
     │   │       └── it should continue to the distribution split
     │   ├── when a valid source execution reverts
-    │   │   ├── it should propagate the revert
-    │   │   └── it should roll back earlier harvests and distribution
+    │   │   ├── it should emit HarvestingFailed and preserve earlier harvests
+    │   │   ├── it should continue harvesting later sources and distributing existing DUSD
+    │   │   └── it should also allow treasury-only distribution when a mint market exhausts its ceiling
     │   ├── when the borrow-market registry getter reverts
     │   │   └── it should propagate the revert before harvesting any source
     │   ├── when the mint-market registry getter reverts
