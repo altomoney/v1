@@ -48,6 +48,11 @@ contract DeployAltoEthereumMainnetUpgradeValidationTest is Test {
         validator.validateImplementations(DeploymentPhase.CONVEX_CREDIT_LINE_MARKET, address(0));
     }
 
+    function test_SDUSDPhaseImplementationsPassUpgradeSafetyValidation() public {
+        if (!_shouldVerifyProxy()) return;
+        validator.validateImplementations(DeploymentPhase.SDUSD, address(0));
+    }
+
     function test_MarketImplementationsPassUpgradeSafetyValidation() public {
         if (!_shouldVerifyProxy()) return;
         validator.validateImplementations(DeploymentPhase.MINT_MARKET_WETH, address(0));

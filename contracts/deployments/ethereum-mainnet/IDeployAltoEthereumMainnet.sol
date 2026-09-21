@@ -41,7 +41,9 @@ enum DeploymentPhase {
     MARKET_DEPRECATION_PHASE_0, // Phase 32: Freeze ten old markets and apply the T0 fixed rates
     CONVEX_CREDIT_LINE_MARKET, // Phase 33: Deploy the frxUSD/DUSD Convex credit-line market
     MINT_MARKET_PEG_RESPONSIVE_IRM, // Phase 34: Migrate active mint markets to peg-responsive IRMs
-    UPGRADE_ALL_MINT_BORROW_MARKETS // Phase 35: Upgrade every registered AltoMintMarket and AltoBorrowMarket
+    UPGRADE_ALL_MINT_BORROW_MARKETS, // Phase 35: Upgrade every registered AltoMintMarket and AltoBorrowMarket
+    SDUSD, // Phase 36: Deploy ProtocolFeeCollector and sDUSD; deployer seeds the vault manually after this phase
+    SDUSD_ACTIVATION // Phase 37: Generate the timelock Safe batch that wires and activates all fee sources
 }
 
 enum UsmFinalizeMode {
@@ -128,6 +130,10 @@ struct Contracts {
     address ownerFixedRateIrmFactory;
     address ownerPegResponsiveExponentialIrmFactory;
     address dusdPegCurveOracle;
+    address protocolFeeCollector;
+    address protocolFeeCollectorImplementation;
+    address sdusd;
+    address sdusdImplementation;
     MintCurveConvexPositionContracts mintCurveConvexPosition;
     MarketContracts frxUsdMarket;
     MarketContracts refreshWethMarket;

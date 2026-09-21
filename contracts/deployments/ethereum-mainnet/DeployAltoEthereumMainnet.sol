@@ -84,6 +84,13 @@ import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {MarketDeprecationDeployment} from "@alto/deployments/ethereum-mainnet/MarketDeprecationDeployment.sol";
 import {PegResponsiveIrmDeployment} from "@alto/deployments/ethereum-mainnet/PegResponsiveIrmDeployment.sol";
+import {
+    ProtocolFeeCollectorBatch,
+    ProtocolFeeCollectorBatchParams,
+    ProtocolFeeCollectorBatchReport
+} from "@alto/deployments/ethereum-mainnet/ProtocolFeeCollectorBatch.sol";
+import {SDUSDBatch, SDUSDBatchParams, SDUSDBatchReport} from "@alto/deployments/ethereum-mainnet/SDUSDBatch.sol";
+import {SDUSD} from "@alto/sdusd/SDUSD.sol";
 import {SafeTransactionBuilder} from "@alto/deployments/ethereum-mainnet/SafeTransactionBuilder.sol";
 import {
     MintCurveConvexPositionFactoryBatch,
@@ -749,6 +756,10 @@ library DeployAltoEthereumMainnet {
             input = MarketDeprecationDeployment.generate(params, input);
         } else if (params.phase == DeploymentPhase.MINT_MARKET_PEG_RESPONSIVE_IRM) {
             input = PegResponsiveIrmDeployment.generate(input);
+        } else if (params.phase == DeploymentPhase.SDUSD) {
+            input = _deploySdusd(params, input);
+        } else if (params.phase == DeploymentPhase.SDUSD_ACTIVATION) {
+            input = _generateSdusdActivation(input);
         } else if (params.phase == DeploymentPhase.CONVEX_CREDIT_LINE_MARKET) {
             address[] memory rewardTokens = new address[](3);
             rewardTokens[0] = CRV_TOKEN_MAINNET;
@@ -1938,6 +1949,93 @@ library DeployAltoEthereumMainnet {
         }
 
         return input;
+    }
+
+    function _deploySdusd(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
+        internal
+        returns (AltoEthereumMainnetInput memory)
+    {
+        require(params.deployer != address(0), "Invalid deployer");
+        require(params.freezer != address(0), "Invalid freezer");
+        require(params.treasuryMultisig != address(0), "Invalid treasury multisig");
+        require(input.contracts.timelock != address(0), "Invalid timelock");
+        require(input.contracts.dusd != address(0), "Invalid DUSD");
+        require(input.contracts.marketRegistry != address(0), "Invalid market registry");
+        require(input.contracts.usmRegistry != address(0), "Invalid USM registry");
+        require(input.contracts.dusdFlashMinter != address(0), "Invalid flash minter");
+        require(input.contracts.feeRecipient != address(0), "Invalid legacy fee recipient");
+        require(input.contracts.protocolFeeCollector == address(0), "ProtocolFeeCollector already deployed");
+        require(input.contracts.sdusd == address(0), "SDUSD already deployed");
+
+        ProtocolFeeCollectorBatch collectorBatch = new ProtocolFeeCollectorBatch(
+            ProtocolFeeCollectorBatchParams({
+                timelock: input.contracts.timelock,
+                freezer: params.freezer,
+                emergencyController: input.contracts.emergencyController,
+                dusd: input.contracts.dusd,
+                marketRegistry: input.contracts.marketRegistry,
+                usmRegistry: input.contracts.usmRegistry,
+                flashMinter: input.contracts.dusdFlashMinter,
+                // Tentative launch destinations; change these centrally before deployment if required.
+                treasury: params.treasuryMultisig,
+                manualSwapReceiver: params.treasuryMultisig, // @todo
+                collateralOperators: _sdusdCollateralOperators(input), // @todo
+                rewardsBps: 10_000, // @todo
+                minimumRewardAmount: 100 ether // @todo
+            })
+        );
+        ProtocolFeeCollectorBatchReport memory collectorReport = collectorBatch.getReport();
+        input.contracts.protocolFeeCollector = collectorReport.protocolFeeCollector;
+        input.contracts.protocolFeeCollectorImplementation = collectorReport.protocolFeeCollectorImplementation;
+
+        SDUSDBatch vaultBatch = new SDUSDBatch(
+            SDUSDBatchParams({
+                rewarder: collectorReport.protocolFeeCollector,
+                timelock: input.contracts.timelock,
+                freezer: params.freezer,
+                emergencyController: input.contracts.emergencyController,
+                dusd: input.contracts.dusd,
+                seedShares: 1 ether,
+                depositCap: 115_000 ether, // @todo
+                rewardDuration: 7 days // @todo
+            })
+        );
+        SDUSDBatchReport memory vaultReport = vaultBatch.getReport();
+        input.contracts.sdusd = vaultReport.sdusd;
+        input.contracts.sdusdImplementation = vaultReport.sdusdImplementation;
+
+        // REQUIRED MANUAL STEP BEFORE SDUSD_ACTIVATION:
+        // The deployer approves this vault for 1 DUSD and calls deposit(1 ether, address(1)).
+        console.log("MANUAL STEP: seed sDUSD before activation");
+        console.log("Approve and call deposit(1 ether, address(1)) on:", vaultReport.sdusd);
+        return input;
+    }
+
+    function _generateSdusdActivation(AltoEthereumMainnetInput memory input)
+        internal
+        returns (AltoEthereumMainnetInput memory)
+    {
+        require(input.contracts.sdusd != address(0), "Invalid sDUSD");
+        SDUSD vault = SDUSD(input.contracts.sdusd);
+        uint256 requiredSeedShares = vault.seedShares();
+        require(
+            requiredSeedShares >= 1 ether && vault.balanceOf(address(1)) >= requiredSeedShares,
+            "SDUSD seed is not locked"
+        );
+
+        SDUSDActivationSafeBuilder.write(input);
+        return input;
+    }
+
+    /// @dev Tentative launch allowlist. Keep collateral-operator changes centralized here so the
+    ///      complete list is reviewed before mainnet deployment.
+    function _sdusdCollateralOperators(AltoEthereumMainnetInput memory input)
+        private
+        pure
+        returns (address[] memory operators)
+    {
+        operators = new address[](1);
+        operators[0] = input.contracts.feeRecipient;
     }
 
     function preflightPegResponsiveIrmMigration(AltoEthereumMainnetInput memory input) internal view {
