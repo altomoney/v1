@@ -59,6 +59,68 @@ contract SDUSD_NotifyRewardAmount_Test is SDUSDCommon {
         vault.notifyRewardAmount(REWARD_AMOUNT);
     }
 
+    function test_RevertWhen_ExtraShareIsTransferredToLockAndAllUsersExit() public {
+        vm.startPrank(USER);
+        vault.transfer(SEED_LOCK, 1);
+        vault.redeem(vault.balanceOf(USER), USER, USER);
+        vm.stopPrank();
+        uint256 accountedBefore = vault.accountedAssets();
+        dusd.mint(address(collector), REWARD_AMOUNT);
+        vm.prank(address(collector));
+        dusd.approve(address(vault), REWARD_AMOUNT);
+
+        assertGt(vault.totalSupply(), SEED_SHARES);
+        assertEq(vault.totalSupply(), vault.balanceOf(SEED_LOCK));
+        vm.prank(address(collector));
+        vm.expectRevert(ISDUSDVaultErrors.SDUSDNoActiveStakers.selector);
+        vault.notifyRewardAmount(REWARD_AMOUNT);
+
+        assertEq(dusd.balanceOf(address(collector)), REWARD_AMOUNT);
+        assertEq(vault.accountedAssets(), accountedBefore);
+        assertEq(vault.rewardsForPeriod(), 0);
+        assertEq(vault.rewardPeriodFinish(), 0);
+    }
+
+    function test_ExtraDepositToLockCannotEnableRepeatedDistributionsWithoutStakers() public {
+        _setSdusdVault();
+        _setRewardsBps(10_000);
+        vm.startPrank(USER);
+        vault.redeem(vault.balanceOf(USER), USER, USER);
+        dusd.approve(address(vault), 1);
+        vault.deposit(1, SEED_LOCK);
+        vm.stopPrank();
+        dusd.mint(address(collector), 300 ether);
+
+        assertEq(vault.totalSupply(), SEED_SHARES + 1);
+        assertEq(vault.totalSupply(), vault.balanceOf(SEED_LOCK));
+        for (uint256 i; i < 3; ++i) {
+            vm.expectRevert(ISDUSDVaultErrors.SDUSDNoActiveStakers.selector);
+            collector.distribute();
+            vm.warp(block.timestamp + REWARD_DURATION);
+        }
+
+        assertEq(dusd.balanceOf(address(collector)), 300 ether);
+        assertEq(dusd.balanceOf(TREASURY), 0);
+        assertEq(vault.accountedAssets(), SEED_SHARES + 1);
+        assertEq(vault.rewardsForPeriod(), 0);
+        assertEq(vault.rewardPeriodFinish(), 0);
+    }
+
+    function test_AllowsRewardsWithAdditionalLockedSharesAndLiveSharesRemaining() public {
+        uint256 extraLocked = vault.balanceOf(USER) / 2;
+        vm.prank(USER);
+        vault.transfer(SEED_LOCK, extraLocked);
+        uint256 accountedBefore = vault.accountedAssets();
+
+        _notifyRewards(REWARD_AMOUNT);
+
+        assertEq(vault.balanceOf(SEED_LOCK), SEED_SHARES + extraLocked);
+        assertGt(vault.totalSupply(), vault.balanceOf(SEED_LOCK));
+        assertEq(vault.accountedAssets(), accountedBefore + REWARD_AMOUNT);
+        assertEq(vault.rewardsForPeriod(), REWARD_AMOUNT);
+        assertEq(vault.rewardPeriodFinish(), block.timestamp + REWARD_DURATION);
+    }
+
     function test_RevertWhen_AmountIsZero() public {
         vm.prank(address(collector));
         vm.expectRevert(ISDUSDVaultErrors.SDUSDZeroAmount.selector);

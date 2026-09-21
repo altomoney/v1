@@ -26,7 +26,7 @@ import {ISDUSDVaultStaticTypes, ISDUSDVaultBase, SDUSDInitParams} from "./interf
 ///      increase the assets backing existing shares as they unlock. Shares use 18 decimals (no virtual
 ///      offset); inflation resistance instead comes from ignoring raw donations, requiring deployment to make
 ///      a permanent seed deposit to address(1), and refusing new reward releases while
-///      `totalSupply() <= seedShares`.
+///      all outstanding shares are held by address(1).
 contract SDUSD is
     Initializable,
     ERC4626Upgradeable,
@@ -134,11 +134,11 @@ contract SDUSD is
     function notifyRewardAmount(uint256 amount) external whenNot(PAUSE_TYPE) {
         if (msg.sender != rewarder) revert SDUSDNotRewarder();
         if (block.timestamp < rewardPeriodFinish) revert SDUSDRewardPeriodNotFinished();
-        if (balanceOf(address(1)) < seedShares) revert SDUSDNotSeeded();
-        // Refuse to start a release when only the locked seed remains: with no real stakers the rewards would
-        // accrue entirely to the irrecoverable seed shares, and repeated releases could inflate the exchange
-        // rate unbounded. Requiring real supply bounds any reward-driven inflation to a single release.
-        if (totalSupply() <= seedShares) revert SDUSDNoActiveStakers();
+        uint256 lockedShares = balanceOf(address(1));
+        if (lockedShares < seedShares) revert SDUSDNotSeeded();
+        // Exclude all permanently locked shares, including later deposits and transfers to address(1).
+        // This checks participation at period start. Holders may still exit during the release.
+        if (totalSupply() <= lockedShares) revert SDUSDNoActiveStakers();
         if (amount == 0) revert SDUSDZeroAmount();
 
         IERC20(asset()).safeTransferFrom(msg.sender, address(this), amount);
