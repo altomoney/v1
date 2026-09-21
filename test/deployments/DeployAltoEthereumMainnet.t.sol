@@ -3,6 +3,8 @@ pragma solidity ^0.8.22;
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {Balance, IMarket, IMarketBase, MarketType, Position} from "@alto/lending/interfaces/IMarket.sol";
+import {AltoBalancesLib} from "@alto/lending/libraries/AltoBalancesLib.sol";
+import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {
     DeployAltoEthereumMainnet,
     AltoEthereumMainnetParams,
@@ -48,6 +50,7 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/AltoMultiChainlinkLendingOracle.sol";
 import {DusdPegCurveOracle} from "@alto/oracles/DusdPegCurveOracle/DusdPegCurveOracle.sol";
 import {IDusdPegOracle} from "@alto/oracles/interfaces/IDusdPegOracle.sol";
+import {ILendingOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {ICurveStableSwapNGOracle} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
 import {
     OwnerPegResponsiveExponentialIrmFactory
@@ -87,7 +90,14 @@ import {
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {ProtocolFeeCollector} from "@alto/sdusd/ProtocolFeeCollector.sol";
+import {SDUSD} from "@alto/sdusd/SDUSD.sol";
+import {IStableTokenFacilitator} from "@alto/usm/interfaces/IStableTokenFacilitator.sol";
+import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
+import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
+import {IUsmRegistry} from "@alto/utils/interfaces/IUsmRegistry.sol";
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
 ///      and skip re-deploying prerequisites. The file must be at:
@@ -1479,5 +1489,329 @@ contract DeployRequiredAddressesTest is DeployAltoEthereumMainnetTestBase {
 
         vm.expectRevert("Emergency controller must be set");
         this.deployExternal(params, input);
+    }
+}
+
+contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
+    using AltoBalancesLib for address;
+    using AssetShareConversionMath for uint256;
+
+    uint256 internal constant MAINNET_FORK_BLOCK = 26025105;
+
+    string internal constant ACTIVATION_SCHEDULE_PATH =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-activation-schedule.json";
+    string internal constant ACTIVATION_EXECUTE_PATH =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-activation-execute.json";
+    string internal constant BORROW_SUPPLY_WITHDRAWAL_SCHEDULE_PATH =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-borrow-fee-supply-withdrawal-schedule.json";
+    string internal constant BORROW_SUPPLY_WITHDRAWAL_EXECUTE_PATH =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-borrow-fee-supply-withdrawal-execute.json";
+    string internal constant BORROW_COLLATERAL_WITHDRAWAL_SCHEDULE_PATH =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-borrow-fee-collateral-withdrawal-schedule.json";
+    string internal constant BORROW_COLLATERAL_WITHDRAWAL_EXECUTE_PATH =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-borrow-fee-collateral-withdrawal-execute.json";
+    string internal constant MINT_COLLATERAL_WITHDRAWAL_SCHEDULE_PATH =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-mint-fee-collateral-withdrawal-schedule.json";
+    string internal constant MINT_COLLATERAL_WITHDRAWAL_EXECUTE_PATH =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-mint-fee-collateral-withdrawal-execute.json";
+
+    struct LegacyFeePositionSnapshot {
+        uint256 supplyShares;
+        uint256 collateralAssets;
+        uint256 receiverCollateralBalance;
+        bool fullSupplyIsLiquid;
+    }
+
+    function setUp() public override {
+        super.setUp();
+        vm.createSelectFork(vm.rpcUrl("ethereum"), MAINNET_FORK_BLOCK);
+    }
+
+    function testFork_DeploySeedActivateAndWithdrawLiquidLegacyFees() public {
+        address[] memory borrowMarkets = IMarketRegistry(input.contracts.marketRegistry).getBorrowMarkets();
+        address[] memory mintMarkets = IMarketRegistry(input.contracts.marketRegistry).getMintMarkets();
+        address[] memory usms = IUsmRegistry(input.contracts.usmRegistry).getUsmList();
+
+        (LegacyFeePositionSnapshot[] memory borrowSnapshots, uint256 borrowCollateralMarketCount,) =
+            _snapshotLegacyPositions(borrowMarkets, input.contracts.feeRecipient, true);
+        (LegacyFeePositionSnapshot[] memory mintSnapshots, uint256 mintCollateralMarketCount,) =
+            _snapshotLegacyPositions(mintMarkets, input.contracts.feeRecipientMintMarkets, false);
+
+        assertEq(borrowCollateralMarketCount, 3, "unexpected borrow collateral market count");
+        assertEq(mintCollateralMarketCount, 5, "unexpected mint collateral market count");
+
+        address[] memory originalUsmFeeRecipients = new address[](usms.length);
+        for (uint256 i; i < usms.length; ++i) {
+            originalUsmFeeRecipients[i] = IStableTokenFacilitator(usms[i]).getFeeRecipient();
+        }
+
+        params.phase = DeploymentPhase.SDUSD;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        ProtocolFeeCollector collector = ProtocolFeeCollector(input.contracts.protocolFeeCollector);
+        SDUSD vault = SDUSD(input.contracts.sdusd);
+
+        assertGt(input.contracts.protocolFeeCollectorImplementation.code.length, 0);
+        assertGt(input.contracts.sdusdImplementation.code.length, 0);
+        assertEq(
+            Upgrades.getImplementationAddress(address(collector)),
+            input.contracts.protocolFeeCollectorImplementation,
+            "collector proxy implementation"
+        );
+        assertEq(
+            Upgrades.getImplementationAddress(address(vault)),
+            input.contracts.sdusdImplementation,
+            "vault proxy implementation"
+        );
+        assertEq(collector.owner(), input.contracts.timelock);
+        assertEq(vault.owner(), input.contracts.timelock);
+        assertEq(vault.rewarder(), address(collector));
+        assertEq(collector.treasury(), params.treasuryMultisig);
+        assertEq(collector.manualSwapReceiver(), params.treasuryMultisig);
+        assertEq(collector.rewardsBps(), 10_000);
+        assertEq(collector.minimumRewardAmount(), 100 ether);
+        assertTrue(collector.isCollateralOperator(input.contracts.feeRecipient));
+        assertEq(vault.seedShares(), 1 ether);
+        assertEq(vault.depositCap(), 115_000 ether);
+        assertEq(vault.rewardDuration(), 7 days);
+        assertTrue(collector.pausers(params.freezer, PAUSE_TYPE));
+        assertTrue(collector.pausers(input.contracts.emergencyController, PAUSE_TYPE));
+        assertTrue(vault.pausers(params.freezer, PAUSE_TYPE));
+        assertTrue(vault.pausers(input.contracts.emergencyController, PAUSE_TYPE));
+
+        deal(input.contracts.dusd, address(this), 1 ether);
+        IDUSD(input.contracts.dusd).approve(address(vault), 1 ether);
+        assertEq(vault.deposit(1 ether, address(1)), 1 ether, "seed must mint one share per DUSD");
+        assertEq(vault.totalAssets(), 1 ether);
+        assertEq(vault.depositCapUsage(), 0, "seed must not consume deposit-cap headroom");
+
+        params.phase = DeploymentPhase.SDUSD_ACTIVATION;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        _scheduleTimelockBatch(input.contracts.timelock, ACTIVATION_SCHEDULE_PATH);
+        _scheduleTimelockBatch(input.contracts.feeRecipient, BORROW_SUPPLY_WITHDRAWAL_SCHEDULE_PATH);
+        _scheduleTimelockBatch(input.contracts.feeRecipient, BORROW_COLLATERAL_WITHDRAWAL_SCHEDULE_PATH);
+        _scheduleTimelockBatch(input.contracts.feeRecipientMintMarkets, MINT_COLLATERAL_WITHDRAWAL_SCHEDULE_PATH);
+
+        _mockPreWarpOraclePrices(borrowMarkets, borrowSnapshots);
+        _mockPreWarpOraclePrices(mintMarkets, mintSnapshots);
+
+        uint256 activationDelay = TimelockController(payable(input.contracts.timelock)).getMinDelay();
+        uint256 borrowFeeDelay = TimelockController(payable(input.contracts.feeRecipient)).getMinDelay();
+        uint256 mintFeeDelay = TimelockController(payable(input.contracts.feeRecipientMintMarkets)).getMinDelay();
+        vm.warp(block.timestamp + Math.max(activationDelay, Math.max(borrowFeeDelay, mintFeeDelay)) + 1);
+
+        _executeScheduledTimelockBatch(input.contracts.timelock, ACTIVATION_EXECUTE_PATH);
+
+        assertEq(collector.sdusdVault(), address(vault));
+        assertGe(
+            vault.balanceOf(address(1)), vault.seedShares(), "required seed shares must remain locked after activation"
+        );
+        _assertActivationPreservedLegacyPositions(
+            borrowMarkets, input.contracts.feeRecipient, borrowSnapshots, address(collector), true
+        );
+        _assertActivationPreservedLegacyPositions(
+            mintMarkets, input.contracts.feeRecipientMintMarkets, mintSnapshots, address(collector), false
+        );
+        _assertAncillaryFeeSourcesActivated(usms, originalUsmFeeRecipients, address(collector));
+
+        _executeAndAssertSupplyWithdrawal(borrowMarkets, borrowSnapshots);
+        _executeAndAssertCollateralWithdrawal(
+            borrowMarkets, input.contracts.feeRecipient, borrowSnapshots, BORROW_COLLATERAL_WITHDRAWAL_EXECUTE_PATH
+        );
+        _executeAndAssertCollateralWithdrawal(
+            mintMarkets, input.contracts.feeRecipientMintMarkets, mintSnapshots, MINT_COLLATERAL_WITHDRAWAL_EXECUTE_PATH
+        );
+    }
+
+    function _snapshotLegacyPositions(address[] memory markets, address feeRecipient, bool requireSupply)
+        private
+        view
+        returns (
+            LegacyFeePositionSnapshot[] memory snapshots,
+            uint256 collateralMarketCount,
+            uint256 liquidSupplyMarketCount
+        )
+    {
+        snapshots = new LegacyFeePositionSnapshot[](markets.length);
+        for (uint256 i; i < markets.length; ++i) {
+            IMarket market = IMarket(markets[i]);
+            Position memory legacyPosition = market.position(feeRecipient);
+
+            assertEq(market.feeRecipient(), feeRecipient, "unexpected legacy market fee recipient");
+            if (requireSupply) assertGt(legacyPosition.supplyShares, 0, "legacy recipient has no supply");
+
+            bool fullSupplyIsLiquid = requireSupply && _canWithdrawFullSupply(market, feeRecipient);
+            if (fullSupplyIsLiquid) ++liquidSupplyMarketCount;
+            if (legacyPosition.collateralAssets != 0) ++collateralMarketCount;
+            if (fullSupplyIsLiquid || legacyPosition.collateralAssets != 0) {
+                assertTrue(
+                    AltoAdapter(payable(input.contracts.altoAdapter)).isApprovedContract(markets[i]),
+                    "market is not approved by AltoAdapter"
+                );
+            }
+
+            snapshots[i] = LegacyFeePositionSnapshot({
+                supplyShares: legacyPosition.supplyShares,
+                collateralAssets: legacyPosition.collateralAssets,
+                receiverCollateralBalance: IERC20Metadata(market.collateralToken()).balanceOf(feeRecipient),
+                fullSupplyIsLiquid: fullSupplyIsLiquid
+            });
+        }
+    }
+
+    function _assertActivationPreservedLegacyPositions(
+        address[] memory markets,
+        address legacyFeeRecipient,
+        LegacyFeePositionSnapshot[] memory snapshots,
+        address collector,
+        bool supplyMayAccrue
+    ) private view {
+        for (uint256 i; i < markets.length; ++i) {
+            IMarket market = IMarket(markets[i]);
+            Position memory legacyPosition = market.position(legacyFeeRecipient);
+
+            assertEq(market.feeRecipient(), collector, "market fee recipient was not activated");
+            if (supplyMayAccrue) {
+                assertGe(
+                    legacyPosition.supplyShares,
+                    snapshots[i].supplyShares,
+                    "activation must preserve legacy borrow supply"
+                );
+                snapshots[i].supplyShares = legacyPosition.supplyShares;
+            } else {
+                assertEq(legacyPosition.supplyShares, snapshots[i].supplyShares, "activation changed legacy supply");
+            }
+            assertEq(
+                legacyPosition.collateralAssets,
+                snapshots[i].collateralAssets,
+                "activation must preserve legacy collateral"
+            );
+        }
+    }
+
+    function _assertAncillaryFeeSourcesActivated(
+        address[] memory usms,
+        address[] memory originalUsmFeeRecipients,
+        address collector
+    ) private view {
+        for (uint256 i; i < usms.length; ++i) {
+            address expectedRecipient = originalUsmFeeRecipients[i] == address(0) ? address(0) : collector;
+            assertEq(
+                IStableTokenFacilitator(usms[i]).getFeeRecipient(),
+                expectedRecipient,
+                "unexpected USM fee recipient after activation"
+            );
+        }
+        assertEq(
+            IStableTokenFacilitator(input.contracts.dusdFlashMinter).getFeeRecipient(),
+            collector,
+            "flash-minter fee recipient was not activated"
+        );
+    }
+
+    function _executeAndAssertSupplyWithdrawal(
+        address[] memory borrowMarkets,
+        LegacyFeePositionSnapshot[] memory snapshots
+    ) private {
+        uint256 legacyDusdBeforeWithdrawal = IDUSD(input.contracts.dusd).balanceOf(input.contracts.feeRecipient);
+        _executeScheduledTimelockBatch(input.contracts.feeRecipient, BORROW_SUPPLY_WITHDRAWAL_EXECUTE_PATH);
+
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            Position memory legacyPosition = IMarket(borrowMarkets[i]).position(input.contracts.feeRecipient);
+            if (snapshots[i].fullSupplyIsLiquid) {
+                assertEq(legacyPosition.supplyShares, 0, "liquid legacy supply was not withdrawn");
+                assertFalse(
+                    IAuth(borrowMarkets[i]).isAuthorized(input.contracts.feeRecipient, input.contracts.altoAdapter),
+                    "temporary supply-withdrawal authorization was not revoked"
+                );
+            } else {
+                assertEq(
+                    legacyPosition.supplyShares, snapshots[i].supplyShares, "illiquid legacy supply should be omitted"
+                );
+            }
+            assertEq(
+                legacyPosition.collateralAssets,
+                snapshots[i].collateralAssets,
+                "supply withdrawal must not move collateral"
+            );
+        }
+        assertGt(
+            IDUSD(input.contracts.dusd).balanceOf(input.contracts.feeRecipient),
+            legacyDusdBeforeWithdrawal,
+            "liquid legacy supply did not return DUSD"
+        );
+    }
+
+    function _executeAndAssertCollateralWithdrawal(
+        address[] memory markets,
+        address legacyFeeRecipient,
+        LegacyFeePositionSnapshot[] memory snapshots,
+        string memory executePath
+    ) private {
+        _executeScheduledTimelockBatch(legacyFeeRecipient, executePath);
+
+        for (uint256 i; i < markets.length; ++i) {
+            Position memory legacyPosition = IMarket(markets[i]).position(legacyFeeRecipient);
+            if (snapshots[i].collateralAssets != 0) {
+                assertEq(legacyPosition.collateralAssets, 0, "legacy collateral was not withdrawn");
+                assertGe(
+                    IERC20Metadata(IMarket(markets[i]).collateralToken()).balanceOf(legacyFeeRecipient),
+                    snapshots[i].receiverCollateralBalance + snapshots[i].collateralAssets,
+                    "legacy recipient did not receive collateral"
+                );
+                assertFalse(
+                    IAuth(markets[i]).isAuthorized(legacyFeeRecipient, input.contracts.altoAdapter),
+                    "temporary collateral-withdrawal authorization was not revoked"
+                );
+            } else {
+                assertEq(legacyPosition.collateralAssets, 0, "zero collateral position changed");
+            }
+        }
+    }
+
+    function _mockPreWarpOraclePrices(address[] memory markets, LegacyFeePositionSnapshot[] memory snapshots) private {
+        for (uint256 i; i < markets.length; ++i) {
+            if (snapshots[i].collateralAssets == 0) continue;
+
+            address oracle = IMarket(markets[i]).oracle();
+            uint256 preWarpPrice = ILendingOracle(oracle).getPrice();
+            vm.mockCall(oracle, abi.encodeCall(ILendingOracle.getPrice, ()), abi.encode(preWarpPrice));
+        }
+    }
+
+    function _canWithdrawFullSupply(IMarket market, address feeRecipient) private view returns (bool) {
+        Balance memory storedTotalSupply = market.totalSupply();
+        (uint256 expectedTotalSupplyAssets, uint256 expectedTotalSupplyShares, uint256 expectedTotalBorrowAssets,) =
+            address(market).expectedMarketBalances();
+        uint256 expectedFeeRecipientShares =
+            market.position(feeRecipient).supplyShares + expectedTotalSupplyShares - storedTotalSupply.shares;
+        if (expectedFeeRecipientShares == 0) return false;
+
+        uint256 claimableAssets =
+            expectedFeeRecipientShares.convertToAssetsDown(expectedTotalSupplyAssets, expectedTotalSupplyShares);
+        uint256 availableLiquidity = Math.min(
+            expectedTotalSupplyAssets - expectedTotalBorrowAssets,
+            IERC20Metadata(market.borrowToken()).balanceOf(address(market))
+        );
+        return claimableAssets != 0 && claimableAssets <= availableLiquidity;
+    }
+
+    function _scheduleTimelockBatch(address timelockAddress, string memory schedulePath) private {
+        vm.prank(MAINNET_TIMELOCK_ADMIN);
+        (bool scheduled, bytes memory scheduleResult) = timelockAddress.call(_readSafeTxData(schedulePath));
+        if (!scheduled) _revertWith(scheduleResult);
+    }
+
+    function _executeScheduledTimelockBatch(address timelockAddress, string memory executePath) private {
+        vm.prank(MAINNET_TIMELOCK_ADMIN);
+        (bool executed, bytes memory executeResult) = timelockAddress.call(_readSafeTxData(executePath));
+        if (!executed) _revertWith(executeResult);
+    }
+
+    function _revertWith(bytes memory revertData) private pure {
+        assembly ("memory-safe") {
+            revert(add(revertData, 0x20), mload(revertData))
+        }
     }
 }

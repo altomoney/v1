@@ -17,7 +17,7 @@ import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 import {USDC_MAINNET, FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
-DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.UPGRADE_ALL_MINT_BORROW_MARKETS;
+DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.SDUSD;
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployAltoEthereumMainnetScript is Script {
@@ -108,6 +108,10 @@ contract DeployAltoEthereumMainnetScript is Script {
             Options memory opts;
             Upgrades.validateImplementation("AltoMintMarket.sol:AltoMintMarket", opts);
             Upgrades.validateImplementation("AltoBorrowMarket.sol:AltoBorrowMarket", opts);
+        } else if (phase == DeploymentPhase.SDUSD) {
+            Options memory opts;
+            Upgrades.validateImplementation("ProtocolFeeCollector.sol:ProtocolFeeCollector", opts);
+            Upgrades.validateImplementation("SDUSD.sol:SDUSD", opts);
         } else if (phase == DeploymentPhase.CONVEX_CREDIT_LINE_MARKET) {
             Options memory opts;
             opts.unsafeAllow = "external-library-linking";
@@ -166,6 +170,12 @@ contract DeployAltoEthereumMainnetScript is Script {
             input.contracts.ownerPegResponsiveExponentialIrmFactory
         );
         contractsJson = vm.serializeAddress("contracts", "dusdPegCurveOracle", input.contracts.dusdPegCurveOracle);
+        contractsJson = vm.serializeAddress("contracts", "protocolFeeCollector", input.contracts.protocolFeeCollector);
+        contractsJson = vm.serializeAddress(
+            "contracts", "protocolFeeCollectorImplementation", input.contracts.protocolFeeCollectorImplementation
+        );
+        contractsJson = vm.serializeAddress("contracts", "sdusd", input.contracts.sdusd);
+        contractsJson = vm.serializeAddress("contracts", "sdusdImplementation", input.contracts.sdusdImplementation);
 
         // Serialize market contracts using helper
         contractsJson = _serializeMarketContracts(contractsJson, "weth", input.contracts.wethMarket);
@@ -392,6 +402,11 @@ contract DeployAltoEthereumMainnetScript is Script {
         loadedInput.contracts.ownerPegResponsiveExponentialIrmFactory =
             _tryParseAddress(json, ".contracts.ownerPegResponsiveExponentialIrmFactory");
         loadedInput.contracts.dusdPegCurveOracle = _tryParseAddress(json, ".contracts.dusdPegCurveOracle");
+        loadedInput.contracts.protocolFeeCollector = _tryParseAddress(json, ".contracts.protocolFeeCollector");
+        loadedInput.contracts.protocolFeeCollectorImplementation =
+            _tryParseAddress(json, ".contracts.protocolFeeCollectorImplementation");
+        loadedInput.contracts.sdusd = _tryParseAddress(json, ".contracts.sdusd");
+        loadedInput.contracts.sdusdImplementation = _tryParseAddress(json, ".contracts.sdusdImplementation");
 
         // Load market contracts using helper
         loadedInput.contracts.wethMarket = _loadMarketContracts(json, "weth");
@@ -613,6 +628,9 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("OwnerFixedRateIrmFactory", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.MARKET_DEPRECATION_PHASE_0) {
             _extractContractABI("FixedRateIrm", abiFolder);
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.SDUSD) {
+            _extractContractABI("ProtocolFeeCollector", abiFolder);
+            _extractContractABI("SDUSD", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.MINT_MARKET_PEG_RESPONSIVE_IRM) {
             _extractContractABI("OwnerPegResponsiveExponentialIrmFactory", abiFolder);
             _extractContractABI("DusdPegCurveOracle", abiFolder);
