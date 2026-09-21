@@ -53,8 +53,8 @@ contract SDUSDERC4626ComplianceTest is ERC4626Test {
         uint256 gain = uint256(init.yield);
         if (gain == 0) return;
 
-        // Rewards cannot be started while only the permanently locked seed shares exist.
-        vm.assume(sdusd.totalSupply() > SEED_SHARES);
+        // Rewards require shares held outside the permanent lock, including after additional deposits to it.
+        vm.assume(sdusd.totalSupply() > sdusd.balanceOf(address(1)));
 
         // Keep the mock token mint within its arithmetic domain; all other reward-path failures should surface.
         vm.assume(gain <= type(uint256).max - dusd.totalSupply());
