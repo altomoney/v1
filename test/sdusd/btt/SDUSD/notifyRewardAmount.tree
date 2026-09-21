@@ -11,14 +11,19 @@ SDUSD::notifyRewardAmount
         │   ├── it should revert with SDUSDNotSeeded
         │   └── when user-owned total supply exceeds seedShares
         │       └── it should still revert with SDUSDNotSeeded
-        ├── when all real stakers have exited and only seed shares remain
-        │   └── it should revert with SDUSDNoActiveStakers
+        ├── when all real stakers have exited and all remaining shares belong to address(1)
+        │   ├── it should revert with SDUSDNoActiveStakers
+        │   ├── it should include shares transferred to the lock after deployment
+        │   └── when extra shares are deposited directly to the lock
+        │       ├── it should reject repeated distribution attempts across reward periods
+        │       └── it should leave collected DUSD and reward accounting unchanged
         ├── when amount is zero
         │   └── it should revert with SDUSDZeroAmount
         ├── when the rewarder has insufficient DUSD balance or allowance
         │   ├── it should revert with the underlying token transfer error
         │   └── it should leave all reward accounting unchanged
         └── when the previous period has finished, amount is non-zero, and real stakers exist
+            ├── it should allow rewards when additional shares are locked but live shares remain
             ├── it should pull exactly amount DUSD from the rewarder
             ├── it should increase accountedAssets by amount
             ├── it should leave depositCapUsage and DUSD deposit headroom unchanged

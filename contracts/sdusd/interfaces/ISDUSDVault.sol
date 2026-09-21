@@ -15,10 +15,10 @@ struct SDUSDInitParams {
     /// @dev Initialization only records this non-zero threshold; it does not transfer DUSD or mint shares.
     ///      After initialization, deployment must deposit the same amount of DUSD into the empty vault with
     ///      `address(1)` as receiver. At the initial 1:1 exchange rate this mints exactly `seedShares`, which
-    ///      are treated as irrecoverably locked. The seed prevents supply from returning to zero and lets the
-    ///      vault distinguish real stakers from the permanent seed: new rewards are accepted only when
-    ///      `totalSupply() > seedShares`. Its value should be chosen against the maximum expected reward batch
-    ///      and minimum supported deposit so that, a supported deposit still mints at least one share.
+    ///      are treated as irrecoverably locked. The seed prevents supply from returning to zero. New rewards
+    ///      require shares held outside address(1), excluding its full balance rather than just the original seed.
+    ///      Its value should be chosen against the maximum expected reward batch and minimum supported deposit
+    ///      so that a supported deposit still mints at least one share.
     ///      A larger value improves that rounding bound but permanently locks more DUSD.
     uint256 seedShares;
     /// @notice Maximum pooled principal represented by non-seed shares
@@ -60,8 +60,8 @@ interface ISDUSDVaultErrors {
     /// @notice Thrown when the permanent lock address holds fewer shares than the configured seed requirement
     error SDUSDNotSeeded();
 
-    /// @notice Thrown when `notifyRewardAmount` is called while only the locked seed shares remain
-    ///         (`totalSupply() <= seedShares`), i.e. there are no real stakers to receive rewards
+    /// @notice Thrown when `notifyRewardAmount` is called while all shares are held by address(1),
+    ///         including any shares deposited or transferred there after the initial seed
     error SDUSDNoActiveStakers();
 }
 
@@ -102,9 +102,10 @@ interface ISDUSDVaultBase is ISDUSDVaultErrors, ISDUSDVaultEvents {
     /// @param amount The amount of DUSD reward being added
     /// @dev Callable only by the configured rewarder while reward notification is not paused. `amount` must be nonzero,
     ///      the previous period must have fully finished, address(1) must hold at least `seedShares`, and total supply
-    ///      must exceed `seedShares` so at least one non-seed share exists. The vault pulls `amount` DUSD from the
-    ///      rewarder via `transferFrom`, so the rewarder must approve the vault beforehand. A successful call starts a
-    ///      fresh release period; rewards from an active period are never rolled over or retroactively diluted.
+    ///      must exceed the full balance of address(1) so at least one share exists outside the permanent lock.
+    ///      The vault pulls `amount` DUSD from the rewarder via `transferFrom`, so the rewarder must approve the vault
+    ///      beforehand. A successful call starts a fresh release period. Rewards from an active period are never
+    ///      rolled over or retroactively diluted.
     function notifyRewardAmount(uint256 amount) external;
 
     /// @notice Recovers all DUSD received outside the vault's accounted deposit and reward flows
@@ -155,12 +156,11 @@ interface ISDUSDVaultBase is ISDUSDVaultErrors, ISDUSDVaultEvents {
     ///      returned to the configured rewarder through `recoverUnaccountedAssets`.
     function accountedAssets() external view returns (uint256);
 
-    /// @notice The share amount deployment must mint to address(1) through an explicit seed deposit. New
-    ///         reward releases require `totalSupply()` to exceed this value.
+    /// @notice The minimum share amount deployment must mint to address(1) through an explicit seed deposit
     /// @dev Deployment must deposit this amount of DUSD with address(1) as the receiver. Those shares are
     ///      irrecoverably locked, so `totalSupply()` can never fall below this value. A new reward release is
-    ///      only permitted while `totalSupply() > seedShares`, i.e. while at least one real staker exists,
-    ///      which bounds reward-driven exchange-rate inflation to a single release even if every staker exits.
+    ///      only permitted while shares exist outside address(1). This condition is checked at period start,
+    ///      and does not prevent holders from exiting during the release.
     function seedShares() external view returns (uint256);
 
     /// @notice Maximum pooled principal represented by non-seed shares
