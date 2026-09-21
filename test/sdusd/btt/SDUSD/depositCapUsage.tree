@@ -1,0 +1,20 @@
+SDUSD::depositCapUsage
+├── given the vault has not been seeded
+│   ├── it should exempt only an exact initial seed deposit or mint to address(1)
+│   ├── it should count an ordinary first deposit and a late seed against the cap
+│   ├── it should allow a small pre-seed position to exit without underflow
+│   └── it should count a wrong-sized initial deposit to address(1)
+├── given the exact initial seed has been deposited
+│   ├── it should exclude only the fixed original DUSD seed amount
+│   ├── later lock deposits and transfers should not expand the exemption
+│   └── rewards earned by the seed should still consume capacity after other holders exit
+├── when rewards are notified and released
+│   ├── locked rewards should not consume capacity
+│   ├── released rewards should consume capacity and may exceed the cap
+│   └── exceeding the cap should not block further reward periods or exits
+├── when assets exceed the cap
+│   └── withdrawals should reopen headroom only after assets fall below the cap
+└── when a depositor immediately exits at a higher share price
+    ├── repeated round trips should consume capacity only for assets left behind through rounding
+    ├── custody through a shared wrapper should not change this behavior
+    └── deposits, mints, share transfers, and existing positions should preserve this behavior

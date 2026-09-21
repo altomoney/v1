@@ -9,7 +9,7 @@ SDUSD::redeem
     └── when caller is authorized
         ├── it should calculate assets to return by rounding down
         ├── it should decrease accountedAssets by the returned assets
-        ├── it should decrease depositCapUsage by depositCapUsage times shares burned divided by pre-burn non-seed supply, rounded down
+        ├── it should decrease depositCapUsage by the DUSD returned
         ├── it should burn the requested shares from owner
         ├── it should transfer the calculated DUSD assets to receiver
         ├── it should return the calculated asset amount
@@ -33,16 +33,16 @@ SDUSD::redeem
         │   ├── it should not make locked rewards withdrawable
         │   ├── it should retain enough DUSD in the vault to back all locked rewards
         │   ├── it should leave the reward amount and period boundaries unchanged
-        │   ├── it should remove only the pooled principal represented by redeemed shares rather than all returned assets
+        │   ├── it should reduce cap usage by all returned assets, including released rewards
         │   └── it should not decrease the remaining holders' exchange rate
         ├── when owner redeems their full balance
         │   ├── it should leave the permanent seed shares in total supply
-        │   └── it should clear all pooled principal represented by non-seed shares
+        │   └── without rewards it should leave only the exempt seed assets and zero cap usage
         ├── when shares are transferred before redemption
         │   ├── the transfer should leave depositCapUsage unchanged
-        │   └── the recipient redemption should remove the transferred shares' proportional pooled principal
+        │   └── the recipient redemption should reduce cap usage by the assets returned
         ├── when deposits occur at different share prices
-        │   └── it should pool principal across all non-seed shares, so an exiting depositor may remove less principal than they supplied
+        │   └── a deposit and immediate exit should consume capacity only for rounding losses left in the vault
         └── when the vault has received a raw DUSD donation
             ├── it should not include the donation in returned assets
             ├── it should leave the exchange rate unchanged

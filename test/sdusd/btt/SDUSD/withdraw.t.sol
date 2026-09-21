@@ -37,8 +37,6 @@ contract SDUSD_Withdraw_Test is SDUSDCommon {
         ExchangeRateSnapshot memory rateBefore = _snapshotExchangeRate();
         uint256 accountedBefore = vault.accountedAssets();
         uint256 usageBefore = vault.depositCapUsage();
-        uint256 nonSeedSupplyBefore = vault.totalSupply() - vault.seedShares();
-        uint256 expectedPrincipalRemoved = Math.mulDiv(usageBefore, expectedShares, nonSeedSupplyBefore);
         uint256 ownerSharesBefore = vault.balanceOf(USER);
         uint256 receiverAssetsBefore = dusd.balanceOf(RECEIVER);
 
@@ -49,7 +47,7 @@ contract SDUSD_Withdraw_Test is SDUSDCommon {
 
         assertEq(burnedShares, expectedShares);
         assertEq(vault.accountedAssets(), accountedBefore - assets);
-        assertEq(vault.depositCapUsage(), usageBefore - expectedPrincipalRemoved);
+        assertEq(vault.depositCapUsage(), usageBefore - assets);
         assertEq(vault.balanceOf(USER), ownerSharesBefore - expectedShares);
         assertEq(dusd.balanceOf(RECEIVER), receiverAssetsBefore + assets);
         assertEq(vault.allowance(USER, USER), 0);
@@ -115,11 +113,8 @@ contract SDUSD_Withdraw_Test is SDUSDCommon {
         uint256 startBefore = vault.periodStart();
         uint256 finishBefore = vault.rewardPeriodFinish();
         uint256 maximum = vault.maxWithdraw(USER);
-        uint256 shares = vault.previewWithdraw(maximum);
         uint256 usageBefore = vault.depositCapUsage();
-        uint256 expectedPrincipalRemoved = Math.mulDiv(usageBefore, shares, vault.totalSupply() - vault.seedShares());
         assertEq(maximum, vault.convertToAssets(vault.balanceOf(USER)));
-        assertGt(maximum, expectedPrincipalRemoved);
 
         vm.prank(USER);
         vm.expectRevert(abi.encodeWithSelector(ERC4626.ERC4626ExceededMaxWithdraw.selector, USER, maximum + 1, maximum));
@@ -132,7 +127,7 @@ contract SDUSD_Withdraw_Test is SDUSDCommon {
         assertEq(vault.rewardsForPeriod(), rewardAmountBefore);
         assertEq(vault.periodStart(), startBefore);
         assertEq(vault.rewardPeriodFinish(), finishBefore);
-        assertEq(vault.depositCapUsage(), usageBefore - expectedPrincipalRemoved);
+        assertEq(vault.depositCapUsage(), usageBefore - maximum);
         assertEq(dusd.balanceOf(RECEIVER), maximum);
         _assertExchangeRateNotDecreased(rateBefore);
     }

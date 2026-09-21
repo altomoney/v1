@@ -68,11 +68,14 @@ contract SDUSD is
     /// @inheritdoc ISDUSDVaultBase
     uint256 public depositCap;
 
-    /// @inheritdoc ISDUSDVaultBase
-    uint256 public depositCapUsage;
+    /// @dev Reserved slot formerly used by the pooled principal cap counter.
+    uint256 private __deprecatedDepositCapUsage;
+
+    /// @dev Fixed DUSD exemption recorded only for the exact initial seed deposit.
+    uint256 private _seedAssets;
 
     /// @dev Reserved storage for future upgrades.
-    uint256[41] private __gap;
+    uint256[40] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -119,6 +122,13 @@ contract SDUSD is
     ///      Reads internal accounting rather than `balanceOf`, so raw DUSD transfers do not affect it.
     function totalAssets() public view override returns (uint256) {
         return accountedAssets - lockedRewardsRemaining();
+    }
+
+    /// @inheritdoc ISDUSDVaultBase
+    function depositCapUsage() public view returns (uint256) {
+        uint256 assets = totalAssets();
+        uint256 seedAssets = _seedAssets;
+        return assets > seedAssets ? assets - seedAssets : 0;
     }
 
     /// @inheritdoc ISDUSDVaultBase
@@ -233,30 +243,25 @@ contract SDUSD is
     /// @dev Tracks staked principal entering the vault so `totalAssets` reflects deposits without reading
     ///      `balanceOf`. Rejects non-zero deposits that round down to zero shares so assets cannot be accepted
     ///      without giving the receiver ownership in the vault.
-    /// @dev Deployment invariant: immediately after initialization, the deployer deposits exactly `seedShares`
-    ///      DUSD into the empty vault with address(1) as receiver, permanently locking the first minted shares.
-    ///      The first deposit is therefore excluded from `depositCapUsage`.
+    /// @dev Only the exact initial seed deposit is excluded from cap usage. Its fixed DUSD amount is recorded
+    ///      here so an ordinary first deposit cannot claim the exemption. Later deposits to address(1) and
+    ///      rewards earned by the seed consume capacity like other accounted assets.
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         if (assets != 0 && shares == 0) revert SDUSDZeroShares();
 
-        if (totalSupply() != 0) depositCapUsage += assets;
+        if (totalSupply() == 0 && receiver == address(1) && assets == seedShares && shares == seedShares) {
+            _seedAssets = assets;
+        }
         accountedAssets += assets;
         super._deposit(caller, receiver, assets, shares);
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    /// @dev Removes the pooled principal represented by the burned non-seed shares, using supply before the burn.
-    ///      Rewards therefore do not directly reopen deposit-cap headroom. The calculation rounds down so a
-    ///      withdrawal cannot free more principal than the burned shares proportionally represent.
+    /// @dev Withdrawing assets reduces cap usage by the DUSD paid out. Cap limits never restrict exits.
     function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
         internal
         override
     {
-        if (shares != 0) {
-            uint256 principalRemoved = Math.mulDiv(depositCapUsage, shares, totalSupply() - seedShares);
-            depositCapUsage -= principalRemoved;
-        }
-
         accountedAssets -= assets;
         super._withdraw(caller, receiver, owner, assets, shares);
     }
@@ -264,7 +269,7 @@ contract SDUSD is
     /// @dev Returns the unused DUSD deposit headroom without reverting when usage exceeds the configured cap.
     function _remainingDepositCap() internal view returns (uint256) {
         uint256 cap = depositCap;
-        uint256 usage = depositCapUsage;
+        uint256 usage = depositCapUsage();
         return usage < cap ? cap - usage : 0;
     }
 

@@ -36,8 +36,6 @@ contract SDUSD_Redeem_Test is SDUSDCommon {
         ExchangeRateSnapshot memory rateBefore = _snapshotExchangeRate();
         uint256 accountedBefore = vault.accountedAssets();
         uint256 usageBefore = vault.depositCapUsage();
-        uint256 nonSeedSupplyBefore = vault.totalSupply() - vault.seedShares();
-        uint256 expectedPrincipalRemoved = Math.mulDiv(usageBefore, shares, nonSeedSupplyBefore);
         uint256 ownerSharesBefore = vault.balanceOf(USER);
         uint256 receiverAssetsBefore = dusd.balanceOf(RECEIVER);
 
@@ -48,7 +46,7 @@ contract SDUSD_Redeem_Test is SDUSDCommon {
 
         assertEq(returnedAssets, expectedAssets);
         assertEq(vault.accountedAssets(), accountedBefore - expectedAssets);
-        assertEq(vault.depositCapUsage(), usageBefore - expectedPrincipalRemoved);
+        assertEq(vault.depositCapUsage(), usageBefore - expectedAssets);
         assertEq(vault.balanceOf(USER), ownerSharesBefore - shares);
         assertEq(dusd.balanceOf(RECEIVER), receiverAssetsBefore + expectedAssets);
         assertEq(vault.allowance(USER, USER), 0);
@@ -115,7 +113,6 @@ contract SDUSD_Redeem_Test is SDUSDCommon {
         uint256 finishBefore = vault.rewardPeriodFinish();
         uint256 shares = vault.balanceOf(USER) / 2;
         uint256 usageBefore = vault.depositCapUsage();
-        uint256 expectedPrincipalRemoved = Math.mulDiv(usageBefore, shares, vault.totalSupply() - vault.seedShares());
         uint256 supplyBefore = vault.totalSupply();
         uint256 expectedAssets =
             Math.mulDiv(shares, vault.accountedAssets() - lockedBefore + 1, supplyBefore + 1, Math.Rounding.Floor);
@@ -133,8 +130,7 @@ contract SDUSD_Redeem_Test is SDUSDCommon {
         assertEq(vault.rewardsForPeriod(), rewardAmountBefore);
         assertEq(vault.periodStart(), startBefore);
         assertEq(vault.rewardPeriodFinish(), finishBefore);
-        assertEq(vault.depositCapUsage(), usageBefore - expectedPrincipalRemoved);
-        assertGt(returnedAssets, expectedPrincipalRemoved);
+        assertEq(vault.depositCapUsage(), usageBefore - returnedAssets);
         assertGe(dusd.balanceOf(address(vault)), lockedBefore);
         _assertExchangeRateNotDecreased(rateBefore);
     }
@@ -149,7 +145,7 @@ contract SDUSD_Redeem_Test is SDUSDCommon {
         assertEq(vault.depositCapUsage(), 0);
     }
 
-    function test_TransferredSharesRemoveTheirProportionalPooledPrincipalWhenRedeemed() public {
+    function test_TransferredSharesFreeTheReturnedAssetsWhenRedeemed() public {
         uint256 transferredShares = vault.balanceOf(USER) / 2;
         uint256 usageBefore = vault.depositCapUsage();
 
@@ -157,15 +153,14 @@ contract SDUSD_Redeem_Test is SDUSDCommon {
         vault.transfer(RECEIVER, transferredShares);
         assertEq(vault.depositCapUsage(), usageBefore);
 
-        uint256 expectedPrincipalRemoved =
-            Math.mulDiv(usageBefore, transferredShares, vault.totalSupply() - vault.seedShares());
+        uint256 expectedAssets = vault.previewRedeem(transferredShares);
         vm.prank(RECEIVER);
         vault.redeem(transferredShares, RECEIVER, RECEIVER);
 
-        assertEq(vault.depositCapUsage(), usageBefore - expectedPrincipalRemoved);
+        assertEq(vault.depositCapUsage(), usageBefore - expectedAssets);
     }
 
-    function test_LaterDepositorAtHigherSharePriceRemovesOnlyPooledShareOfPrincipalOnExit() public {
+    function test_LaterDepositorAtHigherSharePriceOnlyConsumesHeadroomForRoundingLossOnExit() public {
         _notifyRewards(REWARD_AMOUNT);
         _finishRewardPeriod();
 
@@ -173,15 +168,11 @@ contract SDUSD_Redeem_Test is SDUSDCommon {
         uint256 suppliedAssets = 100 ether;
         uint256 mintedShares = _depositFor(RECEIVER, suppliedAssets);
         uint256 usageBeforeRedeem = vault.depositCapUsage();
-        uint256 expectedPrincipalRemoved =
-            Math.mulDiv(usageBeforeRedeem, mintedShares, vault.totalSupply() - vault.seedShares());
-
-        assertLt(expectedPrincipalRemoved, suppliedAssets);
         vm.prank(RECEIVER);
-        vault.redeem(mintedShares, RECEIVER, RECEIVER);
+        uint256 returnedAssets = vault.redeem(mintedShares, RECEIVER, RECEIVER);
 
-        assertEq(vault.depositCapUsage(), usageBeforeRedeem - expectedPrincipalRemoved);
-        assertGt(vault.depositCapUsage(), usageBeforeDeposit);
+        assertEq(vault.depositCapUsage(), usageBeforeRedeem - returnedAssets);
+        assertEq(vault.depositCapUsage() - usageBeforeDeposit, suppliedAssets - returnedAssets);
     }
 
     function test_RawDonationDoesNotIncreaseRedeemedAssets() public {

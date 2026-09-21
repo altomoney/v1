@@ -28,11 +28,13 @@ contract SDUSD_MaxDeposit_Test is SDUSDCommon {
         assertEq(vault.maxDeposit(USER), 0);
     }
 
-    function test_RewardsDonationsAndShareTransfersDoNotReduceAssetHeadroom() public {
+    function test_ReleasedRewardsReduceHeadroomButDonationsAndTransfersDoNot() public {
         uint256 expected = vault.maxDeposit(USER);
 
         _notifyRewards(REWARD_AMOUNT);
+        assertEq(vault.maxDeposit(USER), expected);
         vm.warp(vault.periodStart() + REWARD_DURATION / 2);
+        expected -= REWARD_AMOUNT / 2;
         _donate(100 ether);
         uint256 transferredShares = vault.balanceOf(USER) / 2;
         vm.prank(USER);

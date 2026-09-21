@@ -13,9 +13,9 @@ SDUSD::deposit
     ├── when total supply is zero
     │   ├── it should transfer assets from caller to the vault
     │   ├── it should increase accountedAssets by assets
-    │   ├── it should exclude the first deployment seed deposit from depositCapUsage
+    │   ├── it should exclude only the exact initial seed deposit to address(1) from depositCapUsage
     │   ├── it should mint all previewed shares to receiver
-    │   ├── it should not mint shares to address(1)
+    │   ├── it should mint shares only to the requested receiver
     │   ├── it should return the full previewed share amount
     │   ├── it should emit Deposit
     │   └── it should not decrease the initial exchange rate
@@ -38,7 +38,7 @@ SDUSD::deposit
         │   └── it should leave asset balances, accountedAssets, and share balances unchanged
         ├── when a reward period is active
         │   ├── it should price the deposit using only currently unlocked assets
-        │   ├── rewards should not change depositCapUsage and the deposit should add only its assets
+        │   ├── released rewards should consume capacity and the deposit should add its assets
         │   └── it should not decrease the exchange rate when shares round down
         ├── when assets equals the remaining cap headroom
         │   ├── it should accept the deposit

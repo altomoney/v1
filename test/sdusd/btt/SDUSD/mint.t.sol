@@ -101,7 +101,7 @@ contract SDUSD_Mint_Test is SDUSDCommon {
         assertEq(returnedAssets, requiredAssets);
         assertEq(dusd.balanceOf(address(vault)), requiredAssets);
         assertEq(vault.accountedAssets(), requiredAssets);
-        assertEq(vault.depositCapUsage(), 0);
+        assertEq(vault.depositCapUsage(), requiredAssets);
         assertEq(vault.balanceOf(USER), shares);
         assertEq(vault.balanceOf(SEED_LOCK), 0);
         assertEq(vault.totalSupply(), shares);
