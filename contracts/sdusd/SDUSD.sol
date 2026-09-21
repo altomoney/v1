@@ -68,14 +68,11 @@ contract SDUSD is
     /// @inheritdoc ISDUSDVaultBase
     uint256 public depositCap;
 
-    /// @dev Reserved slot formerly used by the pooled principal cap counter.
-    uint256 private __deprecatedDepositCapUsage;
-
     /// @dev Fixed DUSD exemption recorded only for the exact initial seed deposit.
     uint256 private _seedAssets;
 
     /// @dev Reserved storage for future upgrades.
-    uint256[40] private __gap;
+    uint256[41] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
