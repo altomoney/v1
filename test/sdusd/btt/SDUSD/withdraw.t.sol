@@ -37,8 +37,7 @@ contract SDUSD_Withdraw_Test is SDUSDCommon {
         ExchangeRateSnapshot memory rateBefore = _snapshotExchangeRate();
         uint256 accountedBefore = vault.accountedAssets();
         uint256 usageBefore = vault.depositCapUsage();
-        uint256 nonSeedSupplyBefore = vault.totalSupply() - vault.seedShares();
-        uint256 expectedPrincipalRemoved = Math.mulDiv(usageBefore, expectedShares, nonSeedSupplyBefore);
+        uint256 expectedPrincipalRemoved = Math.mulDiv(vault.principalOf(USER), expectedShares, vault.balanceOf(USER));
         uint256 ownerSharesBefore = vault.balanceOf(USER);
         uint256 receiverAssetsBefore = dusd.balanceOf(RECEIVER);
 
@@ -117,7 +116,7 @@ contract SDUSD_Withdraw_Test is SDUSDCommon {
         uint256 maximum = vault.maxWithdraw(USER);
         uint256 shares = vault.previewWithdraw(maximum);
         uint256 usageBefore = vault.depositCapUsage();
-        uint256 expectedPrincipalRemoved = Math.mulDiv(usageBefore, shares, vault.totalSupply() - vault.seedShares());
+        uint256 expectedPrincipalRemoved = Math.mulDiv(vault.principalOf(USER), shares, vault.balanceOf(USER));
         assertEq(maximum, vault.convertToAssets(vault.balanceOf(USER)));
         assertGt(maximum, expectedPrincipalRemoved);
 

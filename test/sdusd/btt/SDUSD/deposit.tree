@@ -13,16 +13,16 @@ SDUSD::deposit
     ├── when total supply is zero
     │   ├── it should transfer assets from caller to the vault
     │   ├── it should increase accountedAssets by assets
-    │   ├── it should exclude the first deployment seed deposit from depositCapUsage
+    │   ├── it should exclude only the exact initial seed deposit to address(1) from principal
     │   ├── it should mint all previewed shares to receiver
-    │   ├── it should not mint shares to address(1)
+    │   ├── it should count ordinary first deposits toward the receiver principal and depositCapUsage
     │   ├── it should return the full previewed share amount
     │   ├── it should emit Deposit
     │   └── it should not decrease the initial exchange rate
     └── when total supply is non-zero
         ├── it should transfer assets from caller to the vault
         ├── it should increase accountedAssets by assets
-        ├── it should increase depositCapUsage by the deposited assets
+        ├── it should increase the receiver principal and depositCapUsage by the deposited assets
         ├── it should mint the previewed shares to receiver
         ├── it should leave the seed share balance unchanged
         ├── it should return the previewed share amount

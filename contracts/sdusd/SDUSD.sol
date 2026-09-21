@@ -71,8 +71,11 @@ contract SDUSD is
     /// @inheritdoc ISDUSDVaultBase
     uint256 public depositCapUsage;
 
+    /// @inheritdoc ISDUSDVaultBase
+    mapping(address => uint256) public principalOf;
+
     /// @dev Reserved storage for future upgrades.
-    uint256[41] private __gap;
+    uint256[40] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -233,30 +236,46 @@ contract SDUSD is
     /// @dev Tracks staked principal entering the vault so `totalAssets` reflects deposits without reading
     ///      `balanceOf`. Rejects non-zero deposits that round down to zero shares so assets cannot be accepted
     ///      without giving the receiver ownership in the vault.
-    /// @dev Deployment invariant: immediately after initialization, the deployer deposits exactly `seedShares`
-    ///      DUSD into the empty vault with address(1) as receiver, permanently locking the first minted shares.
-    ///      The first deposit is therefore excluded from `depositCapUsage`.
+    /// @dev Only the exact initial deployment seed to address(1) is excluded from principal. All other deposits
+    ///      add their assets to the receiver's principal, including ordinary deposits into an empty vault.
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         if (assets != 0 && shares == 0) revert SDUSDZeroShares();
 
-        if (totalSupply() != 0) depositCapUsage += assets;
+        bool isSeedDeposit =
+            totalSupply() == 0 && receiver == address(1) && assets == seedShares && shares == seedShares;
+        if (!isSeedDeposit) {
+            principalOf[receiver] += assets;
+            depositCapUsage += assets;
+        }
         accountedAssets += assets;
         super._deposit(caller, receiver, assets, shares);
     }
 
+    /// @dev Transfers carry the sender's proportional principal basis. Burns remove that basis from cap usage.
+    ///      Rounding down leaves any remainder with the sender, and transferring or burning their full balance
+    ///      moves all remaining principal. Mints are accounted for in _deposit, and self-transfers leave basis intact.
+    function _update(address from, address to, uint256 shares) internal override {
+        uint256 balanceBefore = balanceOf(from);
+        super._update(from, to, shares);
+
+        if (from == address(0) || from == to || shares == 0) return;
+
+        uint256 principalMoved = Math.mulDiv(principalOf[from], shares, balanceBefore);
+        principalOf[from] -= principalMoved;
+        if (to == address(0)) {
+            depositCapUsage -= principalMoved;
+        } else {
+            principalOf[to] += principalMoved;
+        }
+    }
+
     /// @inheritdoc ERC4626Upgradeable
-    /// @dev Removes the pooled principal represented by the burned non-seed shares, using supply before the burn.
-    ///      Rewards therefore do not directly reopen deposit-cap headroom. The calculation rounds down so a
-    ///      withdrawal cannot free more principal than the burned shares proportionally represent.
+    /// @dev The share burn removes the owner's principal basis through _update. Withdrawn rewards do not
+    ///      directly reopen cap headroom, and delegated withdrawals use the share owner's basis.
     function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
         internal
         override
     {
-        if (shares != 0) {
-            uint256 principalRemoved = Math.mulDiv(depositCapUsage, shares, totalSupply() - seedShares);
-            depositCapUsage -= principalRemoved;
-        }
-
         accountedAssets -= assets;
         super._withdraw(caller, receiver, owner, assets, shares);
     }

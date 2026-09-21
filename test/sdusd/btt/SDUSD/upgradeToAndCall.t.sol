@@ -99,6 +99,8 @@ contract SDUSD_UpgradeToAndCall_Test is SDUSDCommon {
         assertEq(vault.rewardDuration(), nextRewardDuration);
         assertEq(vault.depositCap(), INITIAL_DEPOSIT_CAP);
         assertEq(vault.depositCapUsage(), SEED_SHARES);
+        assertEq(vault.principalOf(USER), SEED_SHARES);
+        assertEq(vault.principalOf(SEED_LOCK), 0);
         assertEq(vault.maxDeposit(USER), 0);
         assertEq(vault.rewardsForPeriod(), REWARD_AMOUNT);
         assertEq(vault.periodStart(), periodStartBefore);

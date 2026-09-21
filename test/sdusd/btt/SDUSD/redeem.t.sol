@@ -36,8 +36,7 @@ contract SDUSD_Redeem_Test is SDUSDCommon {
         ExchangeRateSnapshot memory rateBefore = _snapshotExchangeRate();
         uint256 accountedBefore = vault.accountedAssets();
         uint256 usageBefore = vault.depositCapUsage();
-        uint256 nonSeedSupplyBefore = vault.totalSupply() - vault.seedShares();
-        uint256 expectedPrincipalRemoved = Math.mulDiv(usageBefore, shares, nonSeedSupplyBefore);
+        uint256 expectedPrincipalRemoved = Math.mulDiv(vault.principalOf(USER), shares, vault.balanceOf(USER));
         uint256 ownerSharesBefore = vault.balanceOf(USER);
         uint256 receiverAssetsBefore = dusd.balanceOf(RECEIVER);
 
@@ -115,7 +114,7 @@ contract SDUSD_Redeem_Test is SDUSDCommon {
         uint256 finishBefore = vault.rewardPeriodFinish();
         uint256 shares = vault.balanceOf(USER) / 2;
         uint256 usageBefore = vault.depositCapUsage();
-        uint256 expectedPrincipalRemoved = Math.mulDiv(usageBefore, shares, vault.totalSupply() - vault.seedShares());
+        uint256 expectedPrincipalRemoved = Math.mulDiv(vault.principalOf(USER), shares, vault.balanceOf(USER));
         uint256 supplyBefore = vault.totalSupply();
         uint256 expectedAssets =
             Math.mulDiv(shares, vault.accountedAssets() - lockedBefore + 1, supplyBefore + 1, Math.Rounding.Floor);
@@ -149,7 +148,7 @@ contract SDUSD_Redeem_Test is SDUSDCommon {
         assertEq(vault.depositCapUsage(), 0);
     }
 
-    function test_TransferredSharesRemoveTheirProportionalPooledPrincipalWhenRedeemed() public {
+    function test_TransferredSharesCarryPrincipalToTheirNewOwner() public {
         uint256 transferredShares = vault.balanceOf(USER) / 2;
         uint256 usageBefore = vault.depositCapUsage();
 
@@ -157,31 +156,28 @@ contract SDUSD_Redeem_Test is SDUSDCommon {
         vault.transfer(RECEIVER, transferredShares);
         assertEq(vault.depositCapUsage(), usageBefore);
 
-        uint256 expectedPrincipalRemoved =
-            Math.mulDiv(usageBefore, transferredShares, vault.totalSupply() - vault.seedShares());
+        uint256 expectedPrincipalRemoved = vault.principalOf(RECEIVER);
+        assertEq(expectedPrincipalRemoved, SEED_SHARES / 2);
         vm.prank(RECEIVER);
         vault.redeem(transferredShares, RECEIVER, RECEIVER);
 
         assertEq(vault.depositCapUsage(), usageBefore - expectedPrincipalRemoved);
+        assertEq(vault.principalOf(RECEIVER), 0);
     }
 
-    function test_LaterDepositorAtHigherSharePriceRemovesOnlyPooledShareOfPrincipalOnExit() public {
+    function test_LaterDepositorAtHigherSharePriceRemovesTheirEntirePrincipalOnExit() public {
         _notifyRewards(REWARD_AMOUNT);
         _finishRewardPeriod();
 
         uint256 usageBeforeDeposit = vault.depositCapUsage();
         uint256 suppliedAssets = 100 ether;
         uint256 mintedShares = _depositFor(RECEIVER, suppliedAssets);
-        uint256 usageBeforeRedeem = vault.depositCapUsage();
-        uint256 expectedPrincipalRemoved =
-            Math.mulDiv(usageBeforeRedeem, mintedShares, vault.totalSupply() - vault.seedShares());
-
-        assertLt(expectedPrincipalRemoved, suppliedAssets);
+        assertEq(vault.principalOf(RECEIVER), suppliedAssets);
         vm.prank(RECEIVER);
         vault.redeem(mintedShares, RECEIVER, RECEIVER);
 
-        assertEq(vault.depositCapUsage(), usageBeforeRedeem - expectedPrincipalRemoved);
-        assertGt(vault.depositCapUsage(), usageBeforeDeposit);
+        assertEq(vault.depositCapUsage(), usageBeforeDeposit);
+        assertEq(vault.principalOf(RECEIVER), 0);
     }
 
     function test_RawDonationDoesNotIncreaseRedeemedAssets() public {

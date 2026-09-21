@@ -14,9 +14,9 @@ SDUSD::mint
     │   ├── it should calculate required assets by rounding up
     │   ├── it should transfer required assets from caller to the vault
     │   ├── it should increase accountedAssets by required assets
-    │   ├── it should exclude the first deployment seed mint from depositCapUsage
+    │   ├── it should exclude only the exact initial seed mint to address(1) from principal
     │   ├── it should mint all requested shares to receiver
-    │   ├── it should not mint shares to address(1)
+    │   ├── it should count ordinary first deposits toward the receiver principal and depositCapUsage
     │   ├── it should return the required asset amount
     │   ├── it should emit Deposit
     │   └── it should not decrease the initial exchange rate
@@ -24,7 +24,7 @@ SDUSD::mint
         ├── it should calculate required assets by rounding up
         ├── it should transfer required assets from caller to the vault
         ├── it should increase accountedAssets by required assets
-        ├── it should increase depositCapUsage by required assets
+        ├── it should increase the receiver principal and depositCapUsage by required assets
         ├── it should mint the requested shares to receiver
         ├── it should leave the seed share balance unchanged
         ├── it should return the required asset amount

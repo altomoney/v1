@@ -21,7 +21,7 @@ struct SDUSDInitParams {
     ///      so that a supported deposit still mints at least one share.
     ///      A larger value improves that rounding bound but permanently locks more DUSD.
     uint256 seedShares;
-    /// @notice Maximum pooled principal represented by non-seed shares
+    /// @notice Maximum total DUSD principal attributed to share holders, excluding the initial seed
     /// @dev Rewards do not consume this cap. The owner may later update it with `setDepositCap`.
     uint256 depositCap;
     /// @notice Duration over which each notified reward amount is released linearly, from 1 to 30 days
@@ -86,7 +86,7 @@ interface ISDUSDVaultEvents {
     /// @notice Emitted when the reward duration is updated
     event RewardDurationUpdated(uint256 oldDuration, uint256 newDuration);
 
-    /// @notice Emitted when the pooled-principal deposit cap is updated
+    /// @notice Emitted when the DUSD principal deposit cap is updated
     event DepositCapUpdated(uint256 oldDepositCap, uint256 newDepositCap);
 }
 
@@ -124,7 +124,7 @@ interface ISDUSDVaultBase is ISDUSDVaultErrors, ISDUSDVaultEvents {
     ///      successful `notifyRewardAmount` call starts a new period.
     function setRewardDuration(uint256 newRewardDuration) external;
 
-    /// @notice Updates the maximum pooled principal represented by non-seed shares
+    /// @notice Updates the maximum total DUSD principal attributed to share holders
     /// @dev Only callable by the owner. May be set to zero or below current usage, immediately preventing new
     ///      deposits and mints without affecting withdrawals, redemptions, or reward accrual.
     function setDepositCap(uint256 newDepositCap) external;
@@ -163,15 +163,25 @@ interface ISDUSDVaultBase is ISDUSDVaultErrors, ISDUSDVaultEvents {
     ///      and does not prevent holders from exiting during the release.
     function seedShares() external view returns (uint256);
 
-    /// @notice Maximum pooled principal represented by non-seed shares
+    /// @notice Maximum total DUSD principal attributed to share holders
     /// @dev Rewards and the required seed deposit do not consume this cap.
     function depositCap() external view returns (uint256);
 
-    /// @notice Current pooled principal counted against `depositCap`
-    /// @dev Increases by assets supplied through non-seed deposits and mints. Rewards and share transfers leave it
-    ///      unchanged. A withdrawal or redemption removes `depositCapUsage * sharesBurned / nonSeedSupply`, using
-    ///      supply before the burn and rounding down, so withdrawn rewards do not directly reopen cap headroom.
+    /// @notice Sum of all holders' principal counted against `depositCap`
+    /// @dev Increases by assets supplied through deposits and mints, except the exact initial seed deposit.
+    ///      Rewards and share transfers leave it unchanged. Burns remove the owner's proportional principal,
+    ///      rounded down, and a full exit clears that owner's basis. Withdrawn rewards do not directly reopen headroom.
     function depositCapUsage() external view returns (uint256);
+
+    /// @notice DUSD principal basis attributed to a holder's shares
+    /// @dev Deposits add their assets to the receiver's basis. Transfers move the sender's proportional basis,
+    ///      and withdrawals remove the owner's basis in proportion to shares burned. Partial amounts round down,
+    ///      with all remaining basis moved or removed on a full transfer or exit. Combining deposits or transferred
+    ///      shares uses the holder's average basis. Rewards do not increase basis and the initial seed has zero basis.
+    ///      Later deposits or transfers to address(1) retain their principal and continue consuming cap capacity.
+    ///      A custodial address combines its users' bases. Depositing and withdrawing through that custodian can
+    ///      reassign principal between its users even when the underlying share balances return to their initial values.
+    function principalOf(address holder) external view returns (uint256);
 
     /// @notice The minimum allowed reward release duration
     function MIN_REWARD_DURATION() external view returns (uint256);

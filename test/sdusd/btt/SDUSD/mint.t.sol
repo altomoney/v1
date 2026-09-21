@@ -83,7 +83,7 @@ contract SDUSD_Mint_Test is SDUSDCommon {
         assertEq(vault.balanceOf(RECEIVER), 0);
     }
 
-    function test_EmptyVaultMintsAllRequestedSharesToReceiver() public {
+    function test_OrdinaryFirstMintMintsSharesAndCountsPrincipal() public {
         _useEmptyVault();
         uint256 shares = SEED_SHARES + 1;
         uint256 requiredAssets = vault.previewMint(shares);
@@ -101,7 +101,8 @@ contract SDUSD_Mint_Test is SDUSDCommon {
         assertEq(returnedAssets, requiredAssets);
         assertEq(dusd.balanceOf(address(vault)), requiredAssets);
         assertEq(vault.accountedAssets(), requiredAssets);
-        assertEq(vault.depositCapUsage(), 0);
+        assertEq(vault.depositCapUsage(), requiredAssets);
+        assertEq(vault.principalOf(USER), requiredAssets);
         assertEq(vault.balanceOf(USER), shares);
         assertEq(vault.balanceOf(SEED_LOCK), 0);
         assertEq(vault.totalSupply(), shares);

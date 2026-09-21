@@ -1,0 +1,29 @@
+SDUSD::principalOf
+├── when shares are minted through deposit or mint
+│   ├── it should record the actual DUSD paid against the receiver
+│   ├── it should exempt only the exact initial seed deposited to address(1)
+│   ├── it should count ordinary first deposits and permit their full redemption
+│   └── it should count later deposits to the permanent lock
+├── when rewards accrue
+│   └── it should leave every holder principal and total cap usage unchanged
+├── when shares are transferred or transferred via allowance
+│   ├── it should carry the sender proportional principal to the recipient
+│   ├── it should merge that basis with any existing recipient basis
+│   ├── it should preserve total principal and cap usage
+│   ├── it should preserve principal on self-transfers and zero transfers
+│   ├── it should preserve state and the ERC20 error on a failed transfer
+│   └── it should retain principal transferred to address(1) in cap usage
+├── when shares are burned through withdraw or redeem
+│   ├── it should remove the owner basis even when a different caller or receiver is used
+│   ├── it should leave rounding remainders with the owner until their full exit
+│   ├── it should use that holder average basis for partial exits from mixed deposits
+│   └── it should remove all remaining owner principal on a full exit
+├── when a new holder repeatedly deposits and redeems after rewards
+│   ├── it should restore the full deposit headroom after every complete round trip
+│   └── it should leave existing holders principal unchanged
+├── when several beneficial holders share a custodial address
+│   └── it should document that custody round trips can blend and reassign their principal bases
+└── when deposits, rewards, transfers and redemptions are interleaved
+    ├── it should conserve the sum of holder principal as depositCapUsage
+    ├── it should leave no principal attached to a zero share balance
+    └── it should clear all non-seed principal after every holder exits
