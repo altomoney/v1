@@ -101,7 +101,7 @@ contract SDUSD_Deposit_Test is SDUSDCommon {
         assertEq(dusd.balanceOf(USER), 0);
         assertEq(dusd.balanceOf(address(vault)), assets);
         assertEq(vault.accountedAssets(), assets);
-        assertEq(vault.depositCapUsage(), 0);
+        assertEq(vault.depositCapUsage(), assets);
         assertEq(vault.balanceOf(USER), preview);
         assertEq(vault.balanceOf(SEED_LOCK), 0);
         assertEq(vault.totalSupply(), preview);

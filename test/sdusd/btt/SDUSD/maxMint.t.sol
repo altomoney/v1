@@ -32,16 +32,17 @@ contract SDUSD_MaxMint_Test is SDUSDCommon {
         assertEq(vault.maxMint(USER), 0);
     }
 
-    function test_RewardVestingChangesShareMaximumButNotAssetHeadroom() public {
+    function test_RewardVestingReducesAssetHeadroomAndShareMaximum() public {
         uint256 headroomBefore = vault.maxDeposit(USER);
         uint256 sharesBefore = vault.maxMint(USER);
 
         _notifyRewards(REWARD_AMOUNT);
         vm.warp(vault.periodStart() + REWARD_DURATION / 2);
 
+        uint256 headroomAfter = headroomBefore - REWARD_AMOUNT / 2;
         uint256 expected =
-            Math.mulDiv(headroomBefore, vault.totalSupply() + 1, vault.totalAssets() + 1, Math.Rounding.Floor);
-        assertEq(vault.maxDeposit(USER), headroomBefore);
+            Math.mulDiv(headroomAfter, vault.totalSupply() + 1, vault.totalAssets() + 1, Math.Rounding.Floor);
+        assertEq(vault.maxDeposit(USER), headroomAfter);
         assertEq(vault.maxMint(USER), expected);
         assertLt(vault.maxMint(USER), sharesBefore);
     }

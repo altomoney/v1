@@ -6,7 +6,7 @@ SDUSD::maxDeposit
     │   ├── when the remaining DUSD headroom converts to at least one share
     │   │   ├── it should return depositCap minus depositCapUsage
     │   │   ├── it should not vary by receiver
-    │   │   └── rewards, raw DUSD donations, and share transfers should not reduce the DUSD headroom
+    │   │   └── released rewards should reduce headroom while locked rewards, raw donations, and share transfers do not
     │   └── when the remaining DUSD headroom rounds down to zero shares
     │       └── it should return zero
     └── when depositCapUsage is equal to or above depositCap

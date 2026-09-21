@@ -14,9 +14,9 @@ SDUSD::mint
     │   ├── it should calculate required assets by rounding up
     │   ├── it should transfer required assets from caller to the vault
     │   ├── it should increase accountedAssets by required assets
-    │   ├── it should exclude the first deployment seed mint from depositCapUsage
+    │   ├── it should exclude only the exact initial seed mint to address(1) from depositCapUsage
     │   ├── it should mint all requested shares to receiver
-    │   ├── it should not mint shares to address(1)
+    │   ├── it should mint shares only to the requested receiver
     │   ├── it should return the required asset amount
     │   ├── it should emit Deposit
     │   └── it should not decrease the initial exchange rate
@@ -37,7 +37,7 @@ SDUSD::mint
         │   └── it should preserve the exchange rate
         ├── when a reward period is active
         │   ├── it should price the mint using only currently unlocked assets
-        │   ├── rewards should not change depositCapUsage and the mint should add only required assets
+        │   ├── released rewards should consume capacity and the mint should add its required assets
         │   └── it should not decrease the exchange rate when required assets round up
         ├── when requested shares equals maxMint
         │   ├── it should accept the mint

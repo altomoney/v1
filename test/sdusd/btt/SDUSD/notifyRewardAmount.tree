@@ -26,7 +26,7 @@ SDUSD::notifyRewardAmount
             ├── it should allow rewards when additional shares are locked but live shares remain
             ├── it should pull exactly amount DUSD from the rewarder
             ├── it should increase accountedAssets by amount
-            ├── it should leave depositCapUsage and DUSD deposit headroom unchanged
+            ├── it should leave cap usage and headroom unchanged at notification, before rewards start unlocking
             ├── it should remain available when depositCapUsage is above depositCap
             ├── it should set rewardsForPeriod to amount
             ├── it should set periodStart to the current timestamp
