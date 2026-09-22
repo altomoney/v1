@@ -17,8 +17,8 @@ contract SDUSD_MaxRedeem_Test is SDUSDCommon {
         assertEq(vault.maxRedeem(USER), vault.balanceOf(USER));
     }
 
-    function test_RemainsOwnerShareBalanceWhilePaused() public {
-        _pauseVault();
+    function test_RemainsOwnerShareBalanceWhileFrozen() public {
+        _freezeVault();
         assertEq(vault.maxRedeem(USER), vault.balanceOf(USER));
     }
 

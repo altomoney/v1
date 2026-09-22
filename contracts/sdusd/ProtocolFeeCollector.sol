@@ -296,13 +296,6 @@ contract ProtocolFeeCollector is
         _setPauser(pauser, pauseType, status);
     }
 
-    /// @notice Enforces pause restrictions for this contract.
-    /// @dev Any configured pauser may pause, but only the owner may unpause.
-    /// @param _paused New pause state (true when pausing, false when unpausing).
-    function _onPause(bytes32, bool _paused) internal view override {
-        if (!_paused && msg.sender != owner()) revert ProtocolFeeCollectorUnauthorized();
-    }
-
     /// @dev Harvests every source configured by the market registry, USM registry, and flash-minter setting.
     function _harvestAll() internal {
         address[] memory borrowMarkets = marketRegistry.getBorrowMarkets();

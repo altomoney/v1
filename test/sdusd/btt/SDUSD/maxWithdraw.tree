@@ -1,4 +1,6 @@
 SDUSD::maxWithdraw
+├── when PAUSE_TYPE is paused
+│   └── it should return zero
 ├── when owner has no shares
 │   └── it should return zero
 ├── when owner has shares and no reward period is active
@@ -7,7 +9,7 @@ SDUSD::maxWithdraw
 ├── when a reward period is active
 │   ├── it should include only currently unlocked rewards
 │   └── it should exclude all still-locked rewards
-├── when PAUSE_TYPE is paused
+├── when FROZEN_TYPE is active
 │   └── it should continue returning the owner's available assets
 └── when the vault has received a raw DUSD donation
     └── it should not include the donation

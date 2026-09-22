@@ -11,7 +11,7 @@ import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC2
 import {AltoOwnable2StepUpgradeable} from "@alto/utils/AltoOwnable2StepUpgradeable.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
-import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {FROZEN_TYPE, PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 import {ISDUSDVaultStaticTypes, ISDUSDVaultBase, SDUSDInitParams} from "./interfaces/ISDUSDVault.sol";
 
@@ -107,6 +107,8 @@ contract SDUSD is
 
         _setPauser(params.pauser, PAUSE_TYPE, true);
         _setPauser(params.admin, PAUSE_TYPE, true);
+        _setPauser(params.pauser, FROZEN_TYPE, true);
+        _setPauser(params.admin, FROZEN_TYPE, true);
 
         rewarder = params.rewarder;
         emit RewarderUpdated(address(0), params.rewarder);
@@ -198,43 +200,84 @@ contract SDUSD is
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    /// @dev Blocked while paused.
-    function deposit(uint256 assets, address receiver) public override whenNot(PAUSE_TYPE) returns (uint256) {
+    /// @dev Blocked while frozen or paused.
+    function deposit(uint256 assets, address receiver)
+        public
+        override
+        whenNot(PAUSE_TYPE)
+        whenNot(FROZEN_TYPE)
+        returns (uint256)
+    {
         return super.deposit(assets, receiver);
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    /// @dev Blocked while paused.
-    function mint(uint256 shares, address receiver) public override whenNot(PAUSE_TYPE) returns (uint256) {
+    /// @dev Blocked while frozen or paused.
+    function mint(uint256 shares, address receiver)
+        public
+        override
+        whenNot(PAUSE_TYPE)
+        whenNot(FROZEN_TYPE)
+        returns (uint256)
+    {
         return super.mint(shares, receiver);
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    /// @dev Returns the remaining DUSD cap headroom, or 0 while paused or when the complete remaining headroom would
+    /// @dev Blocked while paused. Freezing alone leaves withdrawals available.
+    function withdraw(uint256 assets, address receiver, address owner)
+        public
+        override
+        whenNot(PAUSE_TYPE)
+        returns (uint256)
+    {
+        return super.withdraw(assets, receiver, owner);
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    /// @dev Blocked while paused. Freezing alone leaves redemptions available.
+    function redeem(uint256 shares, address receiver, address owner)
+        public
+        override
+        whenNot(PAUSE_TYPE)
+        returns (uint256)
+    {
+        return super.redeem(shares, receiver, owner);
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    /// @dev Returns the remaining DUSD cap headroom, or 0 while frozen or paused or when the complete remaining headroom would
     ///      round down to zero shares and therefore cannot be deposited.
     function maxDeposit(address) public view override returns (uint256) {
-        if (paused[PAUSE_TYPE]) return 0;
+        if (paused[PAUSE_TYPE] || paused[FROZEN_TYPE]) return 0;
 
         uint256 remainingDepositCap = _remainingDepositCap();
         return _convertToShares(remainingDepositCap, Math.Rounding.Floor) == 0 ? 0 : remainingDepositCap;
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    /// @dev Converts the remaining DUSD cap headroom to shares with downward rounding, or returns 0 while paused.
+    /// @dev Converts the remaining DUSD cap headroom to shares with downward rounding, or returns 0 while frozen or paused.
     function maxMint(address) public view override returns (uint256) {
-        if (paused[PAUSE_TYPE]) return 0;
+        if (paused[PAUSE_TYPE] || paused[FROZEN_TYPE]) return 0;
         return _convertToShares(_remainingDepositCap(), Math.Rounding.Floor);
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    /// @dev Returns 0 while paused. Freezing alone does not restrict exits.
+    function maxWithdraw(address owner) public view override returns (uint256) {
+        return paused[PAUSE_TYPE] ? 0 : super.maxWithdraw(owner);
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    /// @dev Returns 0 while paused. Freezing alone does not restrict exits.
+    function maxRedeem(address owner) public view override returns (uint256) {
+        return paused[PAUSE_TYPE] ? 0 : super.maxRedeem(owner);
     }
 
     /// @inheritdoc IPausable
     /// @dev Only the owner may add or remove pausers.
     function setPauser(address pauser, bytes32 pauseType, bool status) external override(Pausable) onlyOwner {
         _setPauser(pauser, pauseType, status);
-    }
-
-    /// @dev Enforces that only the owner may unpause; pausers may only pause.
-    function _onPause(bytes32, bool _paused) internal view override {
-        if (!_paused && msg.sender != owner()) revert SDUSDUnauthorized();
     }
 
     /// @inheritdoc ERC4626Upgradeable

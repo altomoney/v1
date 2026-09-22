@@ -1,6 +1,8 @@
 SDUSD::notifyRewardAmount
 ├── given PAUSE_TYPE is paused
 │   └── it should revert with IsPaused
+├── given FROZEN_TYPE is active without PAUSE_TYPE
+│   └── it should allow a valid new reward period
 └── given PAUSE_TYPE is not paused
     ├── when caller is not the configured rewarder
     │   └── it should revert with SDUSDNotRewarder

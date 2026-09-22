@@ -1,4 +1,6 @@
 SDUSD::redeem
+├── when PAUSE_TYPE is paused
+│   └── it should revert with IsPaused, including zero amounts
 ├── when requested shares exceeds maxRedeem for owner
 │   └── it should revert with ERC4626ExceededMaxRedeem
 └── when requested shares does not exceed maxRedeem for owner
@@ -26,7 +28,7 @@ SDUSD::redeem
         │   ├── it should leave depositCapUsage unchanged
         │   ├── it should leave the exchange rate unchanged
         │   └── it should emit Withdraw with zero assets and shares
-        ├── when PAUSE_TYPE is paused
+        ├── when FROZEN_TYPE is active
         │   └── it should remain available
         ├── when a reward period is active
         │   ├── it should return only the owner's share of currently unlocked assets

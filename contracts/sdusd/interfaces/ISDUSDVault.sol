@@ -3,9 +3,9 @@ pragma solidity ^0.8.28;
 
 /// @notice Initialization parameters for the sDUSD vault
 struct SDUSDInitParams {
-    /// @notice Address that becomes the initial owner and is also authorized to pause and unpause the vault
+    /// @notice Address that becomes the initial owner and is also authorized to freeze, unfreeze, pause, and unpause the vault
     address admin;
-    /// @notice Additional address authorized to pause the vault, but not to unpause it
+    /// @notice Additional address authorized to freeze, unfreeze, pause, and unpause the vault
     address pauser;
     /// @notice Address of the DUSD token used as the ERC-4626 underlying asset
     address dusd;
@@ -54,9 +54,6 @@ interface ISDUSDVaultErrors {
 
     /// @notice Thrown when the reward duration is set outside of the allowed bounds
     error SDUSDInvalidRewardDuration();
-
-    /// @notice Thrown when the caller attempts an owner-only unpause
-    error SDUSDUnauthorized();
 
     /// @notice Thrown when the permanent lock address holds fewer shares than the configured seed requirement
     error SDUSDNotSeeded();

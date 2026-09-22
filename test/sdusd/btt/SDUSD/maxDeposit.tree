@@ -1,7 +1,7 @@
 SDUSD::maxDeposit
-├── given PAUSE_TYPE is paused
+├── given PAUSE_TYPE or FROZEN_TYPE is active
 │   └── it should return zero for every receiver
-└── given PAUSE_TYPE is not paused
+└── given neither PAUSE_TYPE nor FROZEN_TYPE is active
     ├── when depositCapUsage is below depositCap
     │   ├── when the remaining DUSD headroom converts to at least one share
     │   │   ├── it should return depositCap minus depositCapUsage

@@ -1,4 +1,6 @@
 SDUSD::withdraw
+├── when PAUSE_TYPE is paused
+│   └── it should revert with IsPaused, including zero amounts
 ├── when requested assets exceeds maxWithdraw for owner
 │   └── it should revert with ERC4626ExceededMaxWithdraw
 └── when requested assets does not exceed maxWithdraw for owner
@@ -26,7 +28,7 @@ SDUSD::withdraw
         │   ├── it should leave depositCapUsage unchanged
         │   ├── it should leave the exchange rate unchanged
         │   └── it should emit Withdraw with zero assets and shares
-        ├── when PAUSE_TYPE is paused
+        ├── when FROZEN_TYPE is active
         │   └── it should remain available
         ├── when a reward period is active
         │   ├── it should set maxWithdraw to the owner's share of currently unlocked assets

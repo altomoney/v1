@@ -6,7 +6,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {SDUSD} from "@alto/sdusd/SDUSD.sol";
 import {ISDUSDVaultErrors, ISDUSDVaultEvents, SDUSDInitParams} from "@alto/sdusd/interfaces/ISDUSDVault.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
-import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {FROZEN_TYPE, PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {SDUSDCommon} from "./SDUSDCommon.t.sol";
 
 contract SDUSD_Initialize_Test is SDUSDCommon {
@@ -102,6 +102,9 @@ contract SDUSD_Initialize_Test is SDUSDCommon {
         assertTrue(deployed.pausers(PAUSER, PAUSE_TYPE));
         assertTrue(deployed.pausers(ADMIN, PAUSE_TYPE));
         assertFalse(deployed.paused(PAUSE_TYPE));
+        assertFalse(deployed.paused(FROZEN_TYPE));
+        assertTrue(deployed.pausers(PAUSER, FROZEN_TYPE));
+        assertTrue(deployed.pausers(ADMIN, FROZEN_TYPE));
         assertEq(deployed.accountedAssets(), 0);
         assertEq(deployed.rewardsForPeriod(), 0);
         assertEq(deployed.periodStart(), 0);

@@ -31,9 +31,9 @@ contract SDUSD_MaxWithdraw_Test is SDUSDCommon {
         assertLt(expected, assetsIfLockedRewardsWereIncluded);
     }
 
-    function test_RemainsAvailableWhilePaused() public {
+    function test_RemainsAvailableWhileFrozen() public {
         uint256 beforePause = vault.maxWithdraw(USER);
-        _pauseVault();
+        _freezeVault();
         assertEq(vault.maxWithdraw(USER), beforePause);
     }
 

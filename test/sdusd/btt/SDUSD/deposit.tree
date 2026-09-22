@@ -1,7 +1,7 @@
 SDUSD::deposit
-├── given PAUSE_TYPE is paused
+├── given PAUSE_TYPE or FROZEN_TYPE is active
 │   └── it should revert with IsPaused
-└── given PAUSE_TYPE is not paused
+└── given neither PAUSE_TYPE nor FROZEN_TYPE is active
     ├── when receiver is zero address
     │   └── it should revert with ERC20InvalidReceiver
     ├── when caller has insufficient DUSD balance or allowance
