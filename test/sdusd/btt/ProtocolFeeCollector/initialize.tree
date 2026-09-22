@@ -35,6 +35,7 @@ ProtocolFeeCollector::initialize
     ├── it should set the treasury
     ├── it should set the manual swap receiver
     ├── it should leave the sDUSD vault unset
+    ├── it should leave the vault registry unset without emitting VaultRegistryUpdated
     ├── it should leave PAUSE_TYPE unpaused
     ├── it should set minimumRewardAmount to the provided nonzero value
     ├── it should emit the ownership, role, and configured-address update events

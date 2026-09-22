@@ -7,9 +7,15 @@ ProtocolFeeCollector::distribute
     ├── before calculating collected and the split
     │   ├── it should harvest registered borrow markets in registry order
     │   ├── it should harvest registered mint markets in registry order
+    │   ├── it should harvest registered vaults in registry order after markets
     │   ├── it should harvest registered USMs in registry order
     │   ├── it should harvest the configured flash minter last
-    │   ├── when multiple sources exist in each registry
+    │   ├── when the vault registry is not configured
+    │   │   └── it should skip vault enumeration and continue distribution
+    │   ├── when a registered vault has available DUSD fees
+    │   │   ├── it should harvest the vault automatically
+    │   │   └── it should include the harvested DUSD in the treasury and reward split
+    │   ├── when multiple sources exist in the market and USM registries
     │   │   └── it should finish each registry in order before moving to the next source type
     │   ├── it should include all successfully harvested DUSD in collected
     │   ├── it should emit Harvested for valid sources including zero-fee sources
@@ -22,6 +28,9 @@ ProtocolFeeCollector::distribute
     │   │   ├── it should emit HarvestingFailed and preserve earlier harvests
     │   │   ├── it should continue harvesting later sources and distributing existing DUSD
     │   │   └── it should also allow treasury-only distribution when a mint market exhausts its ceiling
+    │   ├── when automatic vault harvesting reverts
+    │   │   ├── it should emit HarvestingFailed for the vault
+    │   │   └── it should continue to the flash minter and distribution
     │   ├── when the borrow-market registry getter reverts
     │   │   └── it should propagate the revert before harvesting any source
     │   ├── when the mint-market registry getter reverts

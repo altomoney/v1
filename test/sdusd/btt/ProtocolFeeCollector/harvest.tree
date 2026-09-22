@@ -61,6 +61,38 @@ ProtocolFeeCollector::harvest
     │       ├── it should accrue market interest before claiming fees
     │       ├── it should call claimInterest with zero to claim all fees
     │       └── it should emit Harvested with the collector's DUSD balance increase
+    ├── when the source type is VAULT
+    │   ├── given the vault registry is not configured
+    │   │   └── it should emit HarvestingFailed and skip the source
+    │   ├── given source is not a registered vault
+    │   │   └── it should emit HarvestingFailed and skip the source
+    │   ├── given source asset is not DUSD
+    │   │   └── it should emit HarvestingFailed and skip the source
+    │   ├── given source fee recipient is not the collector
+    │   │   ├── when the collector has zero shares
+    │   │   │   └── it should emit HarvestingFailed and skip the source
+    │   │   └── when the collector has residual shares
+    │   │       └── it should redeem the existing position without realizing new fee shares
+    │   └── given source is a registered DUSD vault
+    │       ├── when the collector has zero shares and is the fee recipient
+    │       │   ├── it should use zero-share redemption to run the fee-accrual path
+    │       │   └── it should emit Harvested with zero DUSD received when no fees accrue
+    │       ├── when source is a real AltoVault with zero collector shares
+    │       │   └── it should complete the zero-share accrual path and emit Harvested with zero DUSD received
+    │       ├── when performance-fee shares are pending
+    │       │   ├── it should realize the pending shares before reading maxRedeem
+    │       │   └── it should redeem the realized shares into DUSD
+    │       ├── when maxRedeem is zero
+    │       │   ├── it should retain all collector shares
+    │       │   └── it should emit Harvested with zero DUSD received
+    │       ├── when maxRedeem equals the collector share balance
+    │       │   └── it should redeem all collector shares into DUSD
+    │       ├── when maxRedeem is below the collector share balance
+    │       │   ├── it should redeem only maxRedeem
+    │       │   └── it should retain the residual shares for a later harvest
+    │       └── when a vault interaction reverts
+    │           ├── it should emit HarvestingFailed and retain the collector shares
+    │           └── it should continue harvesting later sources
     ├── when the source type is USM
     │   ├── given source is not a registered USM
     │   │   ├── it should emit HarvestingFailed

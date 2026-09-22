@@ -2,8 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {Vm} from "forge-std/Vm.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {ProtocolFeeCollector} from "@alto/sdusd/ProtocolFeeCollector.sol";
 import {
     FeeSourceType,
     IProtocolFeeCollectorErrors,
@@ -12,6 +14,7 @@ import {
 import {IMarket, IMarketBase, IMarketEvents, Position, Balance} from "@alto/lending/interfaces/IMarket.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
+import {AltoVault} from "@alto/lending/vault/AltoVault.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IStableTokenFacilitator} from "@alto/usm/interfaces/IStableTokenFacilitator.sol";
 import {ProtocolFeeCollectorCommon} from "./ProtocolFeeCollectorCommon.t.sol";
@@ -309,6 +312,178 @@ contract ProtocolFeeCollector_Harvest_Test is ProtocolFeeCollectorCommon {
 
         assertEq(AltoMintMarket(address(mintMarket)).claimableFeesAssets(), 0);
         assertEq(dusd.balanceOf(address(collector)), expectedFees);
+    }
+
+    function test_UnconfiguredVaultRegistryEmitsHarvestingFailedAndSkips() public {
+        ProtocolFeeCollector unconfiguredCollector = _deployCollector(_validInitParams());
+        (FeeSourceType[] memory sourceTypes, address[] memory sources) =
+            _singleSource(FeeSourceType.VAULT, address(feeVault));
+
+        vm.expectEmit(true, true, false, true, address(unconfiguredCollector));
+        emit IProtocolFeeCollectorEvents.HarvestingFailed(FeeSourceType.VAULT, address(feeVault));
+        unconfiguredCollector.harvest(sourceTypes, sources);
+
+        assertEq(address(unconfiguredCollector.vaultRegistry()), address(0));
+        assertEq(dusd.balanceOf(address(unconfiguredCollector)), 0);
+    }
+
+    function test_UnregisteredVaultEmitsHarvestingFailedAndSkips() public {
+        _assertHarvestSkipped(FeeSourceType.VAULT, address(feeVault));
+    }
+
+    function test_RegisteredVaultWithWrongAssetEmitsHarvestingFailedAndSkips() public {
+        _allowVault(address(wrongAssetFeeVault));
+
+        _assertHarvestSkipped(FeeSourceType.VAULT, address(wrongAssetFeeVault));
+    }
+
+    function test_VaultWithWrongFeeRecipientAndZeroSharesEmitsHarvestingFailedAndSkips() public {
+        _allowVault(address(feeVault));
+        feeVault.setFeeRecipient(TREASURY);
+
+        _assertHarvestSkipped(FeeSourceType.VAULT, address(feeVault));
+    }
+
+    function test_RegisteredDusdVaultWithZeroSharesEmitsHarvestedZero() public {
+        _allowVault(address(feeVault));
+        (FeeSourceType[] memory sourceTypes, address[] memory sources) =
+            _singleSource(FeeSourceType.VAULT, address(feeVault));
+        vm.expectCall(address(feeVault), abi.encodeCall(IERC4626.redeem, (0, address(collector), address(collector))));
+        _expectHarvested(FeeSourceType.VAULT, address(feeVault), 0);
+
+        collector.harvest(sourceTypes, sources);
+
+        assertEq(feeVault.balanceOf(address(collector)), 0);
+        assertEq(dusd.balanceOf(address(collector)), 0);
+    }
+
+    function test_RealAltoVaultWithZeroSharesUsesAccrualPathAndHarvestsZero() public {
+        AltoVault altoVault =
+            new AltoVault(ADMIN, 0, address(dusd), "DUSD Alto Vault", "aDUSD", address(marketRegistry));
+        vm.prank(ADMIN);
+        altoVault.setFeeRecipient(address(collector));
+        _allowVault(address(altoVault));
+        (FeeSourceType[] memory sourceTypes, address[] memory sources) =
+            _singleSource(FeeSourceType.VAULT, address(altoVault));
+        _expectHarvested(FeeSourceType.VAULT, address(altoVault), 0);
+
+        collector.harvest(sourceTypes, sources);
+
+        assertEq(altoVault.balanceOf(address(collector)), 0);
+        assertEq(altoVault.lastTotalAssets(), 0);
+        assertEq(dusd.balanceOf(address(collector)), 0);
+    }
+
+    function test_VaultRealizesPendingFeeSharesBeforeRedeemingThem() public {
+        _allowVault(address(feeVault));
+        uint256 pendingFees = 100 ether;
+        _addPendingVaultFees(feeVault, pendingFees);
+        (FeeSourceType[] memory sourceTypes, address[] memory sources) =
+            _singleSource(FeeSourceType.VAULT, address(feeVault));
+        vm.expectCall(address(feeVault), abi.encodeCall(IERC4626.redeem, (0, address(collector), address(collector))));
+        vm.expectCall(
+            address(feeVault), abi.encodeCall(IERC4626.redeem, (pendingFees, address(collector), address(collector)))
+        );
+        _expectHarvested(FeeSourceType.VAULT, address(feeVault), pendingFees);
+
+        collector.harvest(sourceTypes, sources);
+
+        assertEq(feeVault.pendingFeeAssets(), 0);
+        assertEq(feeVault.balanceOf(address(collector)), 0);
+        assertEq(dusd.balanceOf(address(collector)), pendingFees);
+    }
+
+    function test_VaultHarvestsResidualSharesAfterFeeRecipientChanges() public {
+        _allowVault(address(feeVault));
+        uint256 feeAssets = 100 ether;
+        uint256 feeShares = _mintFeeVaultShares(feeVault, feeAssets);
+        feeVault.setFeeRecipient(TREASURY);
+        (FeeSourceType[] memory sourceTypes, address[] memory sources) =
+            _singleSource(FeeSourceType.VAULT, address(feeVault));
+        _expectHarvested(FeeSourceType.VAULT, address(feeVault), feeAssets);
+
+        collector.harvest(sourceTypes, sources);
+
+        assertEq(feeVault.balanceOf(address(collector)), 0);
+        assertEq(feeVault.totalSupply(), 0);
+        assertEq(dusd.balanceOf(address(collector)), feeAssets);
+        assertEq(feeShares, feeAssets);
+    }
+
+    function test_VaultWithZeroMaxRedeemRetainsAllSharesAndEmitsHarvestedZero() public {
+        _allowVault(address(feeVault));
+        uint256 feeShares = _mintFeeVaultShares(feeVault, 100 ether);
+        feeVault.setLiquidityLimitShares(0);
+        (FeeSourceType[] memory sourceTypes, address[] memory sources) =
+            _singleSource(FeeSourceType.VAULT, address(feeVault));
+        _expectHarvested(FeeSourceType.VAULT, address(feeVault), 0);
+
+        collector.harvest(sourceTypes, sources);
+
+        assertEq(feeVault.balanceOf(address(collector)), feeShares);
+        assertEq(dusd.balanceOf(address(collector)), 0);
+    }
+
+    function test_VaultWithFullLiquidityRedeemsAllShares() public {
+        _allowVault(address(feeVault));
+        uint256 feeAssets = 100 ether;
+        uint256 feeShares = _mintFeeVaultShares(feeVault, feeAssets);
+        (FeeSourceType[] memory sourceTypes, address[] memory sources) =
+            _singleSource(FeeSourceType.VAULT, address(feeVault));
+        vm.expectCall(
+            address(feeVault), abi.encodeCall(IERC4626.redeem, (feeShares, address(collector), address(collector)))
+        );
+        _expectHarvested(FeeSourceType.VAULT, address(feeVault), feeAssets);
+
+        collector.harvest(sourceTypes, sources);
+
+        assertEq(feeVault.balanceOf(address(collector)), 0);
+        assertEq(dusd.balanceOf(address(collector)), feeAssets);
+    }
+
+    function test_VaultWithPartialLiquidityRedeemsOnlyMaxRedeemAndRetainsResidualShares() public {
+        _allowVault(address(feeVault));
+        uint256 feeAssets = 100 ether;
+        uint256 feeShares = _mintFeeVaultShares(feeVault, feeAssets);
+        uint256 redeemableShares = 40 ether;
+        feeVault.setLiquidityLimitShares(redeemableShares);
+        (FeeSourceType[] memory sourceTypes, address[] memory sources) =
+            _singleSource(FeeSourceType.VAULT, address(feeVault));
+        vm.expectCall(
+            address(feeVault),
+            abi.encodeCall(IERC4626.redeem, (redeemableShares, address(collector), address(collector)))
+        );
+        _expectHarvested(FeeSourceType.VAULT, address(feeVault), redeemableShares);
+
+        collector.harvest(sourceTypes, sources);
+
+        assertEq(feeVault.balanceOf(address(collector)), feeShares - redeemableShares);
+        assertEq(dusd.balanceOf(address(collector)), redeemableShares);
+    }
+
+    function test_VaultRevertIsIsolatedAndLaterSourceIsHarvested() public {
+        _allowVault(address(feeVault));
+        _mintFeeVaultShares(feeVault, 100 ether);
+        uint256 flashFees = _generateFlashFees(100 ether);
+        vm.mockCallRevert(
+            address(feeVault),
+            abi.encodeCall(IERC4626.maxRedeem, (address(collector))),
+            abi.encodeWithSignature("Error(string)", "liquidity lookup failed")
+        );
+
+        FeeSourceType[] memory sourceTypes = new FeeSourceType[](2);
+        sourceTypes[0] = FeeSourceType.VAULT;
+        sourceTypes[1] = FeeSourceType.FLASH_MINTER;
+        address[] memory sources = new address[](2);
+        sources[0] = address(feeVault);
+        sources[1] = address(flashMinter);
+
+        _expectHarvestingFailed(FeeSourceType.VAULT, address(feeVault));
+        _expectHarvested(FeeSourceType.FLASH_MINTER, address(flashMinter), flashFees);
+        collector.harvest(sourceTypes, sources);
+
+        assertEq(feeVault.balanceOf(address(collector)), 100 ether);
+        assertEq(dusd.balanceOf(address(collector)), flashFees);
     }
 
     function test_UnregisteredUsmEmitsHarvestingFailedAndSkips() public {

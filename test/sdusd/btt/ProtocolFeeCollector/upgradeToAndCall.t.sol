@@ -72,6 +72,7 @@ contract ProtocolFeeCollector_UpgradeToAndCall_Test is ProtocolFeeCollectorCommo
         assertEq(collector.flashMinter(), address(flashMinter));
         assertEq(address(collector.marketRegistry()), address(marketRegistry));
         assertEq(address(collector.usmRegistry()), address(usmRegistry));
+        assertEq(address(collector.vaultRegistry()), address(vaultRegistry));
         assertEq(collector.rewardsBps(), INITIAL_REWARDS_BPS);
         assertEq(collector.minimumRewardAmount(), INITIAL_MINIMUM_REWARD_AMOUNT);
     }

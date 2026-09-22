@@ -11,7 +11,8 @@ ProtocolFeeCollector::upgradeToAndCall
         ├── it should preserve ownership and pending ownership
         ├── it should preserve collateral-operator and pauser permissions
         ├── it should preserve pause state
-        ├── it should preserve configured addresses and registries
+        ├── it should preserve configured addresses and the market and USM registries
+        ├── it should preserve the configured vault registry
         ├── it should preserve rewards bps and minimum reward amount
         └── when initialization calldata is provided
             └── it should delegatecall the new implementation with the provided calldata

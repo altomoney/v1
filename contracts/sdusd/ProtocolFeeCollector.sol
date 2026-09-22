@@ -7,13 +7,16 @@ import {AltoOwnable2StepUpgradeable} from "@alto/utils/AltoOwnable2StepUpgradeab
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
 import {IUsmRegistry} from "@alto/utils/interfaces/IUsmRegistry.sol";
+import {IVaultRegistry} from "@alto/utils/interfaces/IVaultRegistry.sol";
 import {IStableTokenFacilitator} from "@alto/usm/interfaces/IStableTokenFacilitator.sol";
 import {IMarketStaticTypes} from "@alto/lending/interfaces/IMarket.sol";
+import {IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {IDUSDFlashMinter} from "@alto/usm/interfaces/IDUSDFlashMinter.sol";
@@ -30,7 +33,7 @@ import {
 /// @title ProtocolFeeCollector
 /// @author GPM
 /// @custom:contact security@altofoundation.org
-/// @notice Collects DUSD protocol fees from borrow/mint markets, USMs and the flash minter, then splits
+/// @notice Collects DUSD protocol fees from borrow/mint markets, vaults, USMs and the flash minter, then splits
 ///         the collected DUSD between the treasury and the sDUSD vault. Liquidation fee collateral is
 ///         withdrawn through a restricted path to a fixed manual-swap receiver
 ///         which will swap the collateral to DUSD and add back to this contract
@@ -80,8 +83,11 @@ contract ProtocolFeeCollector is
     /// @inheritdoc IProtocolFeeCollectorBase
     uint256 public minimumRewardAmount;
 
+    /// @inheritdoc IProtocolFeeCollectorBase
+    IVaultRegistry public vaultRegistry;
+
     /// upgrade gap
-    uint256[40] private __gap;
+    uint256[39] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -164,6 +170,11 @@ contract ProtocolFeeCollector is
             }
         } else if (sourceType == FeeSourceType.FLASH_MINTER) {
             if (!_validateAndHarvestFlashMinter(source)) {
+                emit HarvestingFailed(sourceType, source);
+                return;
+            }
+        } else if (sourceType == FeeSourceType.VAULT) {
+            if (!_validateAndHarvestVault(source)) {
                 emit HarvestingFailed(sourceType, source);
                 return;
             }
@@ -281,6 +292,11 @@ contract ProtocolFeeCollector is
     }
 
     /// @inheritdoc IProtocolFeeCollectorBase
+    function setVaultRegistry(address newVaultRegistry) external onlyOwner {
+        _setVaultRegistry(newVaultRegistry);
+    }
+
+    /// @inheritdoc IProtocolFeeCollectorBase
     function setUsmRegistry(address newUsmRegistry) external onlyOwner {
         _setUsmRegistry(newUsmRegistry);
     }
@@ -296,7 +312,8 @@ contract ProtocolFeeCollector is
         _setPauser(pauser, pauseType, status);
     }
 
-    /// @dev Harvests every source configured by the market registry, USM registry, and flash-minter setting.
+    /// @dev Harvests every source configured by the market, vault, and USM registries and flash-minter setting.
+    ///      A zero vault registry disables automatic vault harvesting.
     function _harvestAll() internal {
         address[] memory borrowMarkets = marketRegistry.getBorrowMarkets();
         for (uint256 i; i < borrowMarkets.length; ++i) {
@@ -306,6 +323,14 @@ contract ProtocolFeeCollector is
         address[] memory mintMarkets = marketRegistry.getMintMarkets();
         for (uint256 i; i < mintMarkets.length; ++i) {
             _harvest(FeeSourceType.MINT_MARKET, mintMarkets[i]);
+        }
+
+        IVaultRegistry _vaultRegistry = vaultRegistry;
+        if (address(_vaultRegistry) != address(0)) {
+            address[] memory vaults = _vaultRegistry.getVaultList();
+            for (uint256 i; i < vaults.length; ++i) {
+                _harvest(FeeSourceType.VAULT, vaults[i]);
+            }
         }
 
         address[] memory usms = usmRegistry.getUsmList();
@@ -379,6 +404,36 @@ contract ProtocolFeeCollector is
             // so the market always has enough of our shares to burn.
             market.removeSupply(availableLiquidity, 0, address(this), address(this));
         }
+
+        return true;
+    }
+
+    /// @dev Validates a vault and redeems the collector's currently withdrawable fee shares for DUSD.
+    /// @dev When the collector is the fee recipient, a zero-share redemption first realizes any pending performance
+    ///      fee shares before the redeemable balance is calculated. Existing shares remain harvestable after the
+    ///      vault's fee recipient changes. A vault with no collector shares is valid only while the collector is its
+    ///      configured fee recipient.
+    /// @param source The vault to harvest from
+    /// @return harvestingPassed Whether the source passed validation and its harvest completed
+    function _validateAndHarvestVault(address source) internal returns (bool harvestingPassed) {
+        IERC4626 vault = IERC4626(source);
+        IVaultRegistry _vaultRegistry = vaultRegistry;
+        if (address(_vaultRegistry) == address(0) || !_vaultRegistry.isVault(source) || vault.asset() != dusd) {
+            return false;
+        }
+
+        address feeRecipient = IAltoVaultBase(source).feeRecipient();
+        if (vault.balanceOf(address(this)) == 0 && feeRecipient != address(this)) {
+            return false;
+        }
+
+        // AltoVault mints pending performance-fee shares on state-changing ERC4626 operations. Realize those shares
+        // before calculating the amount to redeem. Do not do this after the fee recipient changes, since any newly
+        // accrued shares then belong to the replacement recipient rather than this collector.
+        if (feeRecipient == address(this)) vault.redeem(0, address(this), address(this));
+
+        uint256 redeemableShares = vault.maxRedeem(address(this));
+        if (redeemableShares != 0) vault.redeem(redeemableShares, address(this), address(this));
 
         return true;
     }
@@ -466,6 +521,15 @@ contract ProtocolFeeCollector is
         if (newMarketRegistry == address(marketRegistry)) revert ProtocolFeeCollectorNoStateChange();
         emit MarketRegistryUpdated(address(marketRegistry), newMarketRegistry);
         marketRegistry = IMarketRegistry(newMarketRegistry);
+    }
+
+    /// @notice Sets the vault registry used to validate vault fee sources.
+    /// @param newVaultRegistry Address of the vault registry.
+    function _setVaultRegistry(address newVaultRegistry) internal {
+        if (newVaultRegistry == address(0)) revert ProtocolFeeCollectorZeroAddress();
+        if (newVaultRegistry == address(vaultRegistry)) revert ProtocolFeeCollectorNoStateChange();
+        emit VaultRegistryUpdated(address(vaultRegistry), newVaultRegistry);
+        vaultRegistry = IVaultRegistry(newVaultRegistry);
     }
 
     /// @notice Sets the USM registry used to validate USM fee sources.

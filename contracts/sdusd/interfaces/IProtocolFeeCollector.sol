@@ -3,13 +3,15 @@ pragma solidity ^0.8.28;
 
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
 import {IUsmRegistry} from "@alto/utils/interfaces/IUsmRegistry.sol";
+import {IVaultRegistry} from "@alto/utils/interfaces/IVaultRegistry.sol";
 
 /// @notice The type of a fee source the collector may harvest from
 enum FeeSourceType {
     BORROW_MARKET,
     MINT_MARKET,
     USM,
-    FLASH_MINTER
+    FLASH_MINTER,
+    VAULT
 }
 
 /// @notice Parameters for initializing the ProtocolFeeCollector
@@ -137,6 +139,9 @@ interface IProtocolFeeCollectorEvents {
     /// @notice Emitted when the market registry address is updated
     event MarketRegistryUpdated(address indexed oldRegistry, address indexed newRegistry);
 
+    /// @notice Emitted when the vault registry address is updated
+    event VaultRegistryUpdated(address indexed oldRegistry, address indexed newRegistry);
+
     /// @notice Emitted when the USM registry address is updated
     event UsmRegistryUpdated(address indexed oldRegistry, address indexed newRegistry);
 
@@ -158,9 +163,10 @@ interface IProtocolFeeCollectorEvents {
 /// @notice State-changing functions of the ProtocolFeeCollector contract
 interface IProtocolFeeCollectorBase is IProtocolFeeCollectorErrors, IProtocolFeeCollectorEvents {
     /// @notice Harvests currently available DUSD fees from validated sources into the collector
-    /// @dev Invalid or paused borrow- and mint-market sources, invalid USMs, and invalid flash minters are skipped and
-    ///      emit `HarvestingFailed` instead of reverting or emitting `Harvested`. Reverts during a source's validation
-    ///      or execution are isolated to that source, emit `HarvestingFailed`, and do not stop later sources.
+    /// @dev Invalid or paused borrow- and mint-market sources, invalid vaults, invalid USMs, and invalid flash minters
+    ///      are skipped and emit `HarvestingFailed` instead of reverting or emitting `Harvested`. Reverts during a
+    ///      source's validation or execution are isolated to that source, emit `HarvestingFailed`, and do not stop
+    ///      later sources.
     /// @param sourceTypes The types of the sources being harvested
     /// @param sources The addresses of the sources being harvested, aligned with `sourceTypes`
     function harvest(FeeSourceType[] calldata sourceTypes, address[] calldata sources) external;
@@ -220,6 +226,13 @@ interface IProtocolFeeCollectorBase is IProtocolFeeCollectorErrors, IProtocolFee
     ///      is absent from the configured registry are inaccessible through the collector until it is registered again.
     function setMarketRegistry(address newMarketRegistry) external;
 
+    /// @notice Updates the vault registry address
+    /// @dev Before replacing the registry, or removing a vault from the current registry, harvest all DUSD fee shares
+    ///      held by the collector. Shares in a vault absent from the configured registry are inaccessible through the
+    ///      collector until it is registered again. Before the first registry is configured, automatic vault
+    ///      harvesting remains disabled.
+    function setVaultRegistry(address newVaultRegistry) external;
+
     /// @notice Updates the USM registry address
     /// @dev Before replacing the registry, or removing a USM from the current registry, distribute all accrued fees
     ///      from that USM. Fees in a USM absent from the configured registry are inaccessible through the collector
@@ -255,6 +268,10 @@ interface IProtocolFeeCollectorBase is IProtocolFeeCollectorErrors, IProtocolFee
 
     /// @notice The market registry used to validate market sources
     function marketRegistry() external view returns (IMarketRegistry);
+
+    /// @notice The vault registry used to validate vault sources
+    /// @dev A zero registry means automatic vault harvesting is disabled
+    function vaultRegistry() external view returns (IVaultRegistry);
 
     /// @notice The USM registry used to validate USM sources
     function usmRegistry() external view returns (IUsmRegistry);
