@@ -96,8 +96,8 @@ contract SDUSD_Withdraw_Test is SDUSDCommon {
         _assertExchangeRateUnchanged(rateBefore);
     }
 
-    function test_WithdrawRemainsAvailableWhilePaused() public {
-        _pauseVault();
+    function test_WithdrawRemainsAvailableWhileFrozen() public {
+        _freezeVault();
         uint256 assets = vault.maxWithdraw(USER) / 2;
         vm.prank(USER);
         vault.withdraw(assets, RECEIVER, USER);

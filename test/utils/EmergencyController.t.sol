@@ -6,8 +6,10 @@ import {Test} from "forge-std/Test.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {Upgrades, UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
+import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
+import {EmergencyControllerPreSdusd} from "./fixtures/EmergencyControllerPreSdusd.sol";
 import {EmergencyController} from "@alto/utils/EmergencyController.sol";
 import {FROZEN_TYPE, PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {MarketRegistry} from "@alto/utils/MarketRegistry.sol";
@@ -309,6 +311,92 @@ contract EmergencyControllerTest is Test {
         assertEq(address(controller.dusd()), address(dusd));
         assertEq(address(controller.universalRewardsDistributor()), address(rewardsDistributor));
         assertEq(controller.owner(), governance);
+    }
+
+    function test_NewTargetsRequireGovernanceAndEmitEvents() public {
+        vm.startPrank(responder);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, responder));
+        controller.setSdusd(address(dusd));
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, responder));
+        controller.setProtocolFeeCollector(address(dusd));
+        vm.stopPrank();
+        vm.startPrank(governance);
+        vm.expectRevert(EmergencyController.ZeroAddress.selector);
+        controller.setSdusd(address(0));
+        vm.expectRevert(EmergencyController.ZeroAddress.selector);
+        controller.setProtocolFeeCollector(address(0));
+        vm.expectEmit(true, true, false, false, address(controller));
+        emit EmergencyController.SdusdSet(address(0), address(dusd));
+        controller.setSdusd(address(dusd));
+        vm.expectEmit(true, true, false, false, address(controller));
+        emit EmergencyController.ProtocolFeeCollectorSet(address(0), address(rewardsDistributor));
+        controller.setProtocolFeeCollector(address(rewardsDistributor));
+        vm.stopPrank();
+        assertEq(address(controller.sdusd()), address(dusd));
+        assertEq(address(controller.protocolFeeCollector()), address(rewardsDistributor));
+    }
+
+    function test_UnconfiguredTargetsRevertExplicitly() public {
+        vm.startPrank(responder);
+        vm.expectRevert(EmergencyController.ZeroAddress.selector);
+        controller.freezeSdusd();
+        vm.expectRevert(EmergencyController.ZeroAddress.selector);
+        controller.pauseSdusd();
+        vm.expectRevert(EmergencyController.ZeroAddress.selector);
+        controller.pauseProtocolFeeCollector();
+        vm.stopPrank();
+    }
+
+    function test_UpgradeFromPreSdusdPreservesConfigurationAndOwnership() public {
+        address oldProxy = UnsafeUpgrades.deployUUPSProxy(
+            address(new EmergencyControllerPreSdusd()),
+            abi.encodeCall(
+                EmergencyControllerPreSdusd.initialize,
+                (
+                    governance,
+                    address(safe),
+                    address(marketRegistry),
+                    address(usmRegistry),
+                    address(dusd),
+                    address(rewardsDistributor)
+                )
+            )
+        );
+        vm.prank(governance);
+        EmergencyControllerPreSdusd(oldProxy).transferOwnership(outsider);
+        address newImplementation = address(_newImplementation());
+        vm.prank(governance);
+        UUPSUpgradeable(oldProxy).upgradeToAndCall(newImplementation, "");
+        EmergencyController upgraded = EmergencyController(oldProxy);
+        assertEq(upgraded.owner(), governance);
+        assertEq(upgraded.pendingOwner(), outsider);
+        assertEq(address(upgraded.pauserSafe()), address(safe));
+        assertEq(address(upgraded.marketRegistry()), address(marketRegistry));
+        assertEq(address(upgraded.usmRegistry()), address(usmRegistry));
+        assertEq(address(upgraded.dusd()), address(dusd));
+        assertEq(address(upgraded.universalRewardsDistributor()), address(rewardsDistributor));
+        assertEq(address(upgraded.sdusd()), address(0));
+        assertEq(address(upgraded.protocolFeeCollector()), address(0));
+        vm.startPrank(governance);
+        upgraded.setSdusd(address(dusd));
+        upgraded.setProtocolFeeCollector(address(rewardsDistributor));
+        vm.stopPrank();
+        dusd.setPauser(oldProxy, PAUSE_TYPE, true);
+        rewardsDistributor.setPauser(oldProxy, PAUSE_TYPE, true);
+        vm.startPrank(responder);
+        upgraded.pauseDusd();
+        upgraded.pauseSdusd();
+        upgraded.pauseProtocolFeeCollector();
+        vm.stopPrank();
+        assertTrue(dusd.paused(PAUSE_TYPE));
+        assertTrue(rewardsDistributor.paused(PAUSE_TYPE));
+    }
+
+    function test_UpgradeStorageLayoutIsCompatible() public {
+        if (!vm.envOr("VERIFY_PROXY", false)) return;
+        Options memory opts;
+        opts.referenceContract = "EmergencyControllerPreSdusd.sol:EmergencyControllerPreSdusd";
+        Upgrades.validateUpgrade("EmergencyController.sol:EmergencyController", opts);
     }
 
     function _newImplementation() internal returns (EmergencyController) {

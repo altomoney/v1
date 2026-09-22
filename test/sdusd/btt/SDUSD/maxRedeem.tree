@@ -1,11 +1,13 @@
 SDUSD::maxRedeem
+├── when PAUSE_TYPE is paused
+│   └── it should return zero
 ├── when owner has no shares
 │   └── it should return zero
 ├── when owner has shares
 │   └── it should return the owner's full share balance
 ├── when a reward period is active
 │   └── it should remain equal to the owner's share balance
-├── when PAUSE_TYPE is paused
+├── when FROZEN_TYPE is active
 │   └── it should remain equal to the owner's share balance
 └── when the vault has received a raw DUSD donation
     └── it should remain equal to the owner's share balance

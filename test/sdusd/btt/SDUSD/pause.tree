@@ -3,7 +3,7 @@ SDUSD::pause
 │   ├── when attempting to pause
 │   │   └── it should revert with Unauthorized
 │   └── when attempting to unpause
-│       └── it should revert with Unauthorized before checking owner-only unpause authorization
+│       └── it should revert with Unauthorized
 ├── when caller is a configured non-owner pauser
 │   ├── when pausing an unpaused pause type
 │   │   ├── it should set the pause type to paused
@@ -11,9 +11,9 @@ SDUSD::pause
 │   ├── when pausing an already paused pause type
 │   │   └── it should revert with StateNotChanged
 │   ├── when attempting to unpause a paused pause type
-│   │   └── it should revert with SDUSDUnauthorized
+│   │   └── it should clear the pause state and emit Paused
 │   └── when attempting to set an unpaused pause type to unpaused
-│       └── it should revert with SDUSDUnauthorized before checking state change
+│       └── it should revert with StateNotChanged
 └── when caller is the owner and a configured pauser
     ├── when pausing an unpaused pause type
     │   ├── it should set the pause type to paused

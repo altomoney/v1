@@ -94,8 +94,8 @@ contract SDUSD_Redeem_Test is SDUSDCommon {
         _assertExchangeRateUnchanged(rateBefore);
     }
 
-    function test_RedeemRemainsAvailableWhilePaused() public {
-        _pauseVault();
+    function test_RedeemRemainsAvailableWhileFrozen() public {
+        _freezeVault();
         uint256 shares = vault.maxRedeem(USER) / 2;
         uint256 expectedAssets = vault.previewRedeem(shares);
         vm.prank(USER);

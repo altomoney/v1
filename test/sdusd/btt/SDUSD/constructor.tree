@@ -31,11 +31,11 @@ SDUSD::initialize
     ├── it should emit RewarderUpdated from zero address
     ├── it should set the configured reward duration
     ├── it should emit RewardDurationUpdated from zero
-    ├── it should authorize the configured pauser for PAUSE_TYPE
+    ├── it should authorize the configured pauser for PAUSE_TYPE and FROZEN_TYPE
     ├── it should emit PauserUpdated for pauser
-    ├── it should authorize admin as a pauser for PAUSE_TYPE
+    ├── it should authorize admin as a pauser for PAUSE_TYPE and FROZEN_TYPE
     ├── it should emit PauserUpdated for admin
-    ├── it should leave PAUSE_TYPE unpaused
+    ├── it should leave PAUSE_TYPE and FROZEN_TYPE inactive
     ├── it should initialize accounted assets to zero
     ├── it should initialize deposit cap usage to zero
     ├── it should initialize reward state to zero

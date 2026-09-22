@@ -5,7 +5,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {SDUSD} from "@alto/sdusd/SDUSD.sol";
 import {SDUSDInitParams} from "@alto/sdusd/interfaces/ISDUSDVault.sol";
-import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {FROZEN_TYPE, PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {ProtocolFeeCollectorCommon} from "../ProtocolFeeCollector/ProtocolFeeCollectorCommon.t.sol";
 
 abstract contract SDUSDCommon is ProtocolFeeCollectorCommon {
@@ -80,6 +80,11 @@ abstract contract SDUSDCommon is ProtocolFeeCollectorCommon {
     function _pauseVault() internal {
         vm.prank(PAUSER);
         vault.pause(PAUSE_TYPE, true);
+    }
+
+    function _freezeVault() internal {
+        vm.prank(PAUSER);
+        vault.pause(FROZEN_TYPE, true);
     }
 
     function _setDepositCap(uint256 newDepositCap) internal {

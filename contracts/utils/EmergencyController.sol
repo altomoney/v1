@@ -28,6 +28,8 @@ contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPS
     event MarketRegistrySet(address indexed oldMarketRegistry, address indexed newMarketRegistry);
     event UsmRegistrySet(address indexed oldUsmRegistry, address indexed newUsmRegistry);
     event DusdSet(address indexed oldDusd, address indexed newDusd);
+    event SdusdSet(address indexed oldSdusd, address indexed newSdusd);
+    event ProtocolFeeCollectorSet(address indexed oldProtocolFeeCollector, address indexed newProtocolFeeCollector);
     event UniversalRewardsDistributorSet(
         address indexed oldUniversalRewardsDistributor, address indexed newUniversalRewardsDistributor
     );
@@ -37,8 +39,10 @@ contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPS
     IUsmRegistry public usmRegistry;
     IPausable public dusd;
     IPausable public universalRewardsDistributor;
+    IPausable public sdusd;
+    IPausable public protocolFeeCollector;
 
-    uint256[45] private __gap;
+    uint256[43] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -111,6 +115,20 @@ contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPS
         universalRewardsDistributor = IPausable(newUniversalRewardsDistributor);
     }
 
+    /// @notice Updates the sDUSD freeze and pause target after deploying or upgrading the controller.
+    function setSdusd(address newSdusd) external onlyOwner {
+        if (newSdusd == address(0)) revert ZeroAddress();
+        emit SdusdSet(address(sdusd), newSdusd);
+        sdusd = IPausable(newSdusd);
+    }
+
+    /// @notice Updates the ProtocolFeeCollector pause target after deploying or upgrading the controller.
+    function setProtocolFeeCollector(address newProtocolFeeCollector) external onlyOwner {
+        if (newProtocolFeeCollector == address(0)) revert ZeroAddress();
+        emit ProtocolFeeCollectorSet(address(protocolFeeCollector), newProtocolFeeCollector);
+        protocolFeeCollector = IPausable(newProtocolFeeCollector);
+    }
+
     /// @notice Pauses a registered mint or borrow market.
     function pauseMarket(address market) external onlyPauserSafeOwner {
         _requireRegisteredMarket(market);
@@ -139,6 +157,21 @@ contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPS
         _pause(address(universalRewardsDistributor), PAUSE_TYPE);
     }
 
+    /// @notice Blocks new sDUSD deposits and mints while leaving exits and reward notifications available.
+    function freezeSdusd() external onlyPauserSafeOwner {
+        _pause(address(sdusd), FROZEN_TYPE);
+    }
+
+    /// @notice Blocks sDUSD deposits, mints, withdrawals, redemptions, and new reward notifications.
+    function pauseSdusd() external onlyPauserSafeOwner {
+        _pause(address(sdusd), PAUSE_TYPE);
+    }
+
+    /// @notice Pauses harvesting, distribution, and collateral operations in the ProtocolFeeCollector.
+    function pauseProtocolFeeCollector() external onlyPauserSafeOwner {
+        _pause(address(protocolFeeCollector), PAUSE_TYPE);
+    }
+
     function _requireRegisteredMarket(address market) internal view {
         if (!marketRegistry.isMintMarket(market) && !marketRegistry.isBorrowMarket(market)) {
             revert UnregisteredMarket(market);
@@ -146,6 +179,7 @@ contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPS
     }
 
     function _pause(address target, bytes32 pauseType) internal {
+        if (target == address(0)) revert ZeroAddress();
         if (!IPausable(target).paused(pauseType)) IPausable(target).pause(pauseType, true);
     }
 

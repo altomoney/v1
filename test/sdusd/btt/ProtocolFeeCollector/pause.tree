@@ -9,9 +9,9 @@ ProtocolFeeCollector::pause
 │   │   └── it should revert with StateNotChanged
 │   └── when attempting to unpause
 │       ├── when the pause type is paused
-│       │   └── it should revert with ProtocolFeeCollectorUnauthorized
+│       │   └── it should clear the pause state and emit Paused
 │       └── when the pause type is already unpaused
-│           └── it should revert with ProtocolFeeCollectorUnauthorized before checking StateNotChanged
+│           └── it should revert with StateNotChanged
 └── when caller is the owner and a configured pauser
     ├── when pausing an unpaused pause type
     │   ├── it should set the pause type to paused

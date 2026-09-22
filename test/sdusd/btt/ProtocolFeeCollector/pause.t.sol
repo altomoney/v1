@@ -3,7 +3,6 @@ pragma solidity ^0.8.28;
 
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
-import {IProtocolFeeCollectorErrors} from "@alto/sdusd/interfaces/IProtocolFeeCollector.sol";
 import {ProtocolFeeCollectorCommon} from "./ProtocolFeeCollectorCommon.t.sol";
 
 contract ProtocolFeeCollector_Pause_Test is ProtocolFeeCollectorCommon {
@@ -31,17 +30,18 @@ contract ProtocolFeeCollector_Pause_Test is ProtocolFeeCollectorCommon {
         collector.pause(PAUSE_TYPE, true);
     }
 
-    function test_RevertWhen_NonOwnerPauserAttemptsToUnpause() public {
+    function test_NonOwnerPauserCanUnpauseAndEmitsEvent() public {
         _pause();
-
+        vm.expectEmit(true, true, false, true, address(collector));
+        emit IPausable.Paused(PAUSER, PAUSE_TYPE, false);
         vm.prank(PAUSER);
-        vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorUnauthorized.selector);
         collector.pause(PAUSE_TYPE, false);
+        assertFalse(collector.paused(PAUSE_TYPE));
     }
 
-    function test_RevertWhen_NonOwnerPauserAttemptsToUnpauseAlreadyUnpausedType() public {
+    function test_RevertWhen_NonOwnerPauserUnpausesAlreadyUnpausedType() public {
         vm.prank(PAUSER);
-        vm.expectRevert(IProtocolFeeCollectorErrors.ProtocolFeeCollectorUnauthorized.selector);
+        vm.expectRevert(abi.encodeWithSelector(IPausable.StateNotChanged.selector, PAUSE_TYPE, false, false));
         collector.pause(PAUSE_TYPE, false);
     }
 

@@ -77,7 +77,7 @@ interface IProtocolFeeCollectorErrors {
     /// @notice Thrown when distribute is called before the active reward release period of sDUSD vault has ended
     error ProtocolFeeCollectorRewardPeriodNotFinished();
 
-    /// @notice Thrown when the caller lacks collateral-operator permission, attempts an owner-only unpause,
+    /// @notice Thrown when the caller lacks collateral-operator permission
     ///         or calls the source-isolation entrypoint from outside the collector
     error ProtocolFeeCollectorUnauthorized();
 
