@@ -63,6 +63,6 @@ AltoConvexCreditLineMarket::removeCollateral()
     │   └── it should set collateralAssets to zero and return all corresponding LP
     ├── it should transfer assets of raw LP to receiver
     ├── it should not change totalSupply totalBorrowed or claimable fees
-    ├── it should emit AccrueInterest CollateralUnstaked and RemoveCollateral in order
+    ├── it should emit CollateralUnstaked and RemoveCollateral
     ├── it should include caller creditAccount receiver and assets in RemoveCollateral
     └── it should return assets

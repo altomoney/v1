@@ -18,7 +18,7 @@ AltoConvexCreditLineMarket::accrueInterest()
 │   ├── it should leave debt assets and claimableFeesAssets unchanged
 │   ├── it should leave totalSupply shares and positions unchanged
 │   ├── it should still call the IRM and permit it to update its timestamp
-│   └── it should emit AccrueInterest with zero interest
+│   └── it should not emit AccrueInterest
 └── when returned interest is nonzero
     ├── it should add interest to totalBorrowed assets
     ├── it should add the same interest to claimableFeesAssets
