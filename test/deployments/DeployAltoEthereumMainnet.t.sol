@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
+
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {Balance, IMarket, IMarketBase, MarketType, Position} from "@alto/lending/interfaces/IMarket.sol";
-import {AltoBalancesLib} from "@alto/lending/libraries/AltoBalancesLib.sol";
-import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {
     DeployAltoEthereumMainnet,
     AltoEthereumMainnetParams,
@@ -1493,19 +1492,12 @@ contract DeployRequiredAddressesTest is DeployAltoEthereumMainnetTestBase {
 }
 
 contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
-    using AltoBalancesLib for address;
-    using AssetShareConversionMath for uint256;
-
     uint256 internal constant MAINNET_FORK_BLOCK = 26025105;
 
     string internal constant ACTIVATION_SCHEDULE_PATH =
         "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-activation-schedule.json";
     string internal constant ACTIVATION_EXECUTE_PATH =
         "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-activation-execute.json";
-    string internal constant BORROW_SUPPLY_WITHDRAWAL_SCHEDULE_PATH =
-        "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-borrow-fee-supply-withdrawal-schedule.json";
-    string internal constant BORROW_SUPPLY_WITHDRAWAL_EXECUTE_PATH =
-        "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-borrow-fee-supply-withdrawal-execute.json";
     string internal constant BORROW_COLLATERAL_WITHDRAWAL_SCHEDULE_PATH =
         "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-borrow-fee-collateral-withdrawal-schedule.json";
     string internal constant BORROW_COLLATERAL_WITHDRAWAL_EXECUTE_PATH =
@@ -1519,7 +1511,6 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         uint256 supplyShares;
         uint256 collateralAssets;
         uint256 receiverCollateralBalance;
-        bool fullSupplyIsLiquid;
     }
 
     function setUp() public override {
@@ -1527,14 +1518,14 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         vm.createSelectFork(vm.rpcUrl("ethereum"), MAINNET_FORK_BLOCK);
     }
 
-    function testFork_DeploySeedActivateAndWithdrawLiquidLegacyFees() public {
+    function testFork_DeploySeedActivateAndWithdrawLegacyCollateral() public {
         address[] memory borrowMarkets = IMarketRegistry(input.contracts.marketRegistry).getBorrowMarkets();
         address[] memory mintMarkets = IMarketRegistry(input.contracts.marketRegistry).getMintMarkets();
         address[] memory usms = IUsmRegistry(input.contracts.usmRegistry).getUsmList();
 
-        (LegacyFeePositionSnapshot[] memory borrowSnapshots, uint256 borrowCollateralMarketCount,) =
+        (LegacyFeePositionSnapshot[] memory borrowSnapshots, uint256 borrowCollateralMarketCount) =
             _snapshotLegacyPositions(borrowMarkets, input.contracts.feeRecipient, true);
-        (LegacyFeePositionSnapshot[] memory mintSnapshots, uint256 mintCollateralMarketCount,) =
+        (LegacyFeePositionSnapshot[] memory mintSnapshots, uint256 mintCollateralMarketCount) =
             _snapshotLegacyPositions(mintMarkets, input.contracts.feeRecipientMintMarkets, false);
 
         assertEq(borrowCollateralMarketCount, 3, "unexpected borrow collateral market count");
@@ -1589,7 +1580,6 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         _scheduleTimelockBatch(input.contracts.timelock, ACTIVATION_SCHEDULE_PATH);
-        _scheduleTimelockBatch(input.contracts.feeRecipient, BORROW_SUPPLY_WITHDRAWAL_SCHEDULE_PATH);
         _scheduleTimelockBatch(input.contracts.feeRecipient, BORROW_COLLATERAL_WITHDRAWAL_SCHEDULE_PATH);
         _scheduleTimelockBatch(input.contracts.feeRecipientMintMarkets, MINT_COLLATERAL_WITHDRAWAL_SCHEDULE_PATH);
 
@@ -1614,8 +1604,6 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
             mintMarkets, input.contracts.feeRecipientMintMarkets, mintSnapshots, address(collector), false
         );
         _assertAncillaryFeeSourcesActivated(usms, originalUsmFeeRecipients, address(collector));
-
-        _executeAndAssertSupplyWithdrawal(borrowMarkets, borrowSnapshots);
         _executeAndAssertCollateralWithdrawal(
             borrowMarkets, input.contracts.feeRecipient, borrowSnapshots, BORROW_COLLATERAL_WITHDRAWAL_EXECUTE_PATH
         );
@@ -1627,11 +1615,7 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
     function _snapshotLegacyPositions(address[] memory markets, address feeRecipient, bool requireSupply)
         private
         view
-        returns (
-            LegacyFeePositionSnapshot[] memory snapshots,
-            uint256 collateralMarketCount,
-            uint256 liquidSupplyMarketCount
-        )
+        returns (LegacyFeePositionSnapshot[] memory snapshots, uint256 collateralMarketCount)
     {
         snapshots = new LegacyFeePositionSnapshot[](markets.length);
         for (uint256 i; i < markets.length; ++i) {
@@ -1641,10 +1625,8 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
             assertEq(market.feeRecipient(), feeRecipient, "unexpected legacy market fee recipient");
             if (requireSupply) assertGt(legacyPosition.supplyShares, 0, "legacy recipient has no supply");
 
-            bool fullSupplyIsLiquid = requireSupply && _canWithdrawFullSupply(market, feeRecipient);
-            if (fullSupplyIsLiquid) ++liquidSupplyMarketCount;
             if (legacyPosition.collateralAssets != 0) ++collateralMarketCount;
-            if (fullSupplyIsLiquid || legacyPosition.collateralAssets != 0) {
+            if (legacyPosition.collateralAssets != 0) {
                 assertTrue(
                     AltoAdapter(payable(input.contracts.altoAdapter)).isApprovedContract(markets[i]),
                     "market is not approved by AltoAdapter"
@@ -1654,8 +1636,7 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
             snapshots[i] = LegacyFeePositionSnapshot({
                 supplyShares: legacyPosition.supplyShares,
                 collateralAssets: legacyPosition.collateralAssets,
-                receiverCollateralBalance: IERC20Metadata(market.collateralToken()).balanceOf(feeRecipient),
-                fullSupplyIsLiquid: fullSupplyIsLiquid
+                receiverCollateralBalance: IERC20Metadata(market.collateralToken()).balanceOf(feeRecipient)
             });
         }
     }
@@ -1710,39 +1691,6 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         );
     }
 
-    function _executeAndAssertSupplyWithdrawal(
-        address[] memory borrowMarkets,
-        LegacyFeePositionSnapshot[] memory snapshots
-    ) private {
-        uint256 legacyDusdBeforeWithdrawal = IDUSD(input.contracts.dusd).balanceOf(input.contracts.feeRecipient);
-        _executeScheduledTimelockBatch(input.contracts.feeRecipient, BORROW_SUPPLY_WITHDRAWAL_EXECUTE_PATH);
-
-        for (uint256 i; i < borrowMarkets.length; ++i) {
-            Position memory legacyPosition = IMarket(borrowMarkets[i]).position(input.contracts.feeRecipient);
-            if (snapshots[i].fullSupplyIsLiquid) {
-                assertEq(legacyPosition.supplyShares, 0, "liquid legacy supply was not withdrawn");
-                assertFalse(
-                    IAuth(borrowMarkets[i]).isAuthorized(input.contracts.feeRecipient, input.contracts.altoAdapter),
-                    "temporary supply-withdrawal authorization was not revoked"
-                );
-            } else {
-                assertEq(
-                    legacyPosition.supplyShares, snapshots[i].supplyShares, "illiquid legacy supply should be omitted"
-                );
-            }
-            assertEq(
-                legacyPosition.collateralAssets,
-                snapshots[i].collateralAssets,
-                "supply withdrawal must not move collateral"
-            );
-        }
-        assertGt(
-            IDUSD(input.contracts.dusd).balanceOf(input.contracts.feeRecipient),
-            legacyDusdBeforeWithdrawal,
-            "liquid legacy supply did not return DUSD"
-        );
-    }
-
     function _executeAndAssertCollateralWithdrawal(
         address[] memory markets,
         address legacyFeeRecipient,
@@ -1778,23 +1726,6 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
             uint256 preWarpPrice = ILendingOracle(oracle).getPrice();
             vm.mockCall(oracle, abi.encodeCall(ILendingOracle.getPrice, ()), abi.encode(preWarpPrice));
         }
-    }
-
-    function _canWithdrawFullSupply(IMarket market, address feeRecipient) private view returns (bool) {
-        Balance memory storedTotalSupply = market.totalSupply();
-        (uint256 expectedTotalSupplyAssets, uint256 expectedTotalSupplyShares, uint256 expectedTotalBorrowAssets,) =
-            address(market).expectedMarketBalances();
-        uint256 expectedFeeRecipientShares =
-            market.position(feeRecipient).supplyShares + expectedTotalSupplyShares - storedTotalSupply.shares;
-        if (expectedFeeRecipientShares == 0) return false;
-
-        uint256 claimableAssets =
-            expectedFeeRecipientShares.convertToAssetsDown(expectedTotalSupplyAssets, expectedTotalSupplyShares);
-        uint256 availableLiquidity = Math.min(
-            expectedTotalSupplyAssets - expectedTotalBorrowAssets,
-            IERC20Metadata(market.borrowToken()).balanceOf(address(market))
-        );
-        return claimableAssets != 0 && claimableAssets <= availableLiquidity;
     }
 
     function _scheduleTimelockBatch(address timelockAddress, string memory schedulePath) private {
