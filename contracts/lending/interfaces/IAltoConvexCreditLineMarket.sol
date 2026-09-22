@@ -228,6 +228,7 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     function isRewardToken(address token) external view returns (bool);
 
     /// @notice Claims and forwards every configured Convex reward token
+    /// @dev DUSD rewards are unsupported. Any DUSD received remains in the market and is not forwarded or swept.
     /// @return claimedAmounts The amount forwarded for each configured reward token
     function claimRewards() external returns (uint256[] memory claimedAmounts);
 
@@ -236,6 +237,7 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     function setRewardRecipient(address newRecipient) external;
 
     /// @notice Adds a token to the reward forwarding list
+    /// @dev The borrow token, DUSD, is intentionally excluded. This integration must not use DUSD reward incentives.
     /// @param token The token to add
     function addRewardToken(address token) external;
 

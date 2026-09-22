@@ -26,6 +26,8 @@ import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/inte
 /// @notice A single-account revolving DUSD credit line backed by Curve LP staked through Convex
 /// @dev `totalSupply.assets` is the credit capacity shared by active debt and unsettled bad debt.
 /// Supply shares stay zero. Interest and opening fees accrue to `claimableFeesAssets`.
+/// DUSD is intentionally unsupported as a reward token. This integration must not use DUSD reward incentives.
+/// Any DUSD rewards received remain in the market, which exposes no DUSD reward-forwarding or sweep function.
 /// @custom:audit Pending
 contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMarketStaticTypes {
     using FixedPointMath for uint256;
