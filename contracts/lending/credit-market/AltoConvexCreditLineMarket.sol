@@ -436,9 +436,8 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
         if (interest != 0) {
             totalBorrowed.assets += interest.toUint128();
             claimableFeesAssets += interest.toUint128();
+            emit AccrueInterest(borrowRate, interest, totalBorrowed.assets, totalSupply.assets);
         }
-
-        emit AccrueInterest(borrowRate, interest, totalBorrowed.assets, totalSupply.assets);
     }
 
     /// @inheritdoc AltoBaseMarket

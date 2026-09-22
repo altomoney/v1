@@ -93,5 +93,5 @@ AltoConvexCreditLineMarket::borrow()
     ├── it should not change totalSupply or supply shares
     ├── it should not change collateral accounting staked assets idle assets or rewards
     ├── it should add both newly accrued interest and opening fee to claimableFeesAssets
-    ├── it should emit AccrueInterest before Borrow with net assets and fee values
+    ├── it should emit Borrow
     └── it should return gross debt assets borrow shares and opening fee assets

@@ -61,5 +61,5 @@ AltoConvexCreditLineMarket::repay()
     ├── when all borrow shares are repaid
     │   ├── it should leave the position eligible for collateral withdrawal
     │   └── it should preserve any residual totalBorrowed assets caused by virtual-share rounding
-    ├── it should emit AccrueInterest before Repay
+    ├── it should emit Repay
     └── it should return repaid assets and shares

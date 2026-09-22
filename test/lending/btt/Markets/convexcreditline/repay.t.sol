@@ -358,8 +358,6 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         emit IMarketEvents.AccrueInterest(19, 5 ether, 105 ether, uint128(CREDIT_LIMIT));
         vm.expectEmit(address(market));
         emit IAltoConvexCreditLineMarketEvents.InterestClaimed(FEE_RECIPIENT, claimableBefore + 5 ether);
-        vm.expectEmit(address(market));
-        emit IMarketEvents.AccrueInterest(19, 0, 105 ether, uint128(CREDIT_LIMIT));
         vm.expectEmit(false, true, false, false, address(market));
         emit IMarketEvents.Repay(USER, CREDIT_ACCOUNT, 0, 0);
         vm.prank(USER);

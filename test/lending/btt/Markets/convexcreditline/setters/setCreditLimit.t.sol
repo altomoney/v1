@@ -25,8 +25,6 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
 
         vm.expectCall(address(irm), abi.encodeCall(IIrm.updateInterestRate, (CREDIT_LIMIT, 0)));
         vm.expectEmit(address(market));
-        emit IMarketEvents.AccrueInterest(123, 0, 0, uint128(CREDIT_LIMIT));
-        vm.expectEmit(address(market));
         emit IAltoConvexCreditLineMarketEvents.SetCreditLimit(CREDIT_LIMIT, 0);
         vm.prank(OWNER);
         market.setCreditLimit(0);
@@ -166,8 +164,6 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
         market.setCreditLimit(150 ether - 1);
         _assertUnchanged(beforeState);
 
-        vm.expectEmit(address(market));
-        emit IMarketEvents.AccrueInterest(0, 0, 50 ether, uint128(CREDIT_LIMIT));
         vm.expectEmit(address(market));
         emit IAltoConvexCreditLineMarketEvents.SetCreditLimit(CREDIT_LIMIT, 150 ether);
         vm.prank(OWNER);

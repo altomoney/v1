@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 import {IMintableERC20} from "@alto/lending/interfaces/IMintableERC20.sol";
 import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
@@ -27,8 +28,6 @@ contract AltoConvexCreditLineMarketAccrueInterestTest is ConvexCreditLineCommon 
         (, uint256 higherUtilizationRate) = candidate.updateInterestRateView(newCreditLimit, debt);
         assertGt(higherUtilizationRate, lowUtilizationRate);
 
-        vm.expectEmit(address(market));
-        emit IMarketEvents.AccrueInterest(higherUtilizationRate, 0, debt, uint128(newCreditLimit));
         market.accrueInterest();
     }
 
@@ -86,16 +85,26 @@ contract AltoConvexCreditLineMarketAccrueInterestTest is ConvexCreditLineCommon 
         _assertUnchanged(beforeState);
     }
 
-    function test_ZeroInterestCallsIrmEmitsAndPreservesAllAccounting() external {
+    function test_ZeroInterestCallsIrmWithoutMarketEventAndPreservesAllAccounting() external {
         _openPosition(1 ether, 1);
         AccountingState memory beforeState = _state();
-        (uint256 borrowRate, uint48 lastUpdateBefore) = irm.irState();
+        (, uint48 lastUpdateBefore) = irm.irState();
         vm.warp(block.timestamp + 1);
 
         vm.expectCall(address(irm), abi.encodeCall(IIrm.updateInterestRate, (CREDIT_LIMIT, 1)));
-        vm.expectEmit(address(market));
-        emit IMarketEvents.AccrueInterest(borrowRate, 0, 1, uint128(CREDIT_LIMIT));
+        vm.recordLogs();
         market.accrueInterest();
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].emitter == address(market) && logs[i].topics.length != 0) {
+                assertNotEq(
+                    logs[i].topics[0],
+                    keccak256("AccrueInterest(uint256,uint256,uint128,uint128)"),
+                    "zero interest emitted AccrueInterest"
+                );
+            }
+        }
 
         (, uint48 lastUpdateAfter) = irm.irState();
         assertGt(lastUpdateAfter, lastUpdateBefore);

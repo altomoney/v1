@@ -136,8 +136,6 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
         vm.mockCallRevert(address(oracle), abi.encodeCall(ILendingOracle.getPrice, ()), "ORACLE_MUST_NOT_BE_CALLED");
 
         vm.expectEmit(address(market));
-        emit IMarketEvents.AccrueInterest(29, 0, 0, uint128(CREDIT_LIMIT));
-        vm.expectEmit(address(market));
         emit IAltoConvexCreditLineMarketEvents.CollateralUnstaked(RECEIVER, 10 ether);
         vm.expectEmit(address(market));
         emit IMarketEvents.RemoveCollateral(CREDIT_ACCOUNT, CREDIT_ACCOUNT, RECEIVER, 10 ether);

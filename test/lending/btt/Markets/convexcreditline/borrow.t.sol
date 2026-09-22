@@ -379,8 +379,6 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
         uint256 rewardClaimsBefore = rewardPool.getRewardCalls();
 
         vm.expectEmit(address(market));
-        emit IMarketEvents.AccrueInterest(BORROW_RATE, 0, 0, uint128(CREDIT_LIMIT));
-        vm.expectEmit(address(market));
         emit IMarketEvents.Borrow(DELEGATE, CREDIT_ACCOUNT, RECEIVER, 100 ether, 200_000_000 ether, 100 ether, 0);
         vm.prank(DELEGATE);
         (uint256 assets, uint256 shares, uint256 fee) = market.borrow(100 ether, 0, CREDIT_ACCOUNT, RECEIVER, "");
