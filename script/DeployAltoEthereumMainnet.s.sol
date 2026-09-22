@@ -112,6 +112,7 @@ contract DeployAltoEthereumMainnetScript is Script {
             Options memory opts;
             Upgrades.validateImplementation("ProtocolFeeCollector.sol:ProtocolFeeCollector", opts);
             Upgrades.validateImplementation("SDUSD.sol:SDUSD", opts);
+            Upgrades.validateImplementation("EmergencyController.sol:EmergencyController", opts);
         } else if (phase == DeploymentPhase.CONVEX_CREDIT_LINE_MARKET) {
             Options memory opts;
             opts.unsafeAllow = "external-library-linking";
@@ -631,6 +632,7 @@ contract DeployAltoEthereumMainnetScript is Script {
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.SDUSD) {
             _extractContractABI("ProtocolFeeCollector", abiFolder);
             _extractContractABI("SDUSD", abiFolder);
+            _extractContractABI("EmergencyController", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.MINT_MARKET_PEG_RESPONSIVE_IRM) {
             _extractContractABI("OwnerPegResponsiveExponentialIrmFactory", abiFolder);
             _extractContractABI("DusdPegCurveOracle", abiFolder);

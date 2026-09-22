@@ -4,6 +4,7 @@ pragma solidity ^0.8.22;
 import {AltoOwnable2Step} from "@alto/utils/AltoOwnable2Step.sol";
 import {AltoOwnable2StepUpgradeable} from "@alto/utils/AltoOwnable2StepUpgradeable.sol";
 import {AltoTimelockController} from "@alto/utils/AltoTimelockController.sol";
+import {EmergencyController} from "@alto/utils/EmergencyController.sol";
 import {
     AltoTimelockControllerMintMarketFee
 } from "@alto/deployments/ethereum-mainnet/contracts/AltoTimelockControllerMintMarketFee.sol";
@@ -1966,6 +1967,12 @@ library DeployAltoEthereumMainnet {
         require(input.contracts.feeRecipient != address(0), "Invalid legacy fee recipient");
         require(input.contracts.protocolFeeCollector == address(0), "ProtocolFeeCollector already deployed");
         require(input.contracts.sdusd == address(0), "SDUSD already deployed");
+
+        EmergencyController controller = EmergencyController(input.contracts.emergencyController);
+        require(controller.owner() == input.contracts.timelock, "Unexpected emergency controller owner");
+        require(address(controller.pauserSafe()) == params.freezer, "Unexpected emergency controller Pauser Safe");
+        // The implementation is deployed now. The existing proxy is upgraded atomically during activation.
+        input.contracts.emergencyControllerImplementation = address(new EmergencyController());
 
         ProtocolFeeCollectorBatch collectorBatch = new ProtocolFeeCollectorBatch(
             ProtocolFeeCollectorBatchParams({
