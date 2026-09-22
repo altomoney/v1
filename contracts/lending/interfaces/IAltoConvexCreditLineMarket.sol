@@ -255,6 +255,16 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
 /// @custom:contact security@altofoundation.org
 /// @notice Interface for a Curve-LP-backed credit line market staked through Convex
 interface IAltoConvexCreditLineMarket is IMarket, IAltoConvexCreditLineMarketBase {
+    /// @notice Repays the credit account's debt
+    /// @dev Only the exact `creditAccount` may call this function and `onBehalf` must equal `creditAccount`.
+    /// Authorized delegates and unrelated accounts cannot repay.
+    /// @param assets The exact amount of borrow tokens to repay, or zero when repaying by shares
+    /// @param shares The exact amount of borrow shares to repay, or zero when repaying by assets
+    /// @param onBehalf The configured credit account
+    /// @return assets The amount of borrow tokens repaid
+    /// @return shares The amount of borrow shares repaid
+    function repay(uint256 assets, uint256 shares, address onBehalf) external override returns (uint256, uint256);
+
     /// @notice Adds collateral to the credit account's position and deposits it into Convex
     /// @dev Only the exact `creditAccount` may call this function and `onBehalf` must equal `creditAccount`.
     /// Authorized delegates and unrelated accounts cannot add collateral.

@@ -3,12 +3,17 @@ AltoConvexCreditLineMarket::repay()
 │   └── it should revert with IsPaused for PAUSE_TYPE
 ├── when market is frozen but not paused
 │   └── it should remain available
+├── when caller is not creditAccount
+│   ├── when caller is an authorized delegate
+│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
+│   ├── when caller is unrelated
+│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
 ├── given invalid inputs
-│   ├── when onBehalf is creditAccount and assets and shares are both zero or both nonzero
+│   ├── when caller and onBehalf are creditAccount and assets and shares are both zero or both nonzero
 │   │   ├── it should accrue and claim fees before inherited amount validation
 │   │   ├── it should revert with AltoBaseMarketInvalidInput and roll back accrual and fee minting
 │   │   └── it should propagate an IRM failure before reaching amount validation
-│   ├── when amount selection is invalid and onBehalf is also invalid
+│   ├── when caller is creditAccount and amount selection and onBehalf are invalid
 │   │   └── it should revert with AltoCreditMarketUnauthorizedAccount before accruing or checking amounts
 │   ├── when onBehalf is not creditAccount
 │   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
@@ -22,13 +27,13 @@ AltoConvexCreditLineMarket::repay()
 │   ├── it should calculate shares rounded down
 │   ├── when a small asset repayment rounds to zero shares
 │   │   └── it should reduce debt assets and burn tokens without reducing borrow shares
-│   └── it should burn exactly the supplied assets from caller
+│   └── it should burn exactly the supplied assets from creditAccount
 ├── given repayment by shares
 │   ├── it should calculate assets rounded up
 │   ├── it should permit repaying exactly all creditAccount borrow shares
-│   └── it should burn the calculated assets from caller
+│   └── it should burn the calculated assets from creditAccount
 ├── given borrow token burn failure
-│   ├── when caller balance is insufficient
+│   ├── when creditAccount balance is insufficient
 │   │   └── it should revert atomically
 │   └── when market lacks burner permission or borrow token is paused
 │       └── it should revert atomically
@@ -45,12 +50,8 @@ AltoConvexCreditLineMarket::repay()
 │   └── when DUSD minter permission or ceiling headroom is missing
 │       └── it should revert the fee claim and repayment atomically
 └── given a valid repayment
-    ├── when caller is creditAccount
-    │   └── it should succeed
-    ├── when caller is an authorized delegate
-    │   └── it should succeed but burn tokens from the delegate
-    ├── when caller is unrelated and not authorized
-    │   └── it should succeed but burn tokens from that caller
+    ├── it should require caller and onBehalf to be the exact creditAccount
+    ├── it should burn tokens from creditAccount
     ├── it should accrue interest before calculating assets and shares
     ├── it should decrease totalBorrowed assets and shares
     ├── it should decrease only creditAccount borrowShares

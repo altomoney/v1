@@ -400,8 +400,10 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     }
 
     /// @inheritdoc AltoBaseMarket
-    /// @dev Repayment is limited to `creditAccount` debt and burns the payer's borrow tokens.
+    /// @dev Only the exact `creditAccount` may repay its own debt. Authorized delegates and third parties cannot repay.
+    /// Borrow tokens are burned from `creditAccount`.
     function _repay(uint256 assets, uint256 shares, address onBehalf) internal override returns (uint256, uint256) {
+        _requireCreditAccount(msg.sender);
         _requireCreditAccount(onBehalf);
 
         _accrueInterest();

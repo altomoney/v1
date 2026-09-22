@@ -244,19 +244,19 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
         _borrow(borrowAssets);
     }
 
-    function _repayAssets(address payer, uint256 assets) internal returns (uint256, uint256) {
-        deal(address(borrowToken), payer, borrowToken.balanceOf(payer) + assets);
-        vm.prank(payer);
+    function _repayAssets(uint256 assets) internal returns (uint256, uint256) {
+        deal(address(borrowToken), CREDIT_ACCOUNT, borrowToken.balanceOf(CREDIT_ACCOUNT) + assets);
+        vm.prank(CREDIT_ACCOUNT);
         return market.repay(assets, 0, CREDIT_ACCOUNT);
     }
 
-    function _repayAllShares(address payer) internal returns (uint256 assets, uint256 shares) {
+    function _repayAllShares() internal returns (uint256 assets, uint256 shares) {
         (, shares,) = market.position(CREDIT_ACCOUNT);
         (uint128 totalAssets, uint128 totalShares) = market.totalBorrowed();
         assets = uint256(shares) * (uint256(totalAssets) + 1) / (uint256(totalShares) + 1e6);
         if (uint256(shares) * (uint256(totalAssets) + 1) % (uint256(totalShares) + 1e6) != 0) ++assets;
-        deal(address(borrowToken), payer, borrowToken.balanceOf(payer) + assets);
-        vm.prank(payer);
+        deal(address(borrowToken), CREDIT_ACCOUNT, borrowToken.balanceOf(CREDIT_ACCOUNT) + assets);
+        vm.prank(CREDIT_ACCOUNT);
         return market.repay(0, shares, CREDIT_ACCOUNT);
     }
 
