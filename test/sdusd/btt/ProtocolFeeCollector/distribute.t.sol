@@ -6,6 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {ISDUSDVaultErrors} from "@alto/sdusd/interfaces/ISDUSDVault.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {ProtocolFeeCollector} from "@alto/sdusd/ProtocolFeeCollector.sol";
 import {
     FeeSourceType,
     IProtocolFeeCollectorErrors,
@@ -375,6 +376,69 @@ contract ProtocolFeeCollector_Distribute_Test is ProtocolFeeCollectorCommon {
         assertEq(dusd.balanceOf(address(collector)), 0);
         assertEq(dusd.balanceOf(TREASURY), treasuryAmount);
         assertEq(sdusdVault.rewardsForPeriod(), rewardAmount);
+    }
+
+    function test_UnconfiguredVaultRegistryDoesNotBlockDistribution() public {
+        ProtocolFeeCollector unconfiguredCollector = _deployCollector(_validInitParams());
+        uint256 collected = 250 ether;
+        vm.prank(ADMIN);
+        unconfiguredCollector.setRewardsBps(0);
+        dusd.mint(address(unconfiguredCollector), collected);
+
+        unconfiguredCollector.distribute();
+
+        assertEq(address(unconfiguredCollector.vaultRegistry()), address(0));
+        assertEq(dusd.balanceOf(TREASURY), collected);
+        assertEq(dusd.balanceOf(address(unconfiguredCollector)), 0);
+    }
+
+    function test_AutomaticallyHarvestsRegisteredVaultAndIncludesAvailableFeesInSplit() public {
+        uint256 vaultFees = 500 ether;
+        _allowVault(address(feeVault));
+        _mintFeeVaultShares(feeVault, vaultFees);
+        _setSdusdVault();
+        uint256 rewardAmount = vaultFees * INITIAL_REWARDS_BPS / collector.PERCENTAGE_PRECISION();
+        uint256 treasuryAmount = vaultFees - rewardAmount;
+
+        vm.recordLogs();
+        vm.prank(USER);
+        collector.distribute();
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        uint256 vaultHarvestIndex = _findHarvestedSource(logs, address(feeVault));
+        assertEq(uint256(logs[vaultHarvestIndex].topics[1]), uint256(FeeSourceType.VAULT));
+        assertEq(abi.decode(logs[vaultHarvestIndex].data, (uint256)), vaultFees);
+        _assertDistributedEvent(logs, vaultFees, treasuryAmount, rewardAmount);
+        assertEq(feeVault.balanceOf(address(collector)), 0);
+        assertEq(dusd.balanceOf(address(collector)), 0);
+        assertEq(dusd.balanceOf(TREASURY), treasuryAmount);
+        assertEq(sdusdVault.rewardsForPeriod(), rewardAmount);
+    }
+
+    function test_FailedAutomaticVaultHarvestDoesNotBlockLaterFlashHarvestOrDistribution() public {
+        _allowVault(address(feeVault));
+        _mintFeeVaultShares(feeVault, 100 ether);
+        uint256 flashFees = _generateFlashFees(10_000 ether);
+        _setRewardsBps(0);
+        vm.mockCallRevert(
+            address(feeVault),
+            abi.encodeWithSignature("maxRedeem(address)", address(collector)),
+            abi.encodeWithSignature("Error(string)", "liquidity lookup failed")
+        );
+
+        vm.recordLogs();
+        collector.distribute();
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        uint256 failureIndex = _findCollectorEvent(logs, IProtocolFeeCollectorEvents.HarvestingFailed.selector, 0);
+        uint256 flashIndex = _findHarvestedSource(logs, address(flashMinter));
+        assertEq(uint256(logs[failureIndex].topics[1]), uint256(FeeSourceType.VAULT));
+        assertEq(address(uint160(uint256(logs[failureIndex].topics[2]))), address(feeVault));
+        assertLt(failureIndex, flashIndex);
+        _assertDistributedEvent(logs, flashFees, flashFees, 0);
+        assertEq(feeVault.balanceOf(address(collector)), 100 ether);
+        assertEq(dusd.balanceOf(TREASURY), flashFees);
+        assertEq(dusd.balanceOf(address(collector)), 0);
     }
 
     function test_AutomaticallyHarvestsMultipleSourcesWithinEachRegistryInOrder() public {

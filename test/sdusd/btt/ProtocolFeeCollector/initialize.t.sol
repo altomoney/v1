@@ -112,6 +112,17 @@ contract ProtocolFeeCollector_Initialize_Test is ProtocolFeeCollectorCommon {
         assertEq(collector.minimumRewardAmount(), INITIAL_MINIMUM_REWARD_AMOUNT);
     }
 
+    function test_LeavesVaultRegistryUnconfiguredWithoutEmittingRegistryUpdate() public {
+        ProtocolFeeCollectorInitParams memory params = _validInitParams();
+
+        vm.recordLogs();
+        ProtocolFeeCollector deployed = _deployCollector(params);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        assertEq(address(deployed.vaultRegistry()), address(0));
+        assertEq(_countLogs(logs, IProtocolFeeCollectorEvents.VaultRegistryUpdated.selector, address(deployed)), 0);
+    }
+
     function test_EmitsAllConfigurationAndRoleEvents() public {
         ProtocolFeeCollectorInitParams memory params = _validInitParams();
 

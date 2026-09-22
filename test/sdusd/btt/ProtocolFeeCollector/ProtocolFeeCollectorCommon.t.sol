@@ -21,6 +21,7 @@ import {
 import {DUSD} from "@alto/tokens/DUSD.sol";
 import {MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {UsmRegistry} from "@alto/utils/UsmRegistry.sol";
+import {VaultRegistry} from "@alto/utils/VaultRegistry.sol";
 import {DUSDUsm} from "@alto/usm/DUSDUsm.sol";
 import {DUSDFlashMinter} from "@alto/usm/DUSDFlashMinter.sol";
 import {FixedPriceStrategy} from "@alto/usm/FixedPriceStrategy.sol";
@@ -44,6 +45,7 @@ import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.s
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {ERC20MockMintableDecimals} from "@alto-test/helpers/ERC20MockMintableDecimals.sol";
 import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
+import {ProtocolFeeCollectorVaultMock} from "@alto-test/helpers/ProtocolFeeCollectorVaultMock.sol";
 
 contract ProtocolFeeCollectorFlashBorrower is IERC3156FlashBorrower {
     IERC3156FlashLender internal immutable lender;
@@ -96,6 +98,7 @@ abstract contract ProtocolFeeCollectorCommon is Test, TestHelperOz5 {
 
     MarketRegistry internal marketRegistry;
     UsmRegistry internal usmRegistry;
+    VaultRegistry internal vaultRegistry;
     IMarket internal borrowMarket;
     IMarket internal mintMarket;
     IMarket internal wrongTokenBorrowMarket;
@@ -106,6 +109,8 @@ abstract contract ProtocolFeeCollectorCommon is Test, TestHelperOz5 {
     DUSDFlashMinter internal wrongTokenFlashMinter;
     ProtocolFeeCollectorFlashBorrower internal flashBorrower;
     SDUSD internal sdusdVault;
+    ProtocolFeeCollectorVaultMock internal feeVault;
+    ProtocolFeeCollectorVaultMock internal wrongAssetFeeVault;
 
     ProtocolFeeCollector internal implementation;
     ProtocolFeeCollector internal collector;
@@ -124,6 +129,7 @@ abstract contract ProtocolFeeCollectorCommon is Test, TestHelperOz5 {
 
         marketRegistry = new MarketRegistry(ADMIN);
         usmRegistry = new UsmRegistry(ADMIN);
+        vaultRegistry = new VaultRegistry(ADMIN);
         borrowMarket = _deployBorrowMarket(address(dusd));
         mintMarket = _deployMintMarket(address(dusd));
         wrongTokenBorrowMarket = _deployBorrowMarket(address(otherToken));
@@ -139,6 +145,12 @@ abstract contract ProtocolFeeCollectorCommon is Test, TestHelperOz5 {
         implementation = new ProtocolFeeCollector();
         initParams = _validInitParams();
         collector = _deployCollector(initParams);
+
+        vm.prank(ADMIN);
+        collector.setVaultRegistry(address(vaultRegistry));
+
+        feeVault = new ProtocolFeeCollectorVaultMock(IERC20(address(dusd)), address(collector));
+        wrongAssetFeeVault = new ProtocolFeeCollectorVaultMock(IERC20(address(otherToken)), address(collector));
 
         FixedFeeStrategy feeStrategy = new FixedFeeStrategy(USM_FEE_BPS, USM_FEE_BPS, ADMIN);
 
@@ -342,6 +354,28 @@ abstract contract ProtocolFeeCollectorCommon is Test, TestHelperOz5 {
     function _allowUsm(address usmAddress) internal {
         vm.prank(ADMIN);
         usmRegistry.addUsm(usmAddress);
+    }
+
+    function _allowVault(address vault) internal {
+        vm.prank(ADMIN);
+        vaultRegistry.addVault(vault);
+    }
+
+    function _mintFeeVaultShares(ProtocolFeeCollectorVaultMock vault, uint256 assets)
+        internal
+        returns (uint256 shares)
+    {
+        IERC20 asset = IERC20(vault.asset());
+        ERC20MockMintableDecimals(address(asset)).mint(address(this), assets);
+        asset.approve(address(vault), assets);
+        shares = vault.deposit(assets, address(collector));
+    }
+
+    function _addPendingVaultFees(ProtocolFeeCollectorVaultMock vault, uint256 assets) internal {
+        IERC20 asset = IERC20(vault.asset());
+        ERC20MockMintableDecimals(address(asset)).mint(address(this), assets);
+        asset.approve(address(vault), assets);
+        vault.addPendingFeeAssets(assets);
     }
 
     function _supplyBorrowMarket(uint256 assets) internal returns (uint256 shares) {
