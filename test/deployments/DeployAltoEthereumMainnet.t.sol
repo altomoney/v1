@@ -2,6 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 import {console} from "forge-std/console.sol";
 import {Balance, IMarket, IMarketBase, MarketType, Position} from "@alto/lending/interfaces/IMarket.sol";
 import {
@@ -93,6 +94,10 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {ProtocolFeeCollector} from "@alto/sdusd/ProtocolFeeCollector.sol";
 import {SDUSD} from "@alto/sdusd/SDUSD.sol";
+import {EmergencyController} from "@alto/utils/EmergencyController.sol";
+import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
+import {FeeSourceType} from "@alto/sdusd/interfaces/IProtocolFeeCollector.sol";
+import {SDUSDActivationSafeBuilder} from "@alto/deployments/ethereum-mainnet/SDUSDActivationSafeBuilder.sol";
 import {IStableTokenFacilitator} from "@alto/usm/interfaces/IStableTokenFacilitator.sol";
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
@@ -1491,8 +1496,14 @@ contract DeployRequiredAddressesTest is DeployAltoEthereumMainnetTestBase {
     }
 }
 
+interface ISdusdPauserSafeOwners {
+    function getOwners() external view returns (address[] memory);
+}
+
 contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
     uint256 internal constant MAINNET_FORK_BLOCK = 26025105;
+    bytes32 private _originalControllerConfiguration;
+    address private _originalControllerImplementation;
 
     string internal constant ACTIVATION_SCHEDULE_PATH =
         "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-activation-schedule.json";
@@ -1516,6 +1527,9 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
     function setUp() public override {
         super.setUp();
         vm.createSelectFork(vm.rpcUrl("ethereum"), MAINNET_FORK_BLOCK);
+        params.freezer = address(EmergencyController(input.contracts.emergencyController).pauserSafe());
+        _originalControllerConfiguration = _controllerConfigurationHash();
+        _originalControllerImplementation = Upgrades.getImplementationAddress(input.contracts.emergencyController);
     }
 
     function testFork_DeploySeedActivateAndWithdrawLegacyCollateral() public {
@@ -1537,7 +1551,13 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         }
 
         params.phase = DeploymentPhase.SDUSD;
+        vm.recordLogs();
         input = DeployAltoEthereumMainnet.deploy(params, input);
+        _assertTemporaryPausersRemoved(vm.getRecordedLogs());
+        assertEq(
+            Upgrades.getImplementationAddress(input.contracts.emergencyController), _originalControllerImplementation
+        );
+        assertTrue(input.contracts.emergencyControllerImplementation != _originalControllerImplementation);
 
         ProtocolFeeCollector collector = ProtocolFeeCollector(input.contracts.protocolFeeCollector);
         SDUSD vault = SDUSD(input.contracts.sdusd);
@@ -1569,6 +1589,11 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         assertTrue(collector.pausers(input.contracts.emergencyController, PAUSE_TYPE));
         assertTrue(vault.pausers(params.freezer, PAUSE_TYPE));
         assertTrue(vault.pausers(input.contracts.emergencyController, PAUSE_TYPE));
+        assertTrue(vault.pausers(params.freezer, FROZEN_TYPE));
+        assertTrue(vault.pausers(input.contracts.emergencyController, FROZEN_TYPE));
+        assertFalse(vault.pausers(input.contracts.timelock, PAUSE_TYPE));
+        assertFalse(vault.pausers(input.contracts.timelock, FROZEN_TYPE));
+        assertFalse(collector.pausers(input.contracts.timelock, PAUSE_TYPE));
 
         deal(input.contracts.dusd, address(this), 1 ether);
         IDUSD(input.contracts.dusd).approve(address(vault), 1 ether);
@@ -1593,6 +1618,16 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
 
         _executeScheduledTimelockBatch(input.contracts.timelock, ACTIVATION_EXECUTE_PATH);
 
+        assertEq(_controllerConfigurationHash(), _originalControllerConfiguration, "controller configuration changed");
+        assertEq(
+            Upgrades.getImplementationAddress(input.contracts.emergencyController),
+            input.contracts.emergencyControllerImplementation,
+            "controller implementation was not upgraded"
+        );
+        assertEq(address(EmergencyController(input.contracts.emergencyController).sdusd()), address(vault));
+        assertEq(
+            address(EmergencyController(input.contracts.emergencyController).protocolFeeCollector()), address(collector)
+        );
         assertEq(collector.sdusdVault(), address(vault));
         assertGe(
             vault.balanceOf(address(1)), vault.seedShares(), "required seed shares must remain locked after activation"
@@ -1610,6 +1645,110 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         _executeAndAssertCollateralWithdrawal(
             mintMarkets, input.contracts.feeRecipientMintMarkets, mintSnapshots, MINT_COLLATERAL_WITHDRAWAL_EXECUTE_PATH
         );
+        _assertEmergencyControls(vault, collector);
+    }
+
+    function testFork_DeploymentRejectsMismatchedPauserSafe() public {
+        params.phase = DeploymentPhase.SDUSD;
+        params.freezer = makeAddr("wrongPauserSafe");
+        vm.expectRevert("Unexpected emergency controller Pauser Safe");
+        this.deploySdusdExternal();
+    }
+
+    function testFork_ActivationRejectsMissingFreezePermission() public {
+        params.phase = DeploymentPhase.SDUSD;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+        vm.prank(input.contracts.timelock);
+        SDUSD(input.contracts.sdusd).setPauser(input.contracts.emergencyController, FROZEN_TYPE, false);
+        vm.expectRevert("Missing emergency controller permissions");
+        this.buildActivationExternal();
+    }
+
+    function testFork_ActivationRejectsMissingSafePermission() public {
+        params.phase = DeploymentPhase.SDUSD;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+        vm.prank(input.contracts.timelock);
+        ProtocolFeeCollector(input.contracts.protocolFeeCollector).setPauser(params.freezer, PAUSE_TYPE, false);
+        vm.expectRevert("Missing Pauser Safe permissions");
+        this.buildActivationExternal();
+    }
+
+    function deploySdusdExternal() external {
+        DeployAltoEthereumMainnet.deploy(params, input);
+    }
+
+    function buildActivationExternal() external view {
+        SDUSDActivationSafeBuilder.buildActivationBatch(input);
+    }
+
+    function _controllerConfigurationHash() private view returns (bytes32) {
+        EmergencyController controller = EmergencyController(input.contracts.emergencyController);
+        return keccak256(
+            abi.encode(
+                controller.owner(),
+                controller.pendingOwner(),
+                address(controller.pauserSafe()),
+                address(controller.marketRegistry()),
+                address(controller.usmRegistry()),
+                address(controller.dusd()),
+                address(controller.universalRewardsDistributor())
+            )
+        );
+    }
+
+    function _assertTemporaryPausersRemoved(Vm.Log[] memory logs) private view {
+        for (uint256 i; i < logs.length; ++i) {
+            Vm.Log memory entry = logs[i];
+            if (entry.emitter != input.contracts.sdusd && entry.emitter != input.contracts.protocolFeeCollector) {
+                continue;
+            }
+            if (entry.topics[0] != keccak256("PauserUpdated(address,bytes32,bool)")) continue;
+            address pauser = address(uint160(uint256(entry.topics[1])));
+            if (pauser == params.freezer || pauser == input.contracts.emergencyController) continue;
+            (bytes32 pauseType,) = abi.decode(entry.data, (bytes32, bool));
+            assertFalse(Pausable(entry.emitter).pausers(pauser, pauseType), "temporary pauser retained permission");
+        }
+    }
+
+    function _assertEmergencyControls(SDUSD vault, ProtocolFeeCollector collector) private {
+        EmergencyController controller = EmergencyController(input.contracts.emergencyController);
+        address responder = ISdusdPauserSafeOwners(params.freezer).getOwners()[0];
+        deal(input.contracts.dusd, address(this), 10 ether);
+        IDUSD(input.contracts.dusd).approve(address(vault), type(uint256).max);
+        vault.deposit(5 ether, address(this));
+
+        vm.prank(responder);
+        controller.freezeSdusd();
+        assertEq(vault.maxDeposit(address(this)), 0);
+        vault.withdraw(1 ether, address(this), address(this));
+        vm.startPrank(responder);
+        controller.pauseSdusd();
+        controller.pauseProtocolFeeCollector();
+        vm.expectRevert(abi.encodeWithSelector(IPausable.Unauthorized.selector, responder, PAUSE_TYPE));
+        vault.pause(PAUSE_TYPE, false);
+        vm.expectRevert(abi.encodeWithSelector(IPausable.Unauthorized.selector, responder, PAUSE_TYPE));
+        collector.pause(PAUSE_TYPE, false);
+        vm.expectRevert(abi.encodeWithSelector(IPausable.Unauthorized.selector, responder, FROZEN_TYPE));
+        vault.pause(FROZEN_TYPE, false);
+        vm.stopPrank();
+        assertEq(vault.maxWithdraw(address(this)), 0);
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
+        vault.redeem(1 ether, address(this), address(this));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
+        collector.harvest(new FeeSourceType[](0), new address[](0));
+
+        vm.startPrank(params.freezer);
+        vault.pause(PAUSE_TYPE, false);
+        assertEq(vault.maxDeposit(address(this)), 0, "freeze must survive unpause");
+        vault.pause(FROZEN_TYPE, false);
+        collector.pause(PAUSE_TYPE, false);
+        vm.stopPrank();
+        vault.deposit(1 ether, address(this));
+        vault.redeem(1 ether, address(this), address(this));
+        collector.harvest(new FeeSourceType[](0), new address[](0));
+        assertFalse(vault.paused(PAUSE_TYPE));
+        assertFalse(vault.paused(FROZEN_TYPE));
+        assertFalse(collector.paused(PAUSE_TYPE));
     }
 
     function _snapshotLegacyPositions(address[] memory markets, address feeRecipient, bool requireSupply)

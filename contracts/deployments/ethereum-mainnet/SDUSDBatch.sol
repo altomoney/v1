@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
-import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {FROZEN_TYPE, PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {SDUSD} from "@alto/sdusd/SDUSD.sol";
 import {SDUSDInitParams} from "@alto/sdusd/interfaces/ISDUSDVault.sol";
 
@@ -47,7 +47,9 @@ contract SDUSDBatch {
         SDUSD vault = SDUSD(UnsafeUpgrades.deployUUPSProxy(implementation, initData));
 
         vault.setPauser(params.emergencyController, PAUSE_TYPE, true);
+        vault.setPauser(params.emergencyController, FROZEN_TYPE, true);
         vault.setPauser(address(this), PAUSE_TYPE, false);
+        vault.setPauser(address(this), FROZEN_TYPE, false);
         vault.transferOwnershipSkip2Step(params.timelock);
 
         report = SDUSDBatchReport({sdusd: address(vault), sdusdImplementation: implementation});
