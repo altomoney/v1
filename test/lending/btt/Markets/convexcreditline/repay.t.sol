@@ -31,19 +31,28 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
 
         _unpause(PAUSE_TYPE);
         _pause(FROZEN_TYPE);
-        _repayAssets(USER, 1 ether);
+        _repayAssets(1 ether);
     }
 
-    function test_CreditAccountCheckPrecedesInheritedAmountValidation() external {
+    function test_RevertWhenCallerIsUnrelated() external {
+        vm.prank(USER);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
+        market.repay(1, 0, CREDIT_ACCOUNT);
+    }
+
+    function test_RevertWhenCallerIsAuthorizedDelegate() external {
+        vm.prank(DELEGATE);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
+        market.repay(1, 0, CREDIT_ACCOUNT);
+    }
+
+    function test_OnBehalfCheckPrecedesInheritedAmountValidation() external {
+        vm.startPrank(CREDIT_ACCOUNT);
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.repay(0, 0, USER);
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
-        market.repay(1, 1, USER);
-
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
-        market.repay(1, 0, USER);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.repay(1, 0, address(0));
+        vm.stopPrank();
     }
 
     function test_InvalidAmountsRollBackAccrualAndAutomaticFeeMinting() external {
@@ -57,7 +66,7 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         for (uint256 amount; amount < 2; ++amount) {
             vm.expectCall(address(irm), abi.encodeCall(IIrm.updateInterestRate, (CREDIT_LIMIT, 100 ether)));
             vm.expectCall(address(borrowToken), abi.encodeCall(borrowToken.mint, (FEE_RECIPIENT, 5 ether)));
-            vm.prank(USER);
+            vm.prank(CREDIT_ACCOUNT);
             vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
             market.repay(amount, amount, CREDIT_ACCOUNT);
 
@@ -69,7 +78,7 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         }
 
         _mockIrmUpdateRevert();
-        vm.prank(USER);
+        vm.prank(CREDIT_ACCOUNT);
         vm.expectRevert(bytes("UPDATE_REVERTED"));
         market.repay(0, 0, CREDIT_ACCOUNT);
         _assertUnchanged(beforeState);
@@ -77,16 +86,16 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
 
     function test_AmountsAboveDebtOrPositionSharesRevertAtomically() external {
         _openPosition(1_000 ether, 100 ether);
-        deal(address(borrowToken), USER, 1_000 ether);
+        deal(address(borrowToken), CREDIT_ACCOUNT, 1_000 ether);
         AccountingState memory beforeState = _state();
 
-        vm.prank(USER);
+        vm.prank(CREDIT_ACCOUNT);
         vm.expectRevert();
         market.repay(101 ether, 0, CREDIT_ACCOUNT);
         _assertUnchanged(beforeState);
 
         (, uint128 shares,) = market.position(CREDIT_ACCOUNT);
-        vm.prank(USER);
+        vm.prank(CREDIT_ACCOUNT);
         vm.expectRevert();
         market.repay(0, uint256(shares) + 1, CREDIT_ACCOUNT);
         _assertUnchanged(beforeState);
@@ -99,9 +108,9 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         _mockAccrual(0, 1);
         (uint128 debtAssets, uint128 debtShares) = market.totalBorrowed();
         uint256 expectedShares = uint256(7 ether).convertToSharesDown(debtAssets, debtShares);
-        deal(address(borrowToken), USER, 7 ether);
+        deal(address(borrowToken), CREDIT_ACCOUNT, 7 ether);
 
-        vm.prank(USER);
+        vm.prank(CREDIT_ACCOUNT);
         (uint256 assets, uint256 shares) = market.repay(7 ether, 0, CREDIT_ACCOUNT);
 
         assertEq(assets, 7 ether);
@@ -114,10 +123,10 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         _mockAccrual(1 ether, 1);
         market.accrueInterest();
         _mockAccrual(0, 1);
-        deal(address(borrowToken), USER, 1);
+        deal(address(borrowToken), CREDIT_ACCOUNT, 1);
         (, uint128 sharesBefore,) = market.position(CREDIT_ACCOUNT);
 
-        vm.prank(USER);
+        vm.prank(CREDIT_ACCOUNT);
         (uint256 assets, uint256 shares) = market.repay(1, 0, CREDIT_ACCOUNT);
 
         assertEq(assets, 1);
@@ -133,9 +142,9 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         _mockAccrual(0, 1);
         (uint128 debtAssets, uint128 debtShares) = market.totalBorrowed();
         uint256 expectedAssets = uint256(debtShares).convertToAssetsUp(debtAssets, debtShares);
-        deal(address(borrowToken), USER, expectedAssets);
+        deal(address(borrowToken), CREDIT_ACCOUNT, expectedAssets);
 
-        vm.prank(USER);
+        vm.prank(CREDIT_ACCOUNT);
         (uint256 assets, uint256 shares) = market.repay(0, debtShares, CREDIT_ACCOUNT);
 
         assertEq(assets, expectedAssets);
@@ -144,20 +153,6 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         assertEq(remainingPositionShares, 0);
         vm.prank(CREDIT_ACCOUNT);
         market.removeCollateral(1 ether, CREDIT_ACCOUNT, RECEIVER, "");
-    }
-
-    function test_AnyCallerMayRepayButTokensAreBurnedFromThatCaller() external {
-        _openPosition(1_000 ether, 100 ether);
-        uint256 debtBefore = borrowToken.totalSupply();
-        _repayAssets(CREDIT_ACCOUNT, 10 ether);
-        assertEq(borrowToken.totalSupply(), debtBefore - 10 ether);
-
-        _repayAssets(USER, 10 ether);
-        assertEq(borrowToken.balanceOf(USER), 0);
-        assertEq(borrowToken.totalSupply(), debtBefore - 20 ether);
-
-        _repayAssets(DELEGATE, 10 ether);
-        assertEq(borrowToken.balanceOf(DELEGATE), 0);
     }
 
     function test_RepaymentDoesNotReduceHistoricalBadDebt() external {
@@ -171,17 +166,21 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         _addCollateral(1_000 ether);
         _mockAccrual(0, 0);
         _borrow(50 ether);
-        _repayAssets(USER, 20 ether);
+        _repayAssets(20 ether);
 
         assertEq(market.badDebtAssets(), 100 ether);
         (uint128 debtAssets,) = market.totalBorrowed();
         assertEq(debtAssets, 30 ether);
     }
 
-    function test_InsufficientPayerBalanceRevertsAtomically() external {
+    function test_InsufficientCreditAccountBalanceRevertsAtomically() external {
         _openPosition(1_000 ether, 100 ether);
+        uint256 creditAccountBalance = borrowToken.balanceOf(CREDIT_ACCOUNT);
+        vm.prank(CREDIT_ACCOUNT);
+        borrowToken.transfer(USER, creditAccountBalance);
         AccountingState memory beforeState = _state();
-        vm.prank(USER);
+
+        vm.prank(CREDIT_ACCOUNT);
         vm.expectRevert();
         market.repay(1 ether, 0, CREDIT_ACCOUNT);
         _assertUnchanged(beforeState);
@@ -195,9 +194,9 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         (, uint128 positionShares,) = market.position(CREDIT_ACCOUNT);
         (uint128 debtAssets, uint128 debtShares) = market.totalBorrowed();
         uint256 burnAssets = uint256(positionShares).convertToAssetsUp(debtAssets, debtShares);
-        deal(address(borrowToken), USER, burnAssets);
+        deal(address(borrowToken), CREDIT_ACCOUNT, burnAssets);
 
-        vm.prank(USER);
+        vm.prank(CREDIT_ACCOUNT);
         market.repay(0, positionShares, CREDIT_ACCOUNT);
 
         (uint128 residualAssets, uint128 residualShares) = market.totalBorrowed();
@@ -211,11 +210,11 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
 
     function test_BurnFailureRollsBackAtomically() external {
         _openPosition(1_000 ether, 100 ether);
-        deal(address(borrowToken), USER, 10 ether);
+        deal(address(borrowToken), CREDIT_ACCOUNT, 10 ether);
         AccountingState memory beforeState = _state();
         vm.mockCallRevert(address(borrowToken), borrowToken.burn.selector, bytes("BURN_REVERTED"));
 
-        vm.prank(USER);
+        vm.prank(CREDIT_ACCOUNT);
         vm.expectRevert(bytes("BURN_REVERTED"));
         market.repay(10 ether, 0, CREDIT_ACCOUNT);
         _assertUnchanged(beforeState);
@@ -228,11 +227,11 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         (, uint128 positionShares,) = market.position(CREDIT_ACCOUNT);
         (uint128 debtAssets, uint128 debtShares) = market.totalBorrowed();
         uint256 assets = uint256(positionShares).convertToAssetsUp(debtAssets, debtShares);
-        deal(address(borrowToken), USER, assets);
+        deal(address(borrowToken), CREDIT_ACCOUNT, assets);
         AccountingState memory beforeState = _state();
 
         vm.mockCallRevert(address(borrowToken), borrowToken.mint.selector, bytes("MINT_REVERTED"));
-        vm.prank(USER);
+        vm.prank(CREDIT_ACCOUNT);
         vm.expectRevert(bytes("MINT_REVERTED"));
         market.repay(0, positionShares, CREDIT_ACCOUNT);
         _assertUnchanged(beforeState);
@@ -244,7 +243,7 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         accrualResults[0] = abi.encode(5 ether, 19);
         accrualResults[1] = abi.encode(2 ether, 23);
         vm.mockCalls(address(irm), abi.encodeWithSelector(IIrm.updateInterestRate.selector), accrualResults);
-        deal(address(borrowToken), USER, 10 ether);
+        deal(address(borrowToken), CREDIT_ACCOUNT, 10 ether);
 
         vm.expectEmit(address(market));
         emit IMarketEvents.AccrueInterest(19, 5 ether, 105 ether, uint128(CREDIT_LIMIT));
@@ -252,7 +251,7 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         emit IAltoConvexCreditLineMarketEvents.InterestClaimed(FEE_RECIPIENT, 5 ether);
         vm.expectEmit(address(market));
         emit IMarketEvents.AccrueInterest(23, 2 ether, 107 ether, uint128(CREDIT_LIMIT));
-        vm.prank(USER);
+        vm.prank(CREDIT_ACCOUNT);
         market.repay(10 ether, 0, CREDIT_ACCOUNT);
         vm.clearMockedCalls();
 
@@ -345,7 +344,7 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         accrualResults[0] = abi.encode(5 ether, 19);
         accrualResults[1] = abi.encode(0, 19);
         vm.mockCalls(address(irm), abi.encodeWithSelector(IIrm.updateInterestRate.selector), accrualResults);
-        deal(address(borrowToken), USER, 10 ether);
+        deal(address(borrowToken), CREDIT_ACCOUNT, 10 ether);
         (uint128 supplyAssetsBefore, uint128 supplySharesBefore) = market.totalSupply();
         uint256 stakedBefore = rewardPool.balanceOf(address(market));
         uint256 claimableBefore = market.claimableFeesAssets();
@@ -359,8 +358,8 @@ contract AltoConvexCreditLineMarketRepayTest is ConvexCreditLineCommon {
         vm.expectEmit(address(market));
         emit IAltoConvexCreditLineMarketEvents.InterestClaimed(FEE_RECIPIENT, claimableBefore + 5 ether);
         vm.expectEmit(false, true, false, false, address(market));
-        emit IMarketEvents.Repay(USER, CREDIT_ACCOUNT, 0, 0);
-        vm.prank(USER);
+        emit IMarketEvents.Repay(CREDIT_ACCOUNT, CREDIT_ACCOUNT, 0, 0);
+        vm.prank(CREDIT_ACCOUNT);
         (uint256 assets, uint256 shares) = market.repay(10 ether, 0, CREDIT_ACCOUNT);
         vm.clearMockedCalls();
 

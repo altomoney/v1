@@ -254,8 +254,8 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
         uint256 denominator = uint256(debtShares) + 1e6;
         uint256 burnAssets = numerator / denominator;
         if (numerator % denominator != 0) ++burnAssets;
-        deal(address(borrowToken), USER, burnAssets);
-        vm.prank(USER);
+        deal(address(borrowToken), CREDIT_ACCOUNT, burnAssets);
+        vm.prank(CREDIT_ACCOUNT);
         market.repay(0, positionShares, CREDIT_ACCOUNT);
         (debtAssets,) = market.totalBorrowed();
         assertGt(debtAssets, 0);

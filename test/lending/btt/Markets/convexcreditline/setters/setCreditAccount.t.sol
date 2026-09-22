@@ -72,7 +72,7 @@ contract AltoConvexCreditLineMarketSetCreditAccountTest is ConvexCreditLineCommo
 
     function test_AllowsRotationAfterFullRepaymentAndCollateralWithdrawal() external {
         _openPosition(1_000 ether, 100 ether);
-        _repayAllShares(CREDIT_ACCOUNT);
+        _repayAllShares();
         _expectPositionNotEmpty();
 
         vm.prank(CREDIT_ACCOUNT);
