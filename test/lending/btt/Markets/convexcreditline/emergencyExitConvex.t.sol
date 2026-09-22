@@ -172,10 +172,10 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
         assertEq(collateralAfter, 0);
         assertEq(rewardPool.withdrawCalls(), withdrawalsBefore);
 
-        deal(address(collateralToken), USER, 1 ether);
-        vm.prank(USER);
+        deal(address(collateralToken), CREDIT_ACCOUNT, 1 ether);
+        vm.prank(CREDIT_ACCOUNT);
         collateralToken.approve(address(market), type(uint256).max);
-        vm.prank(USER);
+        vm.prank(CREDIT_ACCOUNT);
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.addCollateral(1 ether, CREDIT_ACCOUNT);
 
