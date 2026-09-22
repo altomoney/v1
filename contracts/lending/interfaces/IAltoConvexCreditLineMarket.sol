@@ -255,6 +255,14 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
 /// @custom:contact security@altofoundation.org
 /// @notice Interface for a Curve-LP-backed credit line market staked through Convex
 interface IAltoConvexCreditLineMarket is IMarket, IAltoConvexCreditLineMarketBase {
+    /// @notice Adds collateral to the credit account's position and deposits it into Convex
+    /// @dev Only the exact `creditAccount` may call this function and `onBehalf` must equal `creditAccount`.
+    /// Authorized delegates and unrelated accounts cannot add collateral.
+    /// @param assets The amount of collateral to add
+    /// @param onBehalf The configured credit account
+    /// @return assets The amount of collateral added
+    function addCollateral(uint256 assets, address onBehalf) external override returns (uint256);
+
     /// @notice Sets a nonzero IRM for the market
     /// @param irm The address of the new IRM implementing IIrm
     /// @param skipAccrueInterest Whether to skip accrual with the current IRM before updating it

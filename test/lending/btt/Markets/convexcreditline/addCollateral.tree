@@ -4,10 +4,15 @@ AltoConvexCreditLineMarket::addCollateral()
 ├── when market is frozen but not paused
 │   └── it should revert with IsPaused for FROZEN_TYPE
 ├── given invalid inputs
+│   ├── when caller is not the exact creditAccount
+│   │   ├── when caller is an unrelated account
+│   │   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
+│   │   └── when caller is an authorized delegate of creditAccount
+│   │       └── it should revert with AltoCreditMarketUnauthorizedAccount
 │   ├── when onBehalf is not creditAccount
-│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
+│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount when caller is creditAccount
 │   ├── when onBehalf is zero address
-│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
+│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount when caller is creditAccount
 │   └── when assets is zero for creditAccount
 │       └── it should revert with AltoBaseMarketInvalidInput
 ├── given Convex strategy is inactive
@@ -20,10 +25,7 @@ AltoConvexCreditLineMarket::addCollateral()
 │   └── when Booster returns false
 │       └── it should revert with AltoConvexCreditLineExternalCallFailed
 └── given a valid deposit for creditAccount
-    ├── when caller is creditAccount
-    │   └── it should succeed
-    ├── when caller is an unrelated account
-    │   └── it should succeed without position authorization
+    ├── it should require caller to be creditAccount
     ├── it should transfer exactly assets of raw LP from caller
     ├── it should call Booster deposit with the configured PID assets and stake true
     ├── it should approve only assets for the Booster call and leave allowance at zero afterward
@@ -35,5 +37,4 @@ AltoConvexCreditLineMarket::addCollateral()
     ├── it should not change totalSupply totalBorrowed or debt shares
     ├── it should emit CollateralStaked before AddCollateral
     ├── it should include msg.sender and assets in CollateralStaked
-    ├── it should support repeated deposits by different callers into the same creditAccount position
     └── it should return assets

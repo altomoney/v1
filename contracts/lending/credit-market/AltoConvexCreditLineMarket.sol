@@ -323,8 +323,10 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     }
 
     /// @inheritdoc AltoBaseMarket
-    /// @dev Only `creditAccount` can receive collateral, which is deposited into Convex.
+    /// @dev Only the exact `creditAccount` may call and receive collateral. Authorized delegates cannot add collateral.
+    /// The collateral is deposited into Convex.
     function _addCollateral(uint256 assets, address onBehalf) internal override nonReentrant returns (uint256) {
+        _requireCreditAccount(msg.sender);
         _requireCreditAccount(onBehalf);
         return super._addCollateral(assets, onBehalf);
     }
