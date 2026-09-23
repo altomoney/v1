@@ -110,39 +110,76 @@ contract EmergencyControllerTest is Test {
 
     function test_UsesLiveSafeOwnership() public {
         vm.prank(responder);
-        controller.pauseMarket(address(mintMarket));
+        controller.pause(address(mintMarket));
 
         safe.setOwner(removedResponder, false);
 
         vm.prank(removedResponder);
         vm.expectRevert(abi.encodeWithSelector(EmergencyController.Unauthorized.selector, removedResponder));
-        controller.freezeMarket(address(mintMarket));
+        controller.freeze(address(mintMarket));
     }
 
     function test_RejectsNonSafeOwner() public {
         vm.prank(outsider);
         vm.expectRevert(abi.encodeWithSelector(EmergencyController.Unauthorized.selector, outsider));
-        controller.pauseDusd();
+        controller.pause(address(dusd));
     }
 
     function test_PausesAndFreezesRegisteredMarketIdempotently() public {
         vm.startPrank(responder);
-        controller.pauseMarket(address(mintMarket));
-        controller.pauseMarket(address(mintMarket));
-        controller.freezeMarket(address(mintMarket));
-        controller.freezeMarket(address(mintMarket));
+        controller.pause(address(mintMarket));
+        controller.pause(address(mintMarket));
+        controller.freeze(address(mintMarket));
+        controller.freeze(address(mintMarket));
         vm.stopPrank();
 
         assertTrue(mintMarket.paused(PAUSE_TYPE));
         assertTrue(mintMarket.paused(FROZEN_TYPE));
     }
 
+    function test_EmergencyControllerCanPauseAndFreezeSdusdVault() public {
+        PausableMock sdusdVault = new PausableMock(address(this));
+        sdusdVault.setPauser(address(controller), PAUSE_TYPE, true);
+        sdusdVault.setPauser(address(controller), FROZEN_TYPE, true);
+
+        vm.startPrank(governance);
+        controller.setPauseWhitelist(address(sdusdVault), true);
+        controller.setFrozenWhitelist(address(sdusdVault), true);
+        vm.stopPrank();
+
+        vm.startPrank(responder);
+        controller.freeze(address(sdusdVault));
+        controller.pause(address(sdusdVault));
+        vm.stopPrank();
+
+        assertTrue(controller.pauseWhitelist(address(sdusdVault)));
+        assertTrue(controller.frozenWhitelist(address(sdusdVault)));
+        assertTrue(sdusdVault.paused(FROZEN_TYPE));
+        assertTrue(sdusdVault.paused(PAUSE_TYPE));
+    }
+
+    function test_EmergencyControllerCanPauseProtocolFeeCollector() public {
+        PausableMock protocolFeeCollector = new PausableMock(address(this));
+        protocolFeeCollector.setPauser(address(controller), PAUSE_TYPE, true);
+
+        vm.prank(governance);
+        controller.setPauseWhitelist(address(protocolFeeCollector), true);
+
+        vm.prank(responder);
+        controller.pause(address(protocolFeeCollector));
+
+        assertTrue(controller.pauseWhitelist(address(protocolFeeCollector)));
+        assertTrue(protocolFeeCollector.paused(PAUSE_TYPE));
+    }
+
     function test_RejectsUnregisteredMarket() public {
         PausableMock unregistered = new PausableMock(address(this));
 
         vm.prank(responder);
-        vm.expectRevert(abi.encodeWithSelector(EmergencyController.UnregisteredMarket.selector, address(unregistered)));
-        controller.pauseMarket(address(unregistered));
+        vm.expectRevert(
+            abi.encodeWithSelector(EmergencyController.UnsupportedTarget.selector, address(unregistered), PAUSE_TYPE)
+        );
+        controller.pause(address(unregistered));
     }
 
     function test_FreezesRegisteredUsmsIdempotently() public {
@@ -164,22 +201,22 @@ contract EmergencyControllerTest is Test {
 
     function test_PausesSingletonsIdempotently() public {
         vm.startPrank(responder);
-        controller.pauseDusd();
-        controller.pauseDusd();
-        controller.pauseUniversalRewardsDistributor();
-        controller.pauseUniversalRewardsDistributor();
+        controller.pause(address(dusd));
+        controller.pause(address(dusd));
+        controller.pause(address(rewardsDistributor));
+        controller.pause(address(rewardsDistributor));
         vm.stopPrank();
 
         assertTrue(dusd.paused(PAUSE_TYPE));
         assertTrue(rewardsDistributor.paused(PAUSE_TYPE));
     }
 
-    function test_GovernanceCanSetDependencies() public {
+    function test_GovernanceCanSetDependenciesAndWhitelists() public {
         MockSafeOwnerManager newSafe = new MockSafeOwnerManager();
         MarketRegistry newMarketRegistry = new MarketRegistry(address(this));
         UsmRegistry newUsmRegistry = new UsmRegistry(address(this));
-        PausableMock newDusd = new PausableMock(address(this));
-        PausableMock newRewardsDistributor = new PausableMock(address(this));
+        PausableMock pauseTarget = new PausableMock(address(this));
+        PausableMock frozenTarget = new PausableMock(address(this));
 
         vm.startPrank(governance);
 
@@ -195,26 +232,26 @@ contract EmergencyControllerTest is Test {
         emit EmergencyController.UsmRegistrySet(address(usmRegistry), address(newUsmRegistry));
         controller.setUsmRegistry(address(newUsmRegistry));
 
-        vm.expectEmit(true, true, false, false, address(controller));
-        emit EmergencyController.DusdSet(address(dusd), address(newDusd));
-        controller.setDusd(address(newDusd));
+        vm.expectEmit(true, false, false, true, address(controller));
+        emit EmergencyController.PauseWhitelistSet(address(pauseTarget), true);
+        controller.setPauseWhitelist(address(pauseTarget), true);
 
-        vm.expectEmit(true, true, false, false, address(controller));
-        emit EmergencyController.UniversalRewardsDistributorSet(
-            address(rewardsDistributor), address(newRewardsDistributor)
-        );
-        controller.setUniversalRewardsDistributor(address(newRewardsDistributor));
+        vm.expectEmit(true, false, false, true, address(controller));
+        emit EmergencyController.FrozenWhitelistSet(address(frozenTarget), true);
+        controller.setFrozenWhitelist(address(frozenTarget), true);
 
         vm.stopPrank();
 
         assertEq(address(controller.pauserSafe()), address(newSafe));
         assertEq(address(controller.marketRegistry()), address(newMarketRegistry));
         assertEq(address(controller.usmRegistry()), address(newUsmRegistry));
-        assertEq(address(controller.dusd()), address(newDusd));
-        assertEq(address(controller.universalRewardsDistributor()), address(newRewardsDistributor));
+        assertEq(address(controller.dusd()), address(dusd));
+        assertEq(address(controller.universalRewardsDistributor()), address(rewardsDistributor));
+        assertTrue(controller.pauseWhitelist(address(pauseTarget)));
+        assertTrue(controller.frozenWhitelist(address(frozenTarget)));
     }
 
-    function test_OnlyGovernanceCanSetDependencies() public {
+    function test_OnlyGovernanceCanSetDependenciesAndWhitelists() public {
         vm.startPrank(responder);
 
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, responder));
@@ -227,10 +264,10 @@ contract EmergencyControllerTest is Test {
         controller.setUsmRegistry(outsider);
 
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, responder));
-        controller.setDusd(outsider);
+        controller.setPauseWhitelist(outsider, true);
 
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, responder));
-        controller.setUniversalRewardsDistributor(outsider);
+        controller.setFrozenWhitelist(outsider, true);
 
         vm.stopPrank();
     }
@@ -248,10 +285,10 @@ contract EmergencyControllerTest is Test {
         controller.setUsmRegistry(address(0));
 
         vm.expectRevert(EmergencyController.ZeroAddress.selector);
-        controller.setDusd(address(0));
+        controller.setPauseWhitelist(address(0), true);
 
         vm.expectRevert(EmergencyController.ZeroAddress.selector);
-        controller.setUniversalRewardsDistributor(address(0));
+        controller.setFrozenWhitelist(address(0), true);
 
         vm.stopPrank();
     }

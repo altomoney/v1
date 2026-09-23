@@ -1372,10 +1372,10 @@ contract DeployMarketDeprecationPhase0Test is DeployAltoEthereumMainnetDeprecate
         address[] memory safeOwners = ISafeOwners(address(controller.pauserSafe())).getOwners();
         vm.startPrank(safeOwners[0]);
         for (uint256 i; i < borrowMarkets.length; ++i) {
-            controller.freezeMarket(borrowMarkets[i]);
+            controller.freeze(borrowMarkets[i]);
         }
         for (uint256 i; i < mintMarkets.length; ++i) {
-            controller.freezeMarket(mintMarkets[i]);
+            controller.freeze(mintMarkets[i]);
         }
         vm.stopPrank();
     }

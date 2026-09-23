@@ -20,25 +20,25 @@ interface ISafeOwnerManager {
 /// @dev Deploy behind a UUPS proxy owned by protocol governance.
 contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPSUpgradeable {
     error Unauthorized(address caller);
-    error UnregisteredMarket(address market);
+    error UnsupportedTarget(address target, bytes32 pauseType);
     error UnregisteredUsm(address usm);
     error ZeroAddress();
 
     event PauserSafeSet(address indexed oldPauserSafe, address indexed newPauserSafe);
     event MarketRegistrySet(address indexed oldMarketRegistry, address indexed newMarketRegistry);
     event UsmRegistrySet(address indexed oldUsmRegistry, address indexed newUsmRegistry);
-    event DusdSet(address indexed oldDusd, address indexed newDusd);
-    event UniversalRewardsDistributorSet(
-        address indexed oldUniversalRewardsDistributor, address indexed newUniversalRewardsDistributor
-    );
+    event PauseWhitelistSet(address indexed target, bool allowed);
+    event FrozenWhitelistSet(address indexed target, bool allowed);
 
     ISafeOwnerManager public pauserSafe;
     IMarketRegistry public marketRegistry;
     IUsmRegistry public usmRegistry;
     IPausable public dusd;
     IPausable public universalRewardsDistributor;
+    mapping(address target => bool allowed) public pauseWhitelist;
+    mapping(address target => bool allowed) public frozenWhitelist;
 
-    uint256[45] private __gap;
+    uint256[43] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -97,30 +97,29 @@ contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPS
         usmRegistry = IUsmRegistry(newUsmRegistry);
     }
 
-    /// @notice Updates the DUSD pause target.
-    function setDusd(address newDusd) external onlyOwner {
-        if (newDusd == address(0)) revert ZeroAddress();
-        emit DusdSet(address(dusd), newDusd);
-        dusd = IPausable(newDusd);
+    /// @notice Adds or removes a target from the pause whitelist.
+    function setPauseWhitelist(address target, bool allowed) external onlyOwner {
+        _setPauseWhitelist(target, allowed);
     }
 
-    /// @notice Updates the UniversalRewardsDistributor pause target.
-    function setUniversalRewardsDistributor(address newUniversalRewardsDistributor) external onlyOwner {
-        if (newUniversalRewardsDistributor == address(0)) revert ZeroAddress();
-        emit UniversalRewardsDistributorSet(address(universalRewardsDistributor), newUniversalRewardsDistributor);
-        universalRewardsDistributor = IPausable(newUniversalRewardsDistributor);
+    /// @notice Adds or removes a target from the frozen whitelist.
+    function setFrozenWhitelist(address target, bool allowed) external onlyOwner {
+        _setFrozenWhitelist(target, allowed);
     }
 
-    /// @notice Pauses a registered mint or borrow market.
-    function pauseMarket(address market) external onlyPauserSafeOwner {
-        _requireRegisteredMarket(market);
-        _pause(market, PAUSE_TYPE);
+    /// @notice Pauses a whitelisted target or registered mint or borrow market.
+    function pause(address target) external onlyPauserSafeOwner {
+        if (
+            target != address(dusd) && target != address(universalRewardsDistributor) && !pauseWhitelist[target]
+                && !_isRegisteredMarket(target)
+        ) revert UnsupportedTarget(target, PAUSE_TYPE);
+        _pause(target, PAUSE_TYPE);
     }
 
-    /// @notice Freezes a registered mint or borrow market.
-    function freezeMarket(address market) external onlyPauserSafeOwner {
-        _requireRegisteredMarket(market);
-        _pause(market, FROZEN_TYPE);
+    /// @notice Freezes a whitelisted target or registered mint or borrow market.
+    function freeze(address target) external onlyPauserSafeOwner {
+        if (!frozenWhitelist[target] && !_isRegisteredMarket(target)) revert UnsupportedTarget(target, FROZEN_TYPE);
+        _pause(target, FROZEN_TYPE);
     }
 
     /// @notice Freezes a registered USM.
@@ -129,20 +128,20 @@ contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPS
         _freezeUsm(usm);
     }
 
-    /// @notice Pauses DUSD minting and burning.
-    function pauseDusd() external onlyPauserSafeOwner {
-        _pause(address(dusd), PAUSE_TYPE);
+    function _setPauseWhitelist(address target, bool allowed) internal {
+        if (target == address(0)) revert ZeroAddress();
+        pauseWhitelist[target] = allowed;
+        emit PauseWhitelistSet(target, allowed);
     }
 
-    /// @notice Pauses claims from the UniversalRewardsDistributor.
-    function pauseUniversalRewardsDistributor() external onlyPauserSafeOwner {
-        _pause(address(universalRewardsDistributor), PAUSE_TYPE);
+    function _setFrozenWhitelist(address target, bool allowed) internal {
+        if (target == address(0)) revert ZeroAddress();
+        frozenWhitelist[target] = allowed;
+        emit FrozenWhitelistSet(target, allowed);
     }
 
-    function _requireRegisteredMarket(address market) internal view {
-        if (!marketRegistry.isMintMarket(market) && !marketRegistry.isBorrowMarket(market)) {
-            revert UnregisteredMarket(market);
-        }
+    function _isRegisteredMarket(address target) internal view returns (bool) {
+        return marketRegistry.isMintMarket(target) || marketRegistry.isBorrowMarket(target);
     }
 
     function _pause(address target, bytes32 pauseType) internal {
