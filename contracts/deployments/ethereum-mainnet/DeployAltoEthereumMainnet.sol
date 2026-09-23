@@ -92,6 +92,7 @@ import {
 } from "@alto/deployments/ethereum-mainnet/ProtocolFeeCollectorBatch.sol";
 import {SDUSDBatch, SDUSDBatchParams, SDUSDBatchReport} from "@alto/deployments/ethereum-mainnet/SDUSDBatch.sol";
 import {SDUSD} from "@alto/sdusd/SDUSD.sol";
+import {SDUSDActivationSafeBuilder} from "@alto/deployments/ethereum-mainnet/SDUSDActivationSafeBuilder.sol";
 import {SafeTransactionBuilder} from "@alto/deployments/ethereum-mainnet/SafeTransactionBuilder.sol";
 import {
     MintCurveConvexPositionFactoryBatch,
@@ -1963,8 +1964,8 @@ library DeployAltoEthereumMainnet {
         require(input.contracts.dusd != address(0), "Invalid DUSD");
         require(input.contracts.marketRegistry != address(0), "Invalid market registry");
         require(input.contracts.usmRegistry != address(0), "Invalid USM registry");
+        require(input.contracts.vaultRegistry != address(0), "Invalid vault registry");
         require(input.contracts.dusdFlashMinter != address(0), "Invalid flash minter");
-        require(input.contracts.feeRecipient != address(0), "Invalid legacy fee recipient");
         require(input.contracts.protocolFeeCollector == address(0), "ProtocolFeeCollector already deployed");
         require(input.contracts.sdusd == address(0), "SDUSD already deployed");
 
@@ -1973,6 +1974,8 @@ library DeployAltoEthereumMainnet {
         require(address(controller.pauserSafe()) == params.freezer, "Unexpected emergency controller Pauser Safe");
         // The implementation is deployed now. The existing proxy is upgraded atomically during activation.
         input.contracts.emergencyControllerImplementation = address(new EmergencyController());
+        address[] memory collateralOperators = new address[](1);
+        collateralOperators[0] = params.treasuryMultisig;
 
         ProtocolFeeCollectorBatch collectorBatch = new ProtocolFeeCollectorBatch(
             ProtocolFeeCollectorBatchParams({
@@ -1981,12 +1984,13 @@ library DeployAltoEthereumMainnet {
                 emergencyController: input.contracts.emergencyController,
                 dusd: input.contracts.dusd,
                 marketRegistry: input.contracts.marketRegistry,
+                vaultRegistry: input.contracts.vaultRegistry,
                 usmRegistry: input.contracts.usmRegistry,
                 flashMinter: input.contracts.dusdFlashMinter,
                 // Tentative launch destinations; change these centrally before deployment if required.
                 treasury: params.treasuryMultisig,
-                manualSwapReceiver: params.treasuryMultisig, // @todo
-                collateralOperators: _sdusdCollateralOperators(input), // @todo
+                manualSwapReceiver: params.treasuryMultisig,
+                collateralOperators: collateralOperators,
                 rewardsBps: 10_000, // @todo
                 minimumRewardAmount: 100 ether // @todo
             })
@@ -2032,17 +2036,6 @@ library DeployAltoEthereumMainnet {
 
         SDUSDActivationSafeBuilder.write(input);
         return input;
-    }
-
-    /// @dev Tentative launch allowlist. Keep collateral-operator changes centralized here so the
-    ///      complete list is reviewed before mainnet deployment.
-    function _sdusdCollateralOperators(AltoEthereumMainnetInput memory input)
-        private
-        pure
-        returns (address[] memory operators)
-    {
-        operators = new address[](1);
-        operators[0] = input.contracts.feeRecipient;
     }
 
     function preflightPegResponsiveIrmMigration(AltoEthereumMainnetInput memory input) internal view {

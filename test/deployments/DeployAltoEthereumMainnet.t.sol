@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {console} from "forge-std/console.sol";
 import {Balance, IMarket, IMarketBase, MarketType, Position} from "@alto/lending/interfaces/IMarket.sol";
+import {IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
 import {
     DeployAltoEthereumMainnet,
     AltoEthereumMainnetParams,
@@ -50,7 +51,6 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/AltoMultiChainlinkLendingOracle.sol";
 import {DusdPegCurveOracle} from "@alto/oracles/DusdPegCurveOracle/DusdPegCurveOracle.sol";
 import {IDusdPegOracle} from "@alto/oracles/interfaces/IDusdPegOracle.sol";
-import {ILendingOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {ICurveStableSwapNGOracle} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
 import {
     OwnerPegResponsiveExponentialIrmFactory
@@ -90,7 +90,6 @@ import {
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {ProtocolFeeCollector} from "@alto/sdusd/ProtocolFeeCollector.sol";
 import {SDUSD} from "@alto/sdusd/SDUSD.sol";
@@ -99,9 +98,8 @@ import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {FeeSourceType} from "@alto/sdusd/interfaces/IProtocolFeeCollector.sol";
 import {SDUSDActivationSafeBuilder} from "@alto/deployments/ethereum-mainnet/SDUSDActivationSafeBuilder.sol";
 import {IStableTokenFacilitator} from "@alto/usm/interfaces/IStableTokenFacilitator.sol";
-import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
-import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
 import {IUsmRegistry} from "@alto/utils/interfaces/IUsmRegistry.sol";
+import {IVaultRegistry} from "@alto/utils/interfaces/IVaultRegistry.sol";
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
 ///      and skip re-deploying prerequisites. The file must be at:
@@ -1509,19 +1507,15 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-activation-schedule.json";
     string internal constant ACTIVATION_EXECUTE_PATH =
         "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-activation-execute.json";
-    string internal constant BORROW_COLLATERAL_WITHDRAWAL_SCHEDULE_PATH =
-        "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-borrow-fee-collateral-withdrawal-schedule.json";
-    string internal constant BORROW_COLLATERAL_WITHDRAWAL_EXECUTE_PATH =
-        "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-borrow-fee-collateral-withdrawal-execute.json";
-    string internal constant MINT_COLLATERAL_WITHDRAWAL_SCHEDULE_PATH =
-        "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-mint-fee-collateral-withdrawal-schedule.json";
-    string internal constant MINT_COLLATERAL_WITHDRAWAL_EXECUTE_PATH =
-        "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-mint-fee-collateral-withdrawal-execute.json";
 
     struct LegacyFeePositionSnapshot {
         uint256 supplyShares;
         uint256 collateralAssets;
-        uint256 receiverCollateralBalance;
+    }
+
+    struct LegacyVaultFeeSnapshot {
+        address feeRecipient;
+        uint256 recipientShares;
     }
 
     function setUp() public override {
@@ -1532,10 +1526,12 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         _originalControllerImplementation = Upgrades.getImplementationAddress(input.contracts.emergencyController);
     }
 
-    function testFork_DeploySeedActivateAndWithdrawLegacyCollateral() public {
+    function testFork_DeploySeedAndActivate() public {
         address[] memory borrowMarkets = IMarketRegistry(input.contracts.marketRegistry).getBorrowMarkets();
         address[] memory mintMarkets = IMarketRegistry(input.contracts.marketRegistry).getMintMarkets();
         address[] memory usms = IUsmRegistry(input.contracts.usmRegistry).getUsmList();
+        address[] memory registeredVaults = IVaultRegistry(input.contracts.vaultRegistry).getVaultList();
+        LegacyVaultFeeSnapshot[] memory vaultSnapshots = _snapshotLegacyVaultFees(registeredVaults);
 
         (LegacyFeePositionSnapshot[] memory borrowSnapshots, uint256 borrowCollateralMarketCount) =
             _snapshotLegacyPositions(borrowMarkets, input.contracts.feeRecipient, true);
@@ -1581,7 +1577,7 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         assertEq(collector.manualSwapReceiver(), params.treasuryMultisig);
         assertEq(collector.rewardsBps(), 10_000);
         assertEq(collector.minimumRewardAmount(), 100 ether);
-        assertTrue(collector.isCollateralOperator(input.contracts.feeRecipient));
+        assertTrue(collector.isCollateralOperator(params.treasuryMultisig));
         assertEq(vault.seedShares(), 1 ether);
         assertEq(vault.depositCap(), 115_000 ether);
         assertEq(vault.rewardDuration(), 7 days);
@@ -1605,16 +1601,9 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         _scheduleTimelockBatch(input.contracts.timelock, ACTIVATION_SCHEDULE_PATH);
-        _scheduleTimelockBatch(input.contracts.feeRecipient, BORROW_COLLATERAL_WITHDRAWAL_SCHEDULE_PATH);
-        _scheduleTimelockBatch(input.contracts.feeRecipientMintMarkets, MINT_COLLATERAL_WITHDRAWAL_SCHEDULE_PATH);
-
-        _mockPreWarpOraclePrices(borrowMarkets, borrowSnapshots);
-        _mockPreWarpOraclePrices(mintMarkets, mintSnapshots);
 
         uint256 activationDelay = TimelockController(payable(input.contracts.timelock)).getMinDelay();
-        uint256 borrowFeeDelay = TimelockController(payable(input.contracts.feeRecipient)).getMinDelay();
-        uint256 mintFeeDelay = TimelockController(payable(input.contracts.feeRecipientMintMarkets)).getMinDelay();
-        vm.warp(block.timestamp + Math.max(activationDelay, Math.max(borrowFeeDelay, mintFeeDelay)) + 1);
+        vm.warp(block.timestamp + activationDelay + 1);
 
         _executeScheduledTimelockBatch(input.contracts.timelock, ACTIVATION_EXECUTE_PATH);
 
@@ -1624,11 +1613,14 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
             input.contracts.emergencyControllerImplementation,
             "controller implementation was not upgraded"
         );
-        assertEq(address(EmergencyController(input.contracts.emergencyController).sdusd()), address(vault));
-        assertEq(
-            address(EmergencyController(input.contracts.emergencyController).protocolFeeCollector()), address(collector)
-        );
+        EmergencyController controller = EmergencyController(input.contracts.emergencyController);
+        assertTrue(controller.pauseWhitelist(address(vault)));
+        assertTrue(controller.frozenWhitelist(address(vault)));
+        assertTrue(controller.pauseWhitelist(address(collector)));
         assertEq(collector.sdusdVault(), address(vault));
+        assertEq(
+            address(collector.vaultRegistry()), input.contracts.vaultRegistry, "collector vault registry not configured"
+        );
         assertGe(
             vault.balanceOf(address(1)), vault.seedShares(), "required seed shares must remain locked after activation"
         );
@@ -1639,12 +1631,7 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
             mintMarkets, input.contracts.feeRecipientMintMarkets, mintSnapshots, address(collector), false
         );
         _assertAncillaryFeeSourcesActivated(usms, originalUsmFeeRecipients, address(collector));
-        _executeAndAssertCollateralWithdrawal(
-            borrowMarkets, input.contracts.feeRecipient, borrowSnapshots, BORROW_COLLATERAL_WITHDRAWAL_EXECUTE_PATH
-        );
-        _executeAndAssertCollateralWithdrawal(
-            mintMarkets, input.contracts.feeRecipientMintMarkets, mintSnapshots, MINT_COLLATERAL_WITHDRAWAL_EXECUTE_PATH
-        );
+        _assertVaultFeeSourcesActivated(registeredVaults, vaultSnapshots, address(collector));
         _assertEmergencyControls(vault, collector);
     }
 
@@ -1653,6 +1640,34 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         params.freezer = makeAddr("wrongPauserSafe");
         vm.expectRevert("Unexpected emergency controller Pauser Safe");
         this.deploySdusdExternal();
+    }
+
+    function testFork_PauserMultisigCanPauseAndClearSdusdEmergencyControls() public {
+        params.phase = DeploymentPhase.SDUSD;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        ProtocolFeeCollector collector = ProtocolFeeCollector(input.contracts.protocolFeeCollector);
+        SDUSD vault = SDUSD(input.contracts.sdusd);
+
+        vm.startPrank(params.freezer);
+        collector.pause(PAUSE_TYPE, true);
+        vault.pause(PAUSE_TYPE, true);
+        vault.pause(FROZEN_TYPE, true);
+        vm.stopPrank();
+
+        assertTrue(collector.paused(PAUSE_TYPE));
+        assertTrue(vault.paused(PAUSE_TYPE));
+        assertTrue(vault.paused(FROZEN_TYPE));
+
+        vm.startPrank(params.freezer);
+        collector.pause(PAUSE_TYPE, false);
+        vault.pause(PAUSE_TYPE, false);
+        vault.pause(FROZEN_TYPE, false);
+        vm.stopPrank();
+
+        assertFalse(collector.paused(PAUSE_TYPE));
+        assertFalse(vault.paused(PAUSE_TYPE));
+        assertFalse(vault.paused(FROZEN_TYPE));
     }
 
     function testFork_ActivationRejectsMissingFreezePermission() public {
@@ -1718,12 +1733,12 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         vault.deposit(5 ether, address(this));
 
         vm.prank(responder);
-        controller.freezeSdusd();
+        controller.freeze(address(vault));
         assertEq(vault.maxDeposit(address(this)), 0);
         vault.withdraw(1 ether, address(this), address(this));
         vm.startPrank(responder);
-        controller.pauseSdusd();
-        controller.pauseProtocolFeeCollector();
+        controller.pause(address(vault));
+        controller.pause(address(collector));
         vm.expectRevert(abi.encodeWithSelector(IPausable.Unauthorized.selector, responder, PAUSE_TYPE));
         vault.pause(PAUSE_TYPE, false);
         vm.expectRevert(abi.encodeWithSelector(IPausable.Unauthorized.selector, responder, PAUSE_TYPE));
@@ -1765,17 +1780,23 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
             if (requireSupply) assertGt(legacyPosition.supplyShares, 0, "legacy recipient has no supply");
 
             if (legacyPosition.collateralAssets != 0) ++collateralMarketCount;
-            if (legacyPosition.collateralAssets != 0) {
-                assertTrue(
-                    AltoAdapter(payable(input.contracts.altoAdapter)).isApprovedContract(markets[i]),
-                    "market is not approved by AltoAdapter"
-                );
-            }
 
             snapshots[i] = LegacyFeePositionSnapshot({
-                supplyShares: legacyPosition.supplyShares,
-                collateralAssets: legacyPosition.collateralAssets,
-                receiverCollateralBalance: IERC20Metadata(market.collateralToken()).balanceOf(feeRecipient)
+                supplyShares: legacyPosition.supplyShares, collateralAssets: legacyPosition.collateralAssets
+            });
+        }
+    }
+
+    function _snapshotLegacyVaultFees(address[] memory vaults)
+        private
+        view
+        returns (LegacyVaultFeeSnapshot[] memory snapshots)
+    {
+        snapshots = new LegacyVaultFeeSnapshot[](vaults.length);
+        for (uint256 i; i < vaults.length; ++i) {
+            address feeRecipient = IAltoVaultBase(vaults[i]).feeRecipient();
+            snapshots[i] = LegacyVaultFeeSnapshot({
+                feeRecipient: feeRecipient, recipientShares: IERC4626(vaults[i]).balanceOf(feeRecipient)
             });
         }
     }
@@ -1810,6 +1831,35 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         }
     }
 
+    function _assertVaultFeeSourcesActivated(
+        address[] memory vaults,
+        LegacyVaultFeeSnapshot[] memory snapshots,
+        address collector
+    ) private view {
+        for (uint256 i; i < vaults.length; ++i) {
+            bool isDusdVault = IERC4626(vaults[i]).asset() == input.contracts.dusd;
+            address expectedRecipient = isDusdVault ? collector : snapshots[i].feeRecipient;
+            assertEq(
+                IAltoVaultBase(vaults[i]).feeRecipient(),
+                expectedRecipient,
+                "unexpected vault fee recipient after activation"
+            );
+
+            if (isDusdVault) {
+                assertEq(
+                    snapshots[i].feeRecipient,
+                    input.contracts.feeRecipient,
+                    "unexpected legacy DUSD vault fee recipient"
+                );
+                assertGe(
+                    IERC4626(vaults[i]).balanceOf(snapshots[i].feeRecipient),
+                    snapshots[i].recipientShares,
+                    "activation must preserve legacy vault fee shares"
+                );
+            }
+        }
+    }
+
     function _assertAncillaryFeeSourcesActivated(
         address[] memory usms,
         address[] memory originalUsmFeeRecipients,
@@ -1828,43 +1878,6 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
             collector,
             "flash-minter fee recipient was not activated"
         );
-    }
-
-    function _executeAndAssertCollateralWithdrawal(
-        address[] memory markets,
-        address legacyFeeRecipient,
-        LegacyFeePositionSnapshot[] memory snapshots,
-        string memory executePath
-    ) private {
-        _executeScheduledTimelockBatch(legacyFeeRecipient, executePath);
-
-        for (uint256 i; i < markets.length; ++i) {
-            Position memory legacyPosition = IMarket(markets[i]).position(legacyFeeRecipient);
-            if (snapshots[i].collateralAssets != 0) {
-                assertEq(legacyPosition.collateralAssets, 0, "legacy collateral was not withdrawn");
-                assertGe(
-                    IERC20Metadata(IMarket(markets[i]).collateralToken()).balanceOf(legacyFeeRecipient),
-                    snapshots[i].receiverCollateralBalance + snapshots[i].collateralAssets,
-                    "legacy recipient did not receive collateral"
-                );
-                assertFalse(
-                    IAuth(markets[i]).isAuthorized(legacyFeeRecipient, input.contracts.altoAdapter),
-                    "temporary collateral-withdrawal authorization was not revoked"
-                );
-            } else {
-                assertEq(legacyPosition.collateralAssets, 0, "zero collateral position changed");
-            }
-        }
-    }
-
-    function _mockPreWarpOraclePrices(address[] memory markets, LegacyFeePositionSnapshot[] memory snapshots) private {
-        for (uint256 i; i < markets.length; ++i) {
-            if (snapshots[i].collateralAssets == 0) continue;
-
-            address oracle = IMarket(markets[i]).oracle();
-            uint256 preWarpPrice = ILendingOracle(oracle).getPrice();
-            vm.mockCall(oracle, abi.encodeCall(ILendingOracle.getPrice, ()), abi.encode(preWarpPrice));
-        }
     }
 
     function _scheduleTimelockBatch(address timelockAddress, string memory schedulePath) private {
