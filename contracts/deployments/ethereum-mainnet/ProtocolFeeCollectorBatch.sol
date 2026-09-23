@@ -13,6 +13,7 @@ struct ProtocolFeeCollectorBatchParams {
     address emergencyController;
     address dusd;
     address marketRegistry;
+    address vaultRegistry;
     address usmRegistry;
     address flashMinter;
     address treasury;
@@ -54,6 +55,7 @@ contract ProtocolFeeCollectorBatch {
                 }))
         );
         ProtocolFeeCollector collector = ProtocolFeeCollector(UnsafeUpgrades.deployUUPSProxy(implementation, initData));
+        collector.setVaultRegistry(params.vaultRegistry);
 
         for (uint256 i = 1; i < params.collateralOperators.length; ++i) {
             if (params.collateralOperators[i] == address(0)) revert InvalidParams();

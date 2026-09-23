@@ -2,27 +2,29 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {
-    BorrowFeeSupplyWithdrawalSafeBatch,
-    GenerateSDUSDBorrowFeeSupplyWithdrawalScript
-} from "../../script/GenerateSDUSDBorrowFeeSupplyWithdrawal.s.sol";
-import {Balance, IMarket, Position} from "@alto/lending/interfaces/IMarket.sol";
+import {GenerateSDUSDBorrowFeeSupplyWithdrawalScript} from "../../script/GenerateSDUSDBorrowFeeSupplyWithdrawal.s.sol";
+import {IMarket, IMarketBase, IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {AltoBalancesLib} from "@alto/lending/libraries/AltoBalancesLib.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
-import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+
+struct DecodedBorrowFeeSupplyWithdrawalBatch {
+    address[] targets;
+    uint256[] values;
+    bytes[] payloads;
+    bytes32 predecessor;
+    bytes32 salt;
+}
 
 contract GenerateSDUSDBorrowFeeSupplyWithdrawalForkTest is Test {
     using AltoBalancesLib for address;
     using AssetShareConversionMath for uint256;
 
-    uint256 internal constant MAINNET_FORK_BLOCK = 26025105;
     uint256 internal constant SDUSD_DEPLOYMENT_ID_TO_LOAD = 1765364975;
 
-    address internal constant MAINNET_TIMELOCK_ADMIN = 0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0;
     address internal constant OLD_FEE_RECIPIENT = 0xb9F06fEFc4c53dEd77A90Cb798eD08DC068Bb6dd;
 
     string internal constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
@@ -30,13 +32,15 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalForkTest is Test {
         "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-borrow-fee-supply-withdrawal-schedule.json";
     string internal constant EXECUTE_PATH =
         "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-borrow-fee-supply-withdrawal-execute.json";
+    string internal constant REPORT_PATH =
+        "contracts/deployments/ethereum-mainnet/output/sdusd-borrow-fee-supply-withdrawal-report.json";
 
     address internal marketRegistry;
-    address internal altoAdapter;
-    address internal dusd;
+    address internal dummyFeeRecipient;
 
     function setUp() public {
-        vm.createSelectFork(vm.rpcUrl("ethereum"), MAINNET_FORK_BLOCK);
+        vm.createSelectFork(vm.rpcUrl("ethereum"));
+        _deleteGeneratedFiles();
 
         string memory json = vm.readFile(
             string.concat(
@@ -49,95 +53,159 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalForkTest is Test {
             )
         );
         marketRegistry = vm.parseJsonAddress(json, ".contracts.marketRegistry");
-        altoAdapter = vm.parseJsonAddress(json, ".contracts.altoAdapter");
-        dusd = vm.parseJsonAddress(json, ".contracts.dusd");
+        dummyFeeRecipient = makeAddr("dummyFeeRecipient");
     }
 
-    function testFork_GenerateAndExecuteBorrowFeeSupplyWithdrawal() public {
+    function testFork_GeneratedBorrowFeeSupplyWithdrawalsMatchJsonReport() public {
         address[] memory markets = IMarketRegistry(marketRegistry).getBorrowMarkets();
-        assertEq(markets.length, 7, "unexpected borrow market count");
+        assertGt(markets.length, 0, "no registered borrow markets");
+
+        uint256 legacyShares = _accrueInterestThenMigrateFeeRecipients(markets);
+        assertGt(legacyShares, 0, "old fee recipient has no supply shares");
 
         GenerateSDUSDBorrowFeeSupplyWithdrawalScript generator = new GenerateSDUSDBorrowFeeSupplyWithdrawalScript();
-        BorrowFeeSupplyWithdrawalSafeBatch memory withdrawalBatch =
-            generator.buildBorrowFeeSupplyWithdrawal(marketRegistry, altoAdapter, OLD_FEE_RECIPIENT);
-        assertGt(withdrawalBatch.targets.length, 0, "no withdrawal calldata generated");
+        generator.run();
 
-        uint256[] memory sharesBefore = new uint256[](markets.length);
+        assertTrue(vm.exists(SCHEDULE_PATH), "missing schedule file");
+        assertTrue(vm.exists(EXECUTE_PATH), "missing execute file");
+        assertTrue(vm.exists(REPORT_PATH), "missing residual report");
+
+        string memory reportJson = vm.readFile(REPORT_PATH);
+
+        DecodedBorrowFeeSupplyWithdrawalBatch memory batch = _readExecuteBatch();
+        assertGt(batch.targets.length, 0, "no withdrawal calldata generated");
+        assertEq(batch.targets.length, batch.values.length, "target/value length mismatch");
+        assertEq(batch.targets.length, batch.payloads.length, "target/payload length mismatch");
+        assertEq(batch.predecessor, bytes32(0), "unexpected predecessor");
+        assertEq(batch.salt, bytes32(0), "unexpected salt");
+
+        _executeGeneratedMarketCalls(batch);
+        _assertPositionsMatchReport(markets, reportJson);
+
+        _deleteGeneratedFiles();
+    }
+
+    /// @dev Accrual must happen while the old recipient is still configured so all pending fee shares are minted to it.
+    function _accrueInterestThenMigrateFeeRecipients(address[] memory markets) private returns (uint256 legacyShares) {
         for (uint256 i; i < markets.length; ++i) {
             IMarket market = IMarket(markets[i]);
-            Position memory position = market.position(OLD_FEE_RECIPIENT);
-            (uint256 claimableAssets, uint256 availableLiquidity) = _claimableAssetsAndLiquidity(market);
 
-            assertGt(position.supplyShares, 0, "old fee recipient has no supply shares");
-            sharesBefore[i] = position.supplyShares;
+            market.accrueInterest();
+            uint256 sharesAfterAccrual = market.position(OLD_FEE_RECIPIENT).supplyShares;
+            legacyShares += sharesAfterAccrual;
 
-            if (_isIncluded(withdrawalBatch, markets[i])) {
-                assertLe(claimableAssets, availableLiquidity, "included market lacks liquidity");
+            vm.prank(Ownable(markets[i]).owner());
+            market.setFeeRecipient(dummyFeeRecipient);
+
+            assertEq(market.feeRecipient(), dummyFeeRecipient, "fee recipient not updated");
+            assertEq(
+                market.position(OLD_FEE_RECIPIENT).supplyShares,
+                sharesAfterAccrual,
+                "legacy shares changed during migration"
+            );
+        }
+    }
+
+    /// @dev Execute the market payloads decoded from the generated Safe JSON immediately, avoiding projection drift
+    ///      from the timelock delay while still testing the exact generated calldata.
+    function _executeGeneratedMarketCalls(DecodedBorrowFeeSupplyWithdrawalBatch memory batch) private {
+        for (uint256 i; i < batch.targets.length; ++i) {
+            IMarket market = IMarket(batch.targets[i]);
+            (uint256 encodedAssets, uint256 encodedShares,,) = _decodeRemoveSupply(batch.payloads[i]);
+
+            uint256 sharesBefore = market.position(OLD_FEE_RECIPIENT).supplyShares;
+            IERC20 borrowToken = IERC20(market.borrowToken());
+            uint256 assetsBefore = borrowToken.balanceOf(OLD_FEE_RECIPIENT);
+
+            vm.prank(OLD_FEE_RECIPIENT);
+            (bool success, bytes memory result) = batch.targets[i].call(batch.payloads[i]);
+            if (!success) {
+                assembly ("memory-safe") {
+                    revert(add(result, 0x20), mload(result))
+                }
+            }
+
+            (uint256 withdrawnAssets, uint256 withdrawnShares) = abi.decode(result, (uint256, uint256));
+            assertEq(
+                borrowToken.balanceOf(OLD_FEE_RECIPIENT) - assetsBefore,
+                withdrawnAssets,
+                "received assets differ from generated call"
+            );
+            assertEq(
+                sharesBefore - market.position(OLD_FEE_RECIPIENT).supplyShares,
+                withdrawnShares,
+                "burned shares differ from generated call"
+            );
+
+            if (encodedAssets != 0) {
+                assertEq(withdrawnAssets, encodedAssets, "wrong asset withdrawal");
             } else {
-                assertGt(claimableAssets, availableLiquidity, "liquid market missing from calldata");
+                assertEq(withdrawnShares, encodedShares, "wrong share withdrawal");
             }
         }
+    }
 
-        generator.run();
-        _callTimelock(SCHEDULE_PATH);
-        vm.warp(block.timestamp + TimelockController(payable(OLD_FEE_RECIPIENT)).getMinDelay() + 1);
-
-        uint256 dusdBefore = IERC20(dusd).balanceOf(OLD_FEE_RECIPIENT);
-        _callTimelock(EXECUTE_PATH);
-
+    function _assertPositionsMatchReport(address[] memory markets, string memory reportJson) private {
         for (uint256 i; i < markets.length; ++i) {
-            uint256 sharesAfter = IMarket(markets[i]).position(OLD_FEE_RECIPIENT).supplyShares;
-            if (_isIncluded(withdrawalBatch, markets[i])) {
-                assertLt(sharesAfter, sharesBefore[i], "included market did not withdraw shares");
-                assertFalse(
-                    IAuth(markets[i]).isAuthorized(OLD_FEE_RECIPIENT, altoAdapter),
-                    "temporary adapter authorization was not revoked"
-                );
-            } else {
-                assertEq(sharesAfter, sharesBefore[i], "omitted market shares changed");
+            string memory reportEntry = string.concat(".markets[", vm.toString(i), "]");
+            uint256 remainingShares = vm.parseJsonUint(reportJson, string.concat(reportEntry, ".remainingShares"));
+            uint256 remainingAssets = vm.parseJsonUint(reportJson, string.concat(reportEntry, ".remainingAssets"));
+
+            IMarket market = IMarket(markets[i]);
+            assertEq(
+                market.position(OLD_FEE_RECIPIENT).supplyShares, remainingShares, "actual shares differ from report"
+            );
+
+            (uint256 totalSupplyAssets, uint256 totalSupplyShares,,) = markets[i].expectedMarketBalances();
+            assertEq(
+                remainingShares.convertToAssetsDown(totalSupplyAssets, totalSupplyShares),
+                remainingAssets,
+                "actual assets differ from report"
+            );
+
+            if (remainingShares != 0) {
+                vm.startPrank(OLD_FEE_RECIPIENT);
+                vm.expectRevert(IMarketErrors.AltoBaseMarketInsufficientMarketLiquidity.selector);
+                market.removeSupply(1, 0, OLD_FEE_RECIPIENT, OLD_FEE_RECIPIENT);
+                vm.stopPrank();
             }
         }
-
-        assertGt(IERC20(dusd).balanceOf(OLD_FEE_RECIPIENT), dusdBefore, "old fee recipient did not receive DUSD");
     }
 
-    function _isIncluded(BorrowFeeSupplyWithdrawalSafeBatch memory batch, address market) private pure returns (bool) {
-        uint256 marketCount = (batch.targets.length - 1) / 2;
-        for (uint256 i; i < marketCount; ++i) {
-            if (batch.targets[i] == market) return true;
-        }
-        return false;
+    function _readExecuteBatch() private view returns (DecodedBorrowFeeSupplyWithdrawalBatch memory batch) {
+        string memory json = vm.readFile(EXECUTE_PATH);
+        assertEq(vm.parseJsonAddress(json, ".transactions[0].to"), OLD_FEE_RECIPIENT, "wrong Safe target");
+
+        bytes memory data = vm.parseJsonBytes(json, ".transactions[0].data");
+        assertEq(bytes4(data), TimelockController.executeBatch.selector, "wrong execute selector");
+        (batch.targets, batch.values, batch.payloads, batch.predecessor, batch.salt) =
+            abi.decode(_removeSelector(data), (address[], uint256[], bytes[], bytes32, bytes32));
     }
 
-    function _claimableAssetsAndLiquidity(IMarket market)
+    function _decodeRemoveSupply(bytes memory payload)
         private
-        view
-        returns (uint256 claimableAssets, uint256 availableLiquidity)
+        pure
+        returns (uint256 assets, uint256 shares, address onBehalf, address receiver)
     {
-        Balance memory storedTotalSupply = market.totalSupply();
-        (uint256 expectedTotalSupplyAssets, uint256 expectedTotalSupplyShares, uint256 expectedTotalBorrowAssets,) =
-            address(market).expectedMarketBalances();
-
-        uint256 expectedShares = market.position(OLD_FEE_RECIPIENT).supplyShares;
-        if (market.feeRecipient() == OLD_FEE_RECIPIENT) {
-            expectedShares += expectedTotalSupplyShares - storedTotalSupply.shares;
-        }
-
-        claimableAssets = expectedShares.convertToAssetsDown(expectedTotalSupplyAssets, expectedTotalSupplyShares);
-        availableLiquidity = Math.min(
-            expectedTotalSupplyAssets - expectedTotalBorrowAssets,
-            IERC20(market.borrowToken()).balanceOf(address(market))
-        );
+        assertEq(bytes4(payload), IMarketBase.removeSupply.selector, "wrong market selector");
+        return abi.decode(_removeSelector(payload), (uint256, uint256, address, address));
     }
 
-    function _callTimelock(string memory path) private {
-        vm.prank(MAINNET_TIMELOCK_ADMIN);
-        (bool success, bytes memory result) =
-            OLD_FEE_RECIPIENT.call(vm.parseJsonBytes(vm.readFile(path), ".transactions[0].data"));
-        if (!success) {
-            assembly ("memory-safe") {
-                revert(add(result, 0x20), mload(result))
-            }
+    function _removeSelector(bytes memory data) private pure returns (bytes memory arguments) {
+        require(data.length >= 4, "missing selector");
+        arguments = new bytes(data.length - 4);
+        for (uint256 i; i < arguments.length; ++i) {
+            arguments[i] = data[i + 4];
         }
+    }
+
+    function _deleteGeneratedFiles() private {
+        _deleteIfExists(SCHEDULE_PATH);
+        _deleteIfExists(EXECUTE_PATH);
+        _deleteIfExists(REPORT_PATH);
+    }
+
+    function _deleteIfExists(string memory path) private {
+        if (vm.exists(path)) vm.removeFile(path);
     }
 }

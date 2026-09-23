@@ -5,14 +5,12 @@ import {Script, console} from "forge-std/Script.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {IBundler3, Call} from "@morpho-org/bundler3/interfaces/IBundler3.sol";
 
-import {Balance, IMarket} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
 import {AltoBalancesLib} from "@alto/lending/libraries/AltoBalancesLib.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {SafeTransactionBuilder} from "@alto/deployments/ethereum-mainnet/SafeTransactionBuilder.sol";
-import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
-import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
 
 struct BorrowFeeSupplyWithdrawalSafeBatch {
@@ -21,15 +19,32 @@ struct BorrowFeeSupplyWithdrawalSafeBatch {
     bytes[] payloads;
 }
 
+struct BorrowFeeSupplyWithdrawalMarketReport {
+    address market;
+    uint256 remainingShares;
+    uint256 remainingAssets;
+}
+
+struct BorrowFeeSupplyWithdrawal {
+    uint256 assets;
+    uint256 shares;
+}
+
 /// @title Generate sDUSD legacy borrow-fee supply withdrawal transactions
-/// @notice Regenerates timelock calldata for legacy fee-recipient supply positions that are fully liquid.
-/// @dev The script supports generation both before and after the legacy fee recipient is replaced.
+/// @notice Generates timelock calldata that withdraws all currently available legacy fee-recipient supply.
+/// @dev Generate this calldata only after every borrow market has migrated away from the legacy fee recipient.
+///      Liquidity can change before execution, so regenerate the calldata immediately before scheduling it.
+///      Reported residual positions are generation-time projections and are not guaranteed execution-time values.
+///      Run with:
+///      `forge script script/GenerateSDUSDBorrowFeeSupplyWithdrawal.s.sol --rpc-url $MAINNET_RPC_URL`
 contract GenerateSDUSDBorrowFeeSupplyWithdrawalScript is Script {
     using AltoBalancesLib for address;
     using AssetShareConversionMath for uint256;
 
     uint256 internal constant SDUSD_DEPLOYMENT_ID_TO_LOAD = 1765364975;
     string internal constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
+    string internal constant REPORT_PATH =
+        "contracts/deployments/ethereum-mainnet/output/sdusd-borrow-fee-supply-withdrawal-report.json";
     string internal constant SAFE_BATCH_NAME = "sdusd-borrow-fee-supply-withdrawal";
     address internal constant OLD_FEE_RECIPIENT = 0xb9F06fEFc4c53dEd77A90Cb798eD08DC068Bb6dd;
 
@@ -47,111 +62,129 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalScript is Script {
             )
         );
 
-        generate(
-            vm.parseJsonAddress(json, ".contracts.marketRegistry"),
-            vm.parseJsonAddress(json, ".contracts.altoAdapter"),
-            OLD_FEE_RECIPIENT
-        );
+        generate(vm.parseJsonAddress(json, ".contracts.marketRegistry"));
     }
 
-    function generate(address marketRegistry, address adapter, address feeRecipient) public {
+    function generate(address marketRegistry) public {
         require(marketRegistry != address(0), "Invalid market registry");
-        require(adapter != address(0), "Invalid adapter");
-        require(feeRecipient != address(0), "Invalid legacy fee recipient");
 
-        BorrowFeeSupplyWithdrawalSafeBatch memory batch =
-            buildBorrowFeeSupplyWithdrawal(marketRegistry, adapter, feeRecipient);
+        (BorrowFeeSupplyWithdrawalSafeBatch memory batch, BorrowFeeSupplyWithdrawalMarketReport[] memory report) =
+            buildBorrowFeeSupplyWithdrawal(marketRegistry);
+
+        _writeReport(report);
+
         if (batch.targets.length == 0) {
-            console.log("No fully liquid legacy borrow-fee supply positions");
+            console.log("No withdrawable legacy borrow-fee supply positions");
             return;
         }
 
         SafeTransactionBuilder.writeTimelockBatch(
             SAFE_BATCH_NAME,
-            feeRecipient,
+            OLD_FEE_RECIPIENT,
             batch.targets,
             batch.values,
             batch.payloads,
-            TimelockController(payable(feeRecipient)).getMinDelay()
+            TimelockController(payable(OLD_FEE_RECIPIENT)).getMinDelay()
         );
     }
 
-    /// @notice Builds a legacy fee-recipient batch for fully liquid borrow-market supply positions.
-    /// @dev Markets whose complete position cannot be withdrawn with the liquidity available during generation are
-    ///      omitted. Liquidity can change before execution, so operators must regenerate and verify this batch before
-    ///      scheduling it. The adapter dynamically reads and withdraws all shares held at execution time.
-    function buildBorrowFeeSupplyWithdrawal(address marketRegistry, address adapter, address feeRecipient)
+    /// @notice Builds direct market withdrawals and projected residuals for all registered borrow markets.
+    /// @dev Reverts unless every market has migrated away from `OLD_FEE_RECIPIENT`. Paused markets and positions with
+    ///      no available liquidity are included in `report` but omitted from the Safe batch.
+    function buildBorrowFeeSupplyWithdrawal(address marketRegistry)
         public
         view
-        returns (BorrowFeeSupplyWithdrawalSafeBatch memory batch)
+        returns (BorrowFeeSupplyWithdrawalSafeBatch memory batch, BorrowFeeSupplyWithdrawalMarketReport[] memory report)
     {
         address[] memory markets = IMarketRegistry(marketRegistry).getBorrowMarkets();
-        uint256 marketCount;
+        BorrowFeeSupplyWithdrawal[] memory withdrawals = new BorrowFeeSupplyWithdrawal[](markets.length);
+        report = new BorrowFeeSupplyWithdrawalMarketReport[](markets.length);
+        uint256 withdrawalCount;
 
         for (uint256 i; i < markets.length; ++i) {
-            if (_canWithdrawFullSupply(IMarket(markets[i]), feeRecipient)) {
-                require(
-                    AltoAdapter(payable(adapter)).isApprovedContract(markets[i]),
-                    "Borrow market not approved in adapter"
+            IMarket market = IMarket(markets[i]);
+            require(market.feeRecipient() != OLD_FEE_RECIPIENT, "Legacy fee recipient still configured");
+
+            uint256 supplyShares = market.position(OLD_FEE_RECIPIENT).supplyShares;
+            report[i].market = markets[i];
+            report[i].remainingShares = supplyShares;
+
+            (uint256 totalSupplyAssets, uint256 totalSupplyShares, uint256 totalBorrowAssets,) =
+                markets[i].expectedMarketBalances();
+            uint256 supplyAssets = supplyShares.convertToAssetsDown(totalSupplyAssets, totalSupplyShares);
+            report[i].remainingAssets = supplyAssets;
+
+            if (supplyShares == 0 || supplyAssets == 0 || market.paused(PAUSE_TYPE)) continue;
+
+            uint256 availableLiquidity =
+                Math.min(totalSupplyAssets - totalBorrowAssets, IERC20(market.borrowToken()).balanceOf(markets[i]));
+            uint256 withdrawableAssets = Math.min(supplyAssets, availableLiquidity);
+            if (withdrawableAssets == 0) continue;
+
+            if (withdrawableAssets == supplyAssets) {
+                withdrawals[i].shares = supplyShares;
+                report[i].remainingShares = 0;
+                report[i].remainingAssets = 0;
+            } else {
+                uint256 withdrawnShares = withdrawableAssets.convertToSharesUp(totalSupplyAssets, totalSupplyShares);
+                uint256 remainingShares = supplyShares - withdrawnShares;
+
+                withdrawals[i].assets = withdrawableAssets;
+                report[i].remainingShares = remainingShares;
+                report[i].remainingAssets = remainingShares.convertToAssetsDown(
+                    totalSupplyAssets - withdrawableAssets, totalSupplyShares - withdrawnShares
                 );
-                ++marketCount;
             }
+
+            ++withdrawalCount;
         }
 
-        if (marketCount == 0) return _emptyBatch();
+        if (withdrawalCount == 0) return (_emptyBatch(), report);
 
-        // For each liquid market, authorize AltoAdapter, withdraw all shares in one Bundler3 call, then revoke it.
-        uint256 callCount = marketCount * 2 + 1;
-        batch.targets = new address[](callCount);
-        batch.values = new uint256[](callCount);
-        batch.payloads = new bytes[](callCount);
+        batch.targets = new address[](withdrawalCount);
+        batch.values = new uint256[](withdrawalCount);
+        batch.payloads = new bytes[](withdrawalCount);
 
         uint256 index;
-        Call[] memory bundle = new Call[](marketCount);
-        uint256 bundleIndex;
         for (uint256 i; i < markets.length; ++i) {
-            if (!_canWithdrawFullSupply(IMarket(markets[i]), feeRecipient)) continue;
-            _append(batch, index++, markets[i], abi.encodeCall(IAuth.setAuthorization, (adapter, true)));
-            bundle[bundleIndex++] = Call({
-                to: adapter,
-                data: abi.encodeCall(
-                    AltoAdapter.marketRemoveSupply, (IMarket(markets[i]), 0, type(uint256).max, 0, feeRecipient)
-                ),
-                value: 0,
-                skipRevert: false,
-                callbackHash: bytes32(0)
-            });
-        }
+            BorrowFeeSupplyWithdrawal memory withdrawal = withdrawals[i];
+            if (withdrawal.assets == 0 && withdrawal.shares == 0) continue;
 
-        _append(batch, index++, AltoAdapter(payable(adapter)).BUNDLER3(), abi.encodeCall(IBundler3.multicall, (bundle)));
+            bytes memory payload = withdrawal.assets != 0
+                ? abi.encodeCall(IMarketBase.removeSupply, (withdrawal.assets, 0, OLD_FEE_RECIPIENT, OLD_FEE_RECIPIENT))
+                : abi.encodeCall(IMarketBase.removeSupply, (0, withdrawal.shares, OLD_FEE_RECIPIENT, OLD_FEE_RECIPIENT));
 
-        for (uint256 i; i < markets.length; ++i) {
-            if (!_canWithdrawFullSupply(IMarket(markets[i]), feeRecipient)) continue;
-            _append(batch, index++, markets[i], abi.encodeCall(IAuth.setAuthorization, (adapter, false)));
+            _append(batch, index++, markets[i], payload);
         }
-        assert(bundleIndex == marketCount);
-        assert(index == callCount);
+        assert(index == withdrawalCount);
     }
 
-    function _canWithdrawFullSupply(IMarket market, address feeRecipient) private view returns (bool) {
-        Balance memory storedTotalSupply = market.totalSupply();
-        (uint256 expectedTotalSupplyAssets, uint256 expectedTotalSupplyShares, uint256 expectedTotalBorrowAssets,) =
-            address(market).expectedMarketBalances();
+    function _writeReport(BorrowFeeSupplyWithdrawalMarketReport[] memory report) private {
+        string memory rows;
 
-        uint256 expectedFeeRecipientShares = market.position(feeRecipient).supplyShares;
-        if (market.feeRecipient() == feeRecipient) {
-            // Before activation, accrueInterest() mints newly projected supply shares to the legacy fee recipient.
-            expectedFeeRecipientShares += expectedTotalSupplyShares - storedTotalSupply.shares;
+        console.log("Legacy borrow-fee supply residual report (generation-time projection):");
+        for (uint256 i; i < report.length; ++i) {
+            console.log("Market:", report[i].market);
+            console.log("  Projected remaining shares:", report[i].remainingShares);
+            console.log("  Projected remaining assets:", report[i].remainingAssets);
+
+            rows = string.concat(
+                rows,
+                i == 0 ? "" : ",",
+                '{"market":"',
+                vm.toString(report[i].market),
+                '","remainingShares":"',
+                vm.toString(report[i].remainingShares),
+                '","remainingAssets":"',
+                vm.toString(report[i].remainingAssets),
+                '"}'
+            );
         }
-        if (expectedFeeRecipientShares == 0) return false;
 
-        uint256 claimableAssets =
-            expectedFeeRecipientShares.convertToAssetsDown(expectedTotalSupplyAssets, expectedTotalSupplyShares);
-        uint256 availableLiquidity = Math.min(
-            expectedTotalSupplyAssets - expectedTotalBorrowAssets,
-            IERC20(market.borrowToken()).balanceOf(address(market))
+        vm.writeFile(
+            REPORT_PATH, string.concat('{"projectionBlock":"', vm.toString(block.number), '","markets":[', rows, "]}")
         );
-        return claimableAssets != 0 && claimableAssets <= availableLiquidity;
+        console.log("Residual report written:", REPORT_PATH);
     }
 
     function _emptyBatch() private pure returns (BorrowFeeSupplyWithdrawalSafeBatch memory batch) {
