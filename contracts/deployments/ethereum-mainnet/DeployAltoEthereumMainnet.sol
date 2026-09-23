@@ -163,7 +163,7 @@ library DeployAltoEthereumMainnet {
                 DeployDUSDParams({
                     owner: input.contracts.timelock,
                     lzEndpoint: LAYERZERO_ENDPOINT_MAINNET,
-                    feeRecipient: input.contracts.feeRecipient
+                    feeRecipient: input.contracts.protocolFeeCollector
                 }),
                 params,
                 input
@@ -174,7 +174,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipientMintMarkets,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     collateralToken: WETH_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.WETH,
                     irmInterestRate: 0.02134 ether / uint256(365 days), // 2.134%
@@ -208,7 +208,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipientMintMarkets,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     collateralToken: WSTETH_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.stETH,
                     irmInterestRate: 0.02295163663 ether / uint256(365 days), // 2.295163663%
@@ -242,7 +242,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipientMintMarkets,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     collateralToken: RETH_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.rETH,
                     irmInterestRate: 0.02333714138 ether / uint256(365 days), // 2.333714138%
@@ -276,7 +276,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipientMintMarkets,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     collateralToken: METH_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.METH,
                     irmInterestRate: 0.025 ether / uint256(365 days), // 2.5%
@@ -310,7 +310,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipientMintMarkets,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     collateralToken: TBTC_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.tBTC,
                     irmInterestRate: 0.025 ether / uint256(365 days), // 2.5%
@@ -344,7 +344,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipient,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     collateralToken: WBTC_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.WBTC,
                     irmConfig: AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
@@ -386,7 +386,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipient,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     collateralToken: CBBTC_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.cbBTC,
                     irmConfig: AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
@@ -428,7 +428,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipient,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     collateralToken: SUSDE_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.SUSDE,
                     irmConfig: AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
@@ -470,7 +470,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipient,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     freezer: params.freezer,
                     buyFee: 0,
                     sellFee: 0,
@@ -489,7 +489,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipient,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     freezer: params.freezer,
                     buyFee: 20, // 0.2%
                     sellFee: 20, // 0.2%
@@ -512,7 +512,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipient,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     collateralToken: SYRUPUSDC_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.SYRUPUSDC,
                     irmConfig: AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
@@ -554,7 +554,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipient,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     collateralToken: PAXG_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.PAXG,
                     irmConfig: AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
@@ -596,7 +596,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipientMintMarkets,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     collateralToken: SUSDE_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.SUSDE,
                     irmInterestRate: 0.0216426871 ether / uint256(365 days), // 2.16426871%
@@ -630,7 +630,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipientMintMarkets,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     collateralToken: SYRUPUSDC_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.SYRUPUSDC,
                     irmInterestRate: 0.02271416921 ether / uint256(365 days), // 2.271416921%
@@ -668,7 +668,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipient,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     freezer: params.freezer,
                     buyFee: 0,
                     sellFee: 0,
@@ -687,7 +687,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipient,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     freezer: params.freezer,
                     buyFee: 5, // 0.05%
                     sellFee: 5, // 0.05%
@@ -724,7 +724,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipientMintMarkets,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     collateralToken: FRXUSD_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.FRXUSD,
                     irmInterestRate: 0, // 0%
@@ -772,7 +772,7 @@ library DeployAltoEthereumMainnet {
                 DeployConvexCreditLineMarketParams({
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
-                    feeRecipient: input.contracts.feeRecipientMintMarkets,
+                    feeRecipient: input.contracts.protocolFeeCollector,
                     collateralToken: FRXUSD_DUSD_CURVE_POOL_MAINNET,
                     creditAccount: params.treasuryMultisig,
                     irmInterestRate: 0.04 ether / uint256(365 days), // 4%
@@ -1260,7 +1260,7 @@ library DeployAltoEthereumMainnet {
         require(input.contracts.timelock != address(0), "Timelock not deployed");
         require(input.contracts.altoAdapter != address(0), "AltoAdapter not deployed");
         require(input.contracts.marketRegistry != address(0), "MarketRegistry not deployed");
-        require(input.contracts.feeRecipient != address(0), "FeeRecipient not deployed");
+        require(input.contracts.protocolFeeCollector != address(0), "FeeRecipient not deployed");
 
         address[] memory markets = new address[](5);
         markets[0] = input.contracts.syrupUsdcBorrowMarket.market;
@@ -1292,7 +1292,7 @@ library DeployAltoEthereumMainnet {
                 allocator: params.updater,
                 guardian: params.freezer,
                 skimRecipient: params.treasuryMultisig,
-                feeRecipient: input.contracts.feeRecipient,
+                feeRecipient: input.contracts.protocolFeeCollector,
                 fee: 0,
                 markets: markets,
                 caps: caps,
@@ -1666,7 +1666,7 @@ library DeployAltoEthereumMainnet {
         require(input.contracts.timelock != address(0), "Timelock not deployed");
         require(input.contracts.dusd != address(0), "DUSD not deployed");
         require(input.contracts.usmRegistry != address(0), "UsmRegistry not deployed");
-        require(input.contracts.feeRecipient != address(0), "FeeRecipient not deployed");
+        require(input.contracts.protocolFeeCollector != address(0), "FeeRecipient not deployed");
         require(input.contracts.liquidationPeriphery != address(0), "LiquidationPeriphery not deployed");
         require(params.treasuryMultisig != address(0), "TreasuryMultisig must be set");
 
@@ -1697,7 +1697,7 @@ library DeployAltoEthereumMainnet {
                 owner: input.contracts.timelock,
                 dusd: input.contracts.dusd,
                 usmRegistry: input.contracts.usmRegistry,
-                feeRecipient: input.contracts.feeRecipient,
+                feeRecipient: input.contracts.protocolFeeCollector,
                 freezer: params.freezer,
                 emergencyController: input.contracts.emergencyController,
                 treasuryMultisig: params.treasuryMultisig,
