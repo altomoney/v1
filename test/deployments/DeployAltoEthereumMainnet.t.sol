@@ -223,6 +223,9 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         loaded.contracts.altoAdapter = _tryParseAddress(json, ".contracts.altoAdapter");
         loaded.contracts.feeRecipient = _tryParseAddress(json, ".contracts.feeRecipient");
         loaded.contracts.feeRecipientMintMarkets = _tryParseAddress(json, ".contracts.feeRecipientMintMarkets");
+        loaded.contracts.protocolFeeCollector = _tryParseAddress(json, ".contracts.protocolFeeCollector");
+        loaded.contracts.protocolFeeCollectorImplementation =
+            _tryParseAddress(json, ".contracts.protocolFeeCollectorImplementation");
         loaded.contracts.dusd = _tryParseAddress(json, ".contracts.dusd");
         loaded.contracts.dusdFlashMinter = _tryParseAddress(json, ".contracts.dusdFlashMinter");
         loaded.contracts.marketRegistry = _tryParseAddress(json, ".contracts.marketRegistry");
@@ -520,7 +523,7 @@ abstract contract DeployMarketPhaseTestBase is DeployAltoEthereumMainnetTestBase
         IMarket market = IMarket(deployed.market);
         Balance memory totalSupply = market.totalSupply();
         assertEq(totalSupply.assets, expected.capacity, "debt ceiling");
-        assertEq(market.feeRecipient(), input.contracts.feeRecipientMintMarkets, "fee recipient");
+        assertEq(market.feeRecipient(), input.contracts.protocolFeeCollector, "fee recipient");
 
         FixedRateIrm irm = FixedRateIrm(deployed.marketIrm);
         (uint256 borrowRate,) = irm.irState();
@@ -539,7 +542,7 @@ abstract contract DeployMarketPhaseTestBase is DeployAltoEthereumMainnetTestBase
         AltoBorrowMarket market = AltoBorrowMarket(deployed.market);
         assertEq(market.supplyCapAssets(), expected.capacity, "supply cap");
         assertEq(market.interestFee(), expectedInterestFee, "interest fee");
-        assertEq(market.feeRecipient(), input.contracts.feeRecipient, "fee recipient");
+        assertEq(market.feeRecipient(), input.contracts.protocolFeeCollector, "fee recipient");
 
         AdaptiveCurveIrm irm = AdaptiveCurveIrm(deployed.marketIrm);
         (
@@ -1028,7 +1031,7 @@ contract DeployConvexCreditLineMarketPhaseTest is DeployMarketPhaseTestBase {
         assertEq(market.foreclosureLtv(), 0.9 ether, "foreclosure LTV");
         assertEq(market.borrowOpeningFee(), 0, "borrow opening fee");
         assertEq(market.creditAccount(), TREASURY_MULTISIG, "credit account");
-        assertEq(market.feeRecipient(), input.contracts.feeRecipientMintMarkets, "fee recipient");
+        assertEq(market.feeRecipient(), input.contracts.protocolFeeCollector, "fee recipient");
 
         Balance memory supply = IMarket(address(market)).totalSupply();
         Balance memory borrowed = IMarket(address(market)).totalBorrowed();
