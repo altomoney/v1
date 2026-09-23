@@ -45,8 +45,9 @@ contract SDUSDEmergencyControlsTest is SDUSDCommon {
         );
 
         vm.startPrank(ADMIN);
-        controller.setSdusd(address(vault));
-        controller.setProtocolFeeCollector(address(collector));
+        controller.setPauseWhitelist(address(vault), true);
+        controller.setFrozenWhitelist(address(vault), true);
+        controller.setPauseWhitelist(address(collector), true);
         vault.setPauser(address(controller), FROZEN_TYPE, true);
         vault.setPauser(address(controller), PAUSE_TYPE, true);
         vault.setPauser(address(pauserSafe), FROZEN_TYPE, true);
@@ -164,12 +165,12 @@ contract SDUSDEmergencyControlsTest is SDUSDCommon {
 
     function test_IndividualMemberActivatesControlsIdempotentlyAndSafeClearsThem() public {
         vm.startPrank(responder);
-        controller.freezeSdusd();
-        controller.freezeSdusd();
-        controller.pauseSdusd();
-        controller.pauseSdusd();
-        controller.pauseProtocolFeeCollector();
-        controller.pauseProtocolFeeCollector();
+        controller.freeze(address(vault));
+        controller.freeze(address(vault));
+        controller.pause(address(vault));
+        controller.pause(address(vault));
+        controller.pause(address(collector));
+        controller.pause(address(collector));
         vm.expectRevert(abi.encodeWithSelector(IPausable.Unauthorized.selector, responder, FROZEN_TYPE));
         vault.pause(FROZEN_TYPE, false);
         vm.expectRevert(abi.encodeWithSelector(IPausable.Unauthorized.selector, responder, PAUSE_TYPE));
@@ -199,11 +200,11 @@ contract SDUSDEmergencyControlsTest is SDUSDCommon {
         pauserSafe.setOwner(responder, false);
         vm.startPrank(responder);
         vm.expectRevert(abi.encodeWithSelector(EmergencyController.Unauthorized.selector, responder));
-        controller.freezeSdusd();
+        controller.freeze(address(vault));
         vm.expectRevert(abi.encodeWithSelector(EmergencyController.Unauthorized.selector, responder));
-        controller.pauseSdusd();
+        controller.pause(address(vault));
         vm.expectRevert(abi.encodeWithSelector(EmergencyController.Unauthorized.selector, responder));
-        controller.pauseProtocolFeeCollector();
+        controller.pause(address(collector));
         vm.stopPrank();
     }
 
