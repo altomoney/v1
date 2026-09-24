@@ -1008,8 +1008,8 @@ contract DeployConvexCreditLineMarketPhaseTest is DeployMarketPhaseTestBase {
         assertEq(market.irm(), address(irm), "IRM");
         assertEq(market.oracle(), marketOracle, "oracle");
         assertEq(market.liquidationEngine(), address(0), "liquidation engine");
-        assertEq(market.maxLtv(), 0.6 ether, "max LTV");
-        assertEq(market.foreclosureLtv(), 0.8 ether, "foreclosure LTV");
+        assertEq(market.maxLtv(), 0.8 ether, "max LTV");
+        assertEq(market.foreclosureLtv(), 0.9 ether, "foreclosure LTV");
         assertEq(market.borrowOpeningFee(), 0, "borrow opening fee");
         assertEq(market.creditAccount(), TREASURY_MULTISIG, "credit account");
         assertEq(market.feeRecipient(), input.contracts.feeRecipientMintMarkets, "fee recipient");
@@ -1125,7 +1125,7 @@ contract DeployConvexCreditLineMarketPhaseTest is DeployMarketPhaseTestBase {
         assertEq(dusd.allowedBurner(market), enabled, "DUSD burner status");
         (uint256 minted, uint256 ceiling) = dusd.minterConfig(market);
         assertEq(minted, 0, "initial minted amount");
-        assertEq(ceiling, enabled ? 1_312_500 ether : 0, "DUSD minter ceiling");
+        assertEq(ceiling, enabled ? 1_166_666_666_666_666_666_666_666 : 0, "DUSD minter ceiling");
     }
 }
 

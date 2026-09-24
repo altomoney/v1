@@ -40,7 +40,8 @@ enum DeploymentPhase {
     OWNER_FIXED_RATE_IRM_FACTORY, // Phase 31: Deploy the reusable Timelock-owned FixedRateIrm factory
     MARKET_DEPRECATION_PHASE_0, // Phase 32: Freeze ten old markets and apply the T0 fixed rates
     CONVEX_CREDIT_LINE_MARKET, // Phase 33: Deploy the frxUSD/DUSD Convex credit-line market
-    MINT_MARKET_PEG_RESPONSIVE_IRM // Phase 34: Migrate active mint markets to peg-responsive IRMs
+    MINT_MARKET_PEG_RESPONSIVE_IRM, // Phase 34: Migrate active mint markets to peg-responsive IRMs
+    UPGRADE_ALL_MINT_BORROW_MARKETS // Phase 35: Upgrade every registered AltoMintMarket and AltoBorrowMarket
 }
 
 enum UsmFinalizeMode {

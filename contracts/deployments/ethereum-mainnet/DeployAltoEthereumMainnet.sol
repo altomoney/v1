@@ -35,7 +35,7 @@ import {
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {AdapterContractApproval} from "@alto/utils/AdapterContractApproval.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
-import {IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, IMarketBase, MarketType} from "@alto/lending/interfaces/IMarket.sol";
 import {
     IDcfDlbPriorityLiquidationEngine,
     LiquidationConfiguration
@@ -80,6 +80,8 @@ import {
 } from "@alto/deployments/ethereum-mainnet/AdvancedPermissionsUsmBatch.sol";
 import {IAdvancedPermissionsUsmFeeStrategy} from "@alto/usm/interfaces/IAdvancedPermissionsUsmFeeStrategy.sol";
 import {MarketUpgradeBatch, MarketUpgradeBatchReport} from "@alto/deployments/ethereum-mainnet/MarketUpgradeBatch.sol";
+import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
+import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {MarketDeprecationDeployment} from "@alto/deployments/ethereum-mainnet/MarketDeprecationDeployment.sol";
 import {PegResponsiveIrmDeployment} from "@alto/deployments/ethereum-mainnet/PegResponsiveIrmDeployment.sol";
 import {SafeTransactionBuilder} from "@alto/deployments/ethereum-mainnet/SafeTransactionBuilder.sol";
@@ -701,6 +703,8 @@ library DeployAltoEthereumMainnet {
             input = _deployAdvancedPermissionsFrxUsdUsm(params, input);
         } else if (params.phase == DeploymentPhase.UPGRADE_MARKETS_LIQUIDATION_PERIPHERY) {
             input = _upgradeMarketsForLiquidationPeriphery(input);
+        } else if (params.phase == DeploymentPhase.UPGRADE_ALL_MINT_BORROW_MARKETS) {
+            input = _upgradeAllMintBorrowMarkets(input);
         } else if (params.phase == DeploymentPhase.UNIVERSAL_REWARDS_DISTRIBUTOR) {
             input = _deployUniversalRewardsDistributor(params, input);
         } else if (params.phase == DeploymentPhase.MINT_CURVE_CONVEX_POSITION) {
@@ -759,9 +763,9 @@ library DeployAltoEthereumMainnet {
                     collateralToken: FRXUSD_DUSD_CURVE_POOL_MAINNET,
                     creditAccount: params.treasuryMultisig,
                     irmInterestRate: 0.04 ether / uint256(365 days), // 4%
-                    maxLtv: 0.6 ether, // 60%
+                    maxLtv: 0.8 ether, // 80%
                     creditLimit: 1_000_000 ether, // 1,000,000 DUSD
-                    foreclosureLtv: 0.8 ether, // 80%
+                    foreclosureLtv: 0.9 ether, // 90%
                     initialBorrowOpeningFee: 0,
                     convexBooster: CONVEX_BOOSTER_MAINNET,
                     convexPoolId: POOL_ID_FRXUSD_DUSD_CURVE_POOL_MAINNET,
@@ -1750,7 +1754,7 @@ library DeployAltoEthereumMainnet {
         );
     }
 
-    /// @dev Deploys new market implementations and logs timelock batches to upgrade all 12 markets and
+    /// @dev Deploys new market implementations and logs timelock batches to upgrade all registered ordinary markets and
     ///      authorize the liquidation periphery on each market.
     function _upgradeMarketsForLiquidationPeriphery(AltoEthereumMainnetInput memory input)
         internal
@@ -1762,11 +1766,40 @@ library DeployAltoEthereumMainnet {
         address[] memory markets = _getAllMarkets(input);
         MarketUpgradeBatchReport memory report = (new MarketUpgradeBatch(markets)).getReport();
 
-        _logMarketUpgradeTimelockBatch(input, report);
+        _logMarketUpgradeTimelockBatch(input, report, "market-upgrade-liquidation-periphery");
         _logAuthorizeLiquidationPeripheryTimelockBatch(input, report.markets);
 
         input = _updateMarketImplementations(input, report);
 
+        return input;
+    }
+
+    /// @dev Deploys shared mint and borrow implementations and writes one timelock upgrade batch.
+    function _upgradeAllMintBorrowMarkets(AltoEthereumMainnetInput memory input)
+        internal
+        returns (AltoEthereumMainnetInput memory)
+    {
+        require(input.contracts.timelock != address(0), "Timelock not deployed");
+
+        address[] memory markets = _getAllMarkets(input);
+        address mintImplementation = address(new AltoMintMarket());
+        address borrowImplementation = address(new AltoBorrowMarket());
+        address[] memory implementations = new address[](markets.length);
+        for (uint256 i; i < markets.length; i++) {
+            MarketType marketType = IMarket(markets[i]).MARKET_TYPE();
+            if (marketType == MarketType.MINT) {
+                implementations[i] = mintImplementation;
+            } else if (marketType == MarketType.BORROW) {
+                implementations[i] = borrowImplementation;
+            } else {
+                revert("Unsupported market type");
+            }
+        }
+
+        MarketUpgradeBatchReport memory report =
+            MarketUpgradeBatchReport({markets: markets, implementations: implementations});
+        input = _updateMarketImplementations(input, report);
+        _logMarketUpgradeTimelockBatch(input, report, "all-mint-borrow-markets-upgrade");
         return input;
     }
 
@@ -1777,23 +1810,35 @@ library DeployAltoEthereumMainnet {
         address[] memory mintMarkets = registry.getMintMarkets();
         address[] memory borrowMarkets = registry.getBorrowMarkets();
 
-        uint256 mintCount = mintMarkets.length;
-        uint256 borrowCount = borrowMarkets.length;
-        markets = new address[](mintCount + borrowCount);
-
-        for (uint256 i = 0; i < mintCount; i++) {
-            markets[i] = mintMarkets[i];
+        // Credit and DAO mint markets use different implementations and are excluded.
+        uint256 count;
+        for (uint256 i; i < mintMarkets.length; i++) {
+            if (IMarket(mintMarkets[i]).MARKET_TYPE() == MarketType.MINT) count++;
         }
-        for (uint256 i = 0; i < borrowCount; i++) {
-            markets[mintCount + i] = borrowMarkets[i];
+        for (uint256 i; i < borrowMarkets.length; i++) {
+            if (IMarket(borrowMarkets[i]).MARKET_TYPE() == MarketType.BORROW) count++;
         }
 
-        require(markets.length > 0, "No markets in registry");
+        require(count > 0, "No mint or borrow markets in registry");
+        markets = new address[](count);
+
+        uint256 index;
+        for (uint256 i; i < mintMarkets.length; i++) {
+            if (IMarket(mintMarkets[i]).MARKET_TYPE() == MarketType.MINT) {
+                markets[index++] = mintMarkets[i];
+            }
+        }
+        for (uint256 i; i < borrowMarkets.length; i++) {
+            if (IMarket(borrowMarkets[i]).MARKET_TYPE() == MarketType.BORROW) {
+                markets[index++] = borrowMarkets[i];
+            }
+        }
     }
 
     function _logMarketUpgradeTimelockBatch(
         AltoEthereumMainnetInput memory input,
-        MarketUpgradeBatchReport memory report
+        MarketUpgradeBatchReport memory report,
+        string memory batchName
     ) internal {
         address timelock = input.contracts.timelock;
         uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
@@ -1809,9 +1854,7 @@ library DeployAltoEthereumMainnet {
             payloads[i] = abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (report.implementations[i], ""));
         }
 
-        SafeTransactionBuilder.writeTimelockBatch(
-            "market-upgrade-liquidation-periphery", timelock, targets, values, payloads, minDelay
-        );
+        SafeTransactionBuilder.writeTimelockBatch(batchName, timelock, targets, values, payloads, minDelay);
     }
 
     function _logAuthorizeLiquidationPeripheryTimelockBatch(
@@ -1871,6 +1914,26 @@ library DeployAltoEthereumMainnet {
                 input.contracts.susdeMintMarket.marketImplementation = newImplementation;
             } else if (market == input.contracts.syrupUsdcMintMarket.market) {
                 input.contracts.syrupUsdcMintMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.frxUsdMarket.market) {
+                input.contracts.frxUsdMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.refreshWethMarket.market) {
+                input.contracts.refreshWethMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.refreshWstethMarket.market) {
+                input.contracts.refreshWstethMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.refreshRethMarket.market) {
+                input.contracts.refreshRethMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.refreshSusdeBorrowMarket.market) {
+                input.contracts.refreshSusdeBorrowMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.refreshSyrupUsdcBorrowMarket.market) {
+                input.contracts.refreshSyrupUsdcBorrowMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.refreshSusdeMintMarket.market) {
+                input.contracts.refreshSusdeMintMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.refreshSyrupUsdcMintMarket.market) {
+                input.contracts.refreshSyrupUsdcMintMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.refreshFrxUsdMarket.market) {
+                input.contracts.refreshFrxUsdMarket.marketImplementation = newImplementation;
+            } else {
+                revert("Unrecorded market in registry");
             }
         }
 
