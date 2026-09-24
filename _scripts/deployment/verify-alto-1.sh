@@ -273,6 +273,7 @@ FRXUSD_MINT_LEVERAGE=$(get_address ".contracts.refreshFrxUsdLeverage")
 
 # Convex Credit Line Market contracts
 CONVEX_CREDIT_LINE_MARKET=$(get_address ".contracts.convexCreditLineMarket")
+CONVEX_CREDIT_LINE_MARKET_LIB=$(get_address ".contracts.convexCreditLineMarketLib")
 CONVEX_CREDIT_LINE_MARKET_IMPL=$(get_address ".contracts.convexCreditLineMarketImplementation")
 CONVEX_CREDIT_LINE_MARKET_IRM=$(get_address ".contracts.convexCreditLineMarketIrm")
 CONVEX_CREDIT_LINE_MARKET_ORACLE=$(get_address ".contracts.convexCreditLineMarketOracle")
@@ -586,7 +587,7 @@ verify_contract "FrxUsdMintLeverage" "$FRXUSD_MINT_LEVERAGE" "contracts/lending/
 
 # Convex Credit Line Market contracts
 verify_contract "ConvexCreditLineMarket" "$CONVEX_CREDIT_LINE_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
-verify_contract "ConvexCreditLineMarketImplementation" "$CONVEX_CREDIT_LINE_MARKET_IMPL" "contracts/lending/credit-market/AltoConvexCreditLineMarket.sol:AltoConvexCreditLineMarket"
+verify_contract "ConvexCreditLineMarketLib" "$CONVEX_CREDIT_LINE_MARKET_LIB" "contracts/lending/credit-market/AltoConvexCreditLineLib.sol:AltoConvexCreditLineLib"
 verify_contract "ConvexCreditLineMarketIRM" "$CONVEX_CREDIT_LINE_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
 verify_contract "ConvexCreditLineMarketOracle" "$CONVEX_CREDIT_LINE_MARKET_ORACLE" "contracts/oracles/AltoCreditMarketLpOracle/AltoCreditMarketLpOracle.sol:AltoCreditMarketLpOracle"
 
