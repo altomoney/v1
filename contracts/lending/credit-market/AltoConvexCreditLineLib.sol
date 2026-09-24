@@ -17,7 +17,6 @@ import {IConvexRewardPool} from "@alto/lending/interfaces/vendor/IConvexRewardPo
 /// @notice Stateless Convex custody and reward operations for AltoConvexCreditLineMarket
 /// @dev Linked functions execute in the calling market's context, so `address(this)` and storage refer to the market.
 /// Custody assumes standard exact-transfer LP tokens and trusted Convex contracts with one-to-one receipt accounting.
-/// @custom:audit Pending
 library AltoConvexCreditLineLib {
     using SafeERC20 for IERC20;
 
