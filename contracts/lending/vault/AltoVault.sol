@@ -12,6 +12,7 @@ import {
 import {Market, MarketLib} from "@alto/lending/libraries/MarketLib.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
+import {IAltoBorrowMarket} from "@alto/lending/interfaces/IAltoBorrowMarket.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
 import {PendingLib} from "@alto/lending/libraries/PendingLib.sol";
@@ -664,7 +665,14 @@ contract AltoVault is ERC4626, ERC20Permit, AltoOwnable2Step, Multicall, IAltoVa
             // `supplyAssets` needs to be rounded up for `totalSuppliable` to be rounded down.
             uint256 supplyAssets = supplyShares.convertToAssetsUp(totalSupplyAssets, totalSupplyShares);
 
-            totalSuppliable += supplyCap.zeroFloorSub(supplyAssets);
+            uint256 vaultSupplyCapacity = supplyCap.zeroFloorSub(supplyAssets);
+            uint256 marketSupplyCap = IAltoBorrowMarket(market).supplyCapAssets();
+            // A zero market supply cap means that there is no cap on supply.
+            if (marketSupplyCap == 0) {
+                totalSuppliable += vaultSupplyCapacity;
+            } else {
+                totalSuppliable += UtilsLib.min(vaultSupplyCapacity, marketSupplyCap.zeroFloorSub(totalSupplyAssets));
+            }
         }
     }
 
@@ -838,7 +846,13 @@ contract AltoVault is ERC4626, ERC20Permit, AltoOwnable2Step, Multicall, IAltoVa
             // `supplyAssets` needs to be rounded up for `toSupply` to be rounded down.
             uint256 supplyAssets = supplyShares.convertToAssetsUp(totalSupplyAssets, totalSupplyShares);
 
-            uint256 toSupply = UtilsLib.min(supplyCap.zeroFloorSub(supplyAssets), assets);
+            uint256 vaultSupplyCapacity = supplyCap.zeroFloorSub(supplyAssets);
+            uint256 marketSupplyCap = IAltoBorrowMarket(market).supplyCapAssets();
+            uint256 toSupply = UtilsLib.min(vaultSupplyCapacity, assets);
+            if (marketSupplyCap != 0) {
+                uint256 marketSupplyCapacity = marketSupplyCap.zeroFloorSub(totalSupplyAssets);
+                toSupply = UtilsLib.min(toSupply, marketSupplyCapacity);
+            }
 
             if (toSupply > 0) {
                 IERC20(asset()).forceApprove(market, toSupply);

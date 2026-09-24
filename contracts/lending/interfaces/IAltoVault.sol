@@ -342,6 +342,9 @@ interface IAltoVaultBase is IAltoVaultErrors, IAltoVaultEvents {
     function setSkimRecipient(address newSkimRecipient) external;
 
     /// @notice Sets `supplyQueue` to `newSupplyQueue`.
+    /// @dev Paused or frozen markets cannot accept supply and are not filtered onchain when calculating `maxDeposit`
+    /// or `maxMint`. Allocators must monitor market status offchain and ensure paused or frozen markets are not present
+    /// in `newSupplyQueue`.
     /// @param newSupplyQueue is an array of enabled markets, and can contain duplicate markets, but it would only
     /// increase the cost of depositing to the vault.
     function setSupplyQueue(address[] calldata newSupplyQueue) external;

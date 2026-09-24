@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./helpers/IntegrationTest.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {IAltoBorrowMarket} from "@alto/lending/interfaces/IAltoBorrowMarket.sol";
 
 contract ERC4626Test is IntegrationTest {
     using AltoBalancesLib for address;
@@ -372,6 +373,62 @@ contract ERC4626Test is IntegrationTest {
         erc4626Vault.deposit(1 ether, ONBEHALF);
 
         assertEq(erc4626Vault.maxDeposit(SUPPLIER), 0);
+    }
+
+    function testMaxDepositAndDepositRespectMarketSupplyCap() public {
+        uint256 marketSupplyCap = 1 ether;
+
+        vm.prank(MARKET_OWNER);
+        IAltoBorrowMarket(allMarkets[0]).setSupplyCap(uint128(marketSupplyCap));
+
+        address[] memory supplyQueue = new address[](1);
+        supplyQueue[0] = allMarkets[0];
+        vm.prank(ALLOCATOR);
+        vault.setSupplyQueue(supplyQueue);
+
+        assertEq(erc4626Vault.maxDeposit(SUPPLIER), marketSupplyCap, "incorrect max deposit");
+
+        loanToken.setBalance(SUPPLIER, marketSupplyCap + 1);
+
+        vm.expectRevert(IAltoVaultErrors.AllCapsReached.selector);
+        vm.prank(SUPPLIER);
+        erc4626Vault.deposit(marketSupplyCap + 1, ONBEHALF);
+
+        uint256 previewedShares = erc4626Vault.previewDeposit(marketSupplyCap);
+        vm.prank(SUPPLIER);
+        uint256 shares = erc4626Vault.deposit(marketSupplyCap, ONBEHALF);
+
+        assertEq(shares, previewedShares, "received shares differ from previewDeposit");
+        assertEq(allMarkets[0].expectedSupplyAssets(address(erc4626Vault)), marketSupplyCap, "incorrect market supply");
+        assertEq(erc4626Vault.maxDeposit(SUPPLIER), 0, "market supply capacity remains");
+    }
+
+    function testMaxDepositAndDepositTreatZeroMarketSupplyCapAsUnlimited() public {
+        uint256 vaultSupplyCap = 2 ether;
+
+        _setCap(allMarkets[0], vaultSupplyCap);
+
+        address[] memory supplyQueue = new address[](1);
+        supplyQueue[0] = allMarkets[0];
+        vm.prank(ALLOCATOR);
+        vault.setSupplyQueue(supplyQueue);
+
+        assertEq(IAltoBorrowMarket(allMarkets[0]).supplyCapAssets(), 0, "market supply should be uncapped");
+        assertEq(erc4626Vault.maxDeposit(SUPPLIER), vaultSupplyCap, "incorrect max deposit");
+
+        loanToken.setBalance(SUPPLIER, vaultSupplyCap + 1);
+
+        vm.expectRevert(IAltoVaultErrors.AllCapsReached.selector);
+        vm.prank(SUPPLIER);
+        erc4626Vault.deposit(vaultSupplyCap + 1, ONBEHALF);
+
+        uint256 previewedShares = erc4626Vault.previewDeposit(vaultSupplyCap);
+        vm.prank(SUPPLIER);
+        uint256 shares = erc4626Vault.deposit(vaultSupplyCap, ONBEHALF);
+
+        assertEq(shares, previewedShares, "received shares differ from previewDeposit");
+        assertEq(allMarkets[0].expectedSupplyAssets(address(erc4626Vault)), vaultSupplyCap, "incorrect market supply");
+        assertEq(erc4626Vault.maxDeposit(SUPPLIER), 0, "vault supply capacity remains");
     }
 
     function testDepositSkipsPausedMarketAndFallsBackToNextMarket(uint256 assets) public {
