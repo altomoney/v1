@@ -17,7 +17,7 @@ import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 import {USDC_MAINNET, FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
-DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.MINT_MARKET_PEG_RESPONSIVE_IRM;
+DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.UPGRADE_ALL_MINT_BORROW_MARKETS;
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployAltoEthereumMainnetScript is Script {
@@ -104,6 +104,10 @@ contract DeployAltoEthereumMainnetScript is Script {
                 deploymentInput.contracts.dusd,
                 FRXUSD_MAINNET
             );
+        } else if (phase == DeploymentPhase.UPGRADE_ALL_MINT_BORROW_MARKETS) {
+            Options memory opts;
+            Upgrades.validateImplementation("AltoMintMarket.sol:AltoMintMarket", opts);
+            Upgrades.validateImplementation("AltoBorrowMarket.sol:AltoBorrowMarket", opts);
         } else if (phase == DeploymentPhase.CONVEX_CREDIT_LINE_MARKET) {
             Options memory opts;
             opts.unsafeAllow = "external-library-linking";
@@ -589,7 +593,10 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("DUSDAdvancedPermissionsUsm", abiFolder);
             _extractContractABI("FixedPriceStrategy", abiFolder);
             _extractContractABI("AdvancedPermissionsFeeStrategy", abiFolder);
-        } else if (PHASE_TO_DEPLOY == DeploymentPhase.UPGRADE_MARKETS_LIQUIDATION_PERIPHERY) {
+        } else if (
+            PHASE_TO_DEPLOY == DeploymentPhase.UPGRADE_MARKETS_LIQUIDATION_PERIPHERY
+                || PHASE_TO_DEPLOY == DeploymentPhase.UPGRADE_ALL_MINT_BORROW_MARKETS
+        ) {
             _extractContractABI("AltoMintMarket", abiFolder);
             _extractContractABI("AltoBorrowMarket", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.UNIVERSAL_REWARDS_DISTRIBUTOR) {
