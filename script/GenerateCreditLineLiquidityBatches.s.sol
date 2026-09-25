@@ -35,8 +35,7 @@ interface IYearnDeposit {
     function deposit(uint256 amount, address recipient) external returns (uint256);
 }
 
-/// @notice Generates both Safe batches before the first executes.
-/// @dev Run again after the first batch executes to refresh the second batch from live LP balances.
+/// @notice Generates batch 1 before execution and batch 2 after batch 1 is mined.
 contract GenerateCreditLineLiquidityBatches is Script {
     address constant SAFE = 0xA1148A1b94262540994Cf9Aa431A13ad39764228;
     address constant LP = 0x104d6a1b97A6CEf88D905d7b865A378d90be932A;
@@ -60,9 +59,10 @@ contract GenerateCreditLineLiquidityBatches is Script {
         if (oldConvexLp > 0) {
             require(IERC20(LP).balanceOf(SAFE) == 0, "preexisting loose LP");
             _batchOne(oldConvexLp);
-        } else {
-            require(IERC20(LP).balanceOf(SAFE) > 0, "no LP to allocate");
+            return;
         }
+        require(IERC20(LP).balanceOf(SAFE) > 0, "batch 1 has not minted LP");
+        require(IAltoConvexCreditLineMarket(CREDIT).position(SAFE).borrowShares > 0, "batch 1 has not borrowed");
         _batchTwo();
     }
 
