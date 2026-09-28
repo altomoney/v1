@@ -246,19 +246,24 @@ contract SDUSD is
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    /// @dev Returns the remaining DUSD cap headroom, or 0 while frozen or paused or when the complete remaining headroom would
-    ///      round down to zero shares and therefore cannot be deposited.
-    function maxDeposit(address) public view override returns (uint256) {
+    /// @dev Before seeding, returns exactly `seedShares` for address(1) and 0 for every other receiver. After
+    ///      seeding, returns the remaining DUSD cap headroom. Returns 0 while frozen or paused or when the complete
+    ///      remaining headroom would round down to zero shares and therefore cannot be deposited.
+    function maxDeposit(address receiver) public view override returns (uint256) {
         if (paused[PAUSE_TYPE] || paused[FROZEN_TYPE]) return 0;
+        if (totalSupply() == 0) return receiver == address(1) ? seedShares : 0;
 
         uint256 remainingDepositCap = _remainingDepositCap();
         return _convertToShares(remainingDepositCap, Math.Rounding.Floor) == 0 ? 0 : remainingDepositCap;
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    /// @dev Converts the remaining DUSD cap headroom to shares with downward rounding, or returns 0 while frozen or paused.
-    function maxMint(address) public view override returns (uint256) {
+    /// @dev Before seeding, returns exactly `seedShares` for address(1) and 0 for every other receiver. After
+    ///      seeding, converts the remaining DUSD cap headroom to shares with downward rounding. Returns 0 while
+    ///      frozen or paused.
+    function maxMint(address receiver) public view override returns (uint256) {
         if (paused[PAUSE_TYPE] || paused[FROZEN_TYPE]) return 0;
+        if (totalSupply() == 0) return receiver == address(1) ? seedShares : 0;
         return _convertToShares(_remainingDepositCap(), Math.Rounding.Floor);
     }
 
@@ -284,13 +289,16 @@ contract SDUSD is
     /// @dev Tracks staked principal entering the vault so `totalAssets` reflects deposits without reading
     ///      `balanceOf`. Rejects non-zero deposits that round down to zero shares so assets cannot be accepted
     ///      without giving the receiver ownership in the vault.
-    /// @dev Only the exact initial seed deposit is excluded from cap usage. Its fixed DUSD amount is recorded
-    ///      here so an ordinary first deposit cannot claim the exemption. Later deposits to address(1) and
-    ///      rewards earned by the seed consume capacity like other accounted assets.
+    /// @dev The first deposit must supply exactly `seedShares` DUSD, mint exactly `seedShares` shares, and send
+    ///      those shares to address(1). This seed deposit is excluded from cap usage. Later deposits to address(1)
+    ///      and rewards earned by the seed consume capacity like other accounted assets.
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         if (assets != 0 && shares == 0) revert SDUSDZeroShares();
 
-        if (totalSupply() == 0 && receiver == address(1) && assets == seedShares && shares == seedShares) {
+        if (totalSupply() == 0) {
+            if (receiver != address(1) || assets != seedShares || shares != seedShares) {
+                revert SDUSDInvalidSeedDeposit();
+            }
             _seedAssets = assets;
         }
         accountedAssets += assets;

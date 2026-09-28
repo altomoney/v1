@@ -3,7 +3,6 @@ pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 
 import {SDUSDCommon} from "./SDUSDCommon.t.sol";
 
@@ -41,42 +40,6 @@ contract SDUSD_DepositCapUsage_Test is SDUSDCommon {
         assertEq(vault.totalAssets(), SEED_SHARES);
         assertEq(vault.depositCapUsage(), 0);
         assertEq(vault.maxDeposit(USER), INITIAL_DEPOSIT_CAP);
-    }
-
-    function test_OrdinaryFirstDepositAndLateSeedCannotBypassCap() public {
-        _useEmptyVault();
-        uint256 shares = _depositFor(USER, INITIAL_DEPOSIT_CAP - SEED_SHARES);
-        dusd.mint(address(this), SEED_SHARES);
-        dusd.approve(address(vault), SEED_SHARES);
-        vault.deposit(SEED_SHARES, SEED_LOCK);
-
-        assertEq(vault.depositCapUsage(), INITIAL_DEPOSIT_CAP);
-        assertEq(vault.maxDeposit(USER), 0);
-        assertEq(vault.maxMint(USER), 0);
-        vm.expectRevert(abi.encodeWithSelector(ERC4626.ERC4626ExceededMaxDeposit.selector, USER, 1, 0));
-        vault.deposit(1, USER);
-
-        vm.prank(USER);
-        vault.redeem(shares, USER, USER);
-        assertEq(vault.depositCapUsage(), SEED_SHARES);
-    }
-
-    function test_SmallPreSeedPositionCanExitWithoutUnderflow() public {
-        _useEmptyVault();
-        uint256 shares = _depositFor(USER, 1);
-        assertEq(vault.depositCapUsage(), 1);
-        vm.prank(USER);
-        assertEq(vault.redeem(shares, USER, USER), 1);
-        assertEq(vault.depositCapUsage(), 0);
-        assertEq(vault.maxDeposit(USER), INITIAL_DEPOSIT_CAP);
-    }
-
-    function test_WrongSizedInitialLockDepositIsNotExempt() public {
-        _useEmptyVault();
-        dusd.mint(address(this), 2 * SEED_SHARES);
-        dusd.approve(address(vault), 2 * SEED_SHARES);
-        vault.deposit(2 * SEED_SHARES, SEED_LOCK);
-        assertEq(vault.depositCapUsage(), 2 * SEED_SHARES);
     }
 
     function test_LaterLockDepositsAndTransfersDoNotExpandSeedExemption() public {

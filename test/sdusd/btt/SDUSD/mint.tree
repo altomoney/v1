@@ -11,15 +11,17 @@ SDUSD::mint
     │   ├── it should revert with ERC4626ExceededMaxMint
     │   └── it should leave deposit cap usage and vault state unchanged
     ├── when total supply is zero
-    │   ├── it should calculate required assets by rounding up
-    │   ├── it should transfer required assets from caller to the vault
-    │   ├── it should increase accountedAssets by required assets
-    │   ├── it should exclude only the exact initial seed mint to address(1) from depositCapUsage
-    │   ├── it should mint all requested shares to receiver
-    │   ├── it should mint shares only to the requested receiver
-    │   ├── it should return the required asset amount
-    │   ├── it should emit Deposit
-    │   └── it should not decrease the initial exchange rate
+    │   ├── when receiver is address(1) and assets and shares equal seedShares
+    │   │   ├── it should accept the seed mint
+    │   │   ├── it should exclude the seed from depositCapUsage
+    │   │   ├── it should mint all shares to address(1)
+    │   │   └── it should emit Deposit
+    │   ├── when receiver is not address(1)
+    │   │   └── it should revert with ERC4626ExceededMaxMint because maxMint is zero
+    │   ├── when receiver is address(1) and shares is below seedShares
+    │   │   └── it should revert with SDUSDInvalidSeedDeposit
+    │   └── when receiver is address(1) and shares exceeds seedShares
+    │       └── it should revert with ERC4626ExceededMaxMint
     └── when total supply is non-zero
         ├── it should calculate required assets by rounding up
         ├── it should transfer required assets from caller to the vault

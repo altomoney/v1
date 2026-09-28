@@ -8,6 +8,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {ISDUSDVaultErrors} from "@alto/sdusd/interfaces/ISDUSDVault.sol";
 import {SDUSDCommon} from "./SDUSDCommon.t.sol";
 
 contract SDUSD_Mint_Test is SDUSDCommon {
@@ -83,9 +84,9 @@ contract SDUSD_Mint_Test is SDUSDCommon {
         assertEq(vault.balanceOf(RECEIVER), 0);
     }
 
-    function test_EmptyVaultMintsAllRequestedSharesToReceiver() public {
+    function test_EmptyVaultAcceptsExactSeedMint() public {
         _useEmptyVault();
-        uint256 shares = SEED_SHARES + 1;
+        uint256 shares = SEED_SHARES;
         uint256 requiredAssets = vault.previewMint(shares);
         assertEq(requiredAssets, _expectedAssets(shares, Math.Rounding.Ceil));
         ExchangeRateSnapshot memory exchangeRateBefore = _snapshotExchangeRate();
@@ -94,18 +95,61 @@ contract SDUSD_Mint_Test is SDUSDCommon {
         vm.startPrank(USER);
         dusd.approve(address(vault), requiredAssets);
         vm.expectEmit(true, true, false, true, address(vault));
-        emit IERC4626.Deposit(USER, USER, requiredAssets, shares);
-        uint256 returnedAssets = vault.mint(shares, USER);
+        emit IERC4626.Deposit(USER, SEED_LOCK, requiredAssets, shares);
+        uint256 returnedAssets = vault.mint(shares, SEED_LOCK);
         vm.stopPrank();
 
         assertEq(returnedAssets, requiredAssets);
         assertEq(dusd.balanceOf(address(vault)), requiredAssets);
         assertEq(vault.accountedAssets(), requiredAssets);
-        assertEq(vault.depositCapUsage(), requiredAssets);
-        assertEq(vault.balanceOf(USER), shares);
-        assertEq(vault.balanceOf(SEED_LOCK), 0);
+        assertEq(vault.depositCapUsage(), 0);
+        assertEq(vault.balanceOf(USER), 0);
+        assertEq(vault.balanceOf(SEED_LOCK), shares);
         assertEq(vault.totalSupply(), shares);
         _assertExchangeRateNotDecreased(exchangeRateBefore);
+    }
+
+    function test_RevertWhen_FirstMintReceiverIsNotSeedLock() public {
+        _useEmptyVault();
+        dusd.mint(USER, SEED_SHARES);
+        vm.startPrank(USER);
+        dusd.approve(address(vault), SEED_SHARES);
+        vm.expectRevert(abi.encodeWithSelector(ERC4626.ERC4626ExceededMaxMint.selector, USER, SEED_SHARES, 0));
+        vault.mint(SEED_SHARES, USER);
+        vm.stopPrank();
+
+        assertEq(dusd.balanceOf(USER), SEED_SHARES);
+        assertEq(dusd.balanceOf(address(vault)), 0);
+        assertEq(vault.accountedAssets(), 0);
+        assertEq(vault.totalSupply(), 0);
+    }
+
+    function test_RevertWhen_FirstMintSharesAreBelowSeedShares() public {
+        _useEmptyVault();
+        uint256 shares = SEED_SHARES - 1;
+        uint256 requiredAssets = vault.previewMint(shares);
+        dusd.mint(USER, requiredAssets);
+        vm.startPrank(USER);
+        dusd.approve(address(vault), requiredAssets);
+        vm.expectRevert(ISDUSDVaultErrors.SDUSDInvalidSeedDeposit.selector);
+        vault.mint(shares, SEED_LOCK);
+        vm.stopPrank();
+
+        assertEq(dusd.balanceOf(USER), requiredAssets);
+        assertEq(dusd.balanceOf(address(vault)), 0);
+        assertEq(vault.accountedAssets(), 0);
+        assertEq(vault.totalSupply(), 0);
+    }
+
+    function test_RevertWhen_FirstMintSharesExceedSeedShares() public {
+        _useEmptyVault();
+        uint256 shares = SEED_SHARES + 1;
+        vm.expectRevert(abi.encodeWithSelector(ERC4626.ERC4626ExceededMaxMint.selector, SEED_LOCK, shares, SEED_SHARES));
+        vault.mint(shares, SEED_LOCK);
+
+        assertEq(dusd.balanceOf(address(vault)), 0);
+        assertEq(vault.accountedAssets(), 0);
+        assertEq(vault.totalSupply(), 0);
     }
 
     function test_SubsequentMintRoundsUpTransfersAssetsMintsSharesAndEmits() public {

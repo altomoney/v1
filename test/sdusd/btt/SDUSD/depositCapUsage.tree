@@ -1,9 +1,6 @@
 SDUSD::depositCapUsage
 ├── given the vault has not been seeded
-│   ├── it should exempt only an exact initial seed deposit or mint to address(1)
-│   ├── it should count an ordinary first deposit and a late seed against the cap
-│   ├── it should allow a small pre-seed position to exit without underflow
-│   └── it should count a wrong-sized initial deposit to address(1)
+│   └── it should exempt the required exact initial seed deposit or mint to address(1)
 ├── given the exact initial seed has been deposited
 │   ├── it should exclude only the fixed original DUSD seed amount
 │   ├── later lock deposits and transfers should not expand the exemption
