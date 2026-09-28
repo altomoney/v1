@@ -203,6 +203,8 @@ struct VotiumAllocationData {
     uint256 votiumFeeAmount;
     uint256 votiumStoredAmount;
     uint256 surplusCrvUsdAmount;
+    uint256 cowSurplusCrvUsdAmount;
+    uint256 retainedSurplusCrvUsdAmount;
     bool externalCapExceeded;
 }
 
@@ -216,6 +218,7 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
     uint256 public constant MAX_CURVE_SLIPPAGE_BPS = 100;
     uint256 public constant YEARN_RETAINED_PRINCIPAL_LP = 215_246 ether;
     uint256 public constant VOTIUM_INCENTIVE_CAP_USD = 16_000;
+    uint256 public constant MIN_COW_SURPLUS_CRVUSD_AMOUNT = 1 ether;
 
     // Action C: Stake DAO's current vlCVX delegator UniversalRewardsDistributor.
     address public constant STAKEDAO_DELEGATOR_DISTRIBUTOR = 0x17F513CDE031C8B1E878Bde1Cb020cE29f77f380;
@@ -394,20 +397,26 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
 
     function _runVotium() internal {
         (VotiumAllocationData memory allocation, string memory allocationJson) = _createVotiumAllocation();
-        CowOrderData[] memory surplusOrders = new CowOrderData[](allocation.surplusCrvUsdAmount > 0 ? 1 : 0);
+        CowOrderData[] memory surplusOrders = new CowOrderData[](allocation.cowSurplusCrvUsdAmount > 0 ? 1 : 0);
         if (surplusOrders.length > 0) {
             require(vm.envOr("COW_SUBMIT_ORDERS", false), "set COW_SUBMIT_ORDERS=true to post surplus order");
             uint256 slippageBps = vm.envUint("COW_SLIPPAGE_BPS");
             uint256 validFor = vm.envUint("COW_ORDER_VALIDITY_SECONDS");
             require(slippageBps <= 1_000, "CoW slippage exceeds 10%");
             require(validFor >= 1_800 && validFor <= 604_800, "CoW validity must be 1800-604800 seconds");
-            surplusOrders[0] = _createCowOrder(CRVUSD, USDC, allocation.surplusCrvUsdAmount, slippageBps, validFor);
+            surplusOrders[0] = _createCowOrder(CRVUSD, USDC, allocation.cowSurplusCrvUsdAmount, slippageBps, validFor);
         }
 
-        LiquidityIncentivesSafeTx[] memory txs =
-            getVotiumAndSurplusTransactions(allocation.votiumGrossAmount, surplusOrders);
-        uint256 votiumRound = validateAndSimulateVotiumTransactions(txs, allocation.votiumGrossAmount, surplusOrders);
-        require(votiumRound == allocation.round, "Votium round changed during generation");
+        LiquidityIncentivesSafeTx[] memory txs;
+        if (allocation.votiumGrossAmount > 0 || surplusOrders.length > 0) {
+            txs = getVotiumAndSurplusTransactions(allocation.votiumGrossAmount, surplusOrders);
+            uint256 votiumRound =
+                validateAndSimulateVotiumTransactions(txs, allocation.votiumGrossAmount, surplusOrders);
+            require(votiumRound == allocation.round, "Votium round changed during generation");
+        } else {
+            txs = new LiquidityIncentivesSafeTx[](0);
+        }
+        require(IVotium(VOTIUM).activeRound() == allocation.round, "Votium round changed during generation");
         vm.writeFile(VOTIUM_OUTPUT_PATH, buildSafeBatchJson("Liquidity 04 - Votium F2 and surplus crvUSD to USDC", txs));
         vm.writeFile(VOTIUM_ALLOCATION_OUTPUT_PATH, allocationJson);
         vm.writeFile(VOTIUM_COW_ORDERS_OUTPUT_PATH, buildCowOrdersJson(surplusOrders));
@@ -593,15 +602,34 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
             votiumFeeAmount: vm.parseUint(vm.parseJsonString(allocationJson, ".votiumFeeAmount")),
             votiumStoredAmount: vm.parseUint(vm.parseJsonString(allocationJson, ".votiumStoredAmount")),
             surplusCrvUsdAmount: vm.parseUint(vm.parseJsonString(allocationJson, ".surplusCrvUsdAmount")),
+            cowSurplusCrvUsdAmount: vm.parseUint(vm.parseJsonString(allocationJson, ".cowSurplusCrvUsdAmount")),
+            retainedSurplusCrvUsdAmount: vm.parseUint(
+                vm.parseJsonString(allocationJson, ".retainedSurplusCrvUsdAmount")
+            ),
             externalCapExceeded: vm.parseJsonBool(allocationJson, ".externalCapExceeded")
         });
 
         require(allocation.round == round, "allocation round mismatch");
         require(allocation.crvUsdProceedsAmount == proceedsAmount, "allocation proceeds mismatch");
         require(
+            vm.parseUint(vm.parseJsonString(allocationJson, ".minimumCowSurplusCrvUsdAmount"))
+                == MIN_COW_SURPLUS_CRVUSD_AMOUNT,
+            "CoW surplus minimum mismatch"
+        );
+        require(
             allocation.votiumGrossAmount + allocation.surplusCrvUsdAmount == proceedsAmount,
             "allocation does not consume selected proceeds"
         );
+        require(
+            allocation.cowSurplusCrvUsdAmount + allocation.retainedSurplusCrvUsdAmount
+                == allocation.surplusCrvUsdAmount,
+            "surplus disposition mismatch"
+        );
+        if (allocation.surplusCrvUsdAmount < MIN_COW_SURPLUS_CRVUSD_AMOUNT) {
+            require(allocation.cowSurplusCrvUsdAmount == 0, "dust surplus sent to CoW");
+        } else {
+            require(allocation.retainedSurplusCrvUsdAmount == 0, "swappable surplus retained");
+        }
         require(
             allocation.votiumGrossAmount <= allocation.maximumGrossCrvUsdAmount,
             "allocation gross amount exceeds maximum"
@@ -632,7 +660,9 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
         console.log("Gross crvUSD deposited to Votium:", allocation.votiumGrossAmount);
         console.log("Votium fee:", allocation.votiumFeeAmount);
         console.log("Stored crvUSD incentive:", allocation.votiumStoredAmount);
-        console.log("Surplus crvUSD selected for USDC:", allocation.surplusCrvUsdAmount);
+        console.log("Total surplus crvUSD:", allocation.surplusCrvUsdAmount);
+        console.log("Surplus crvUSD selected for USDC:", allocation.cowSurplusCrvUsdAmount);
+        console.log("Surplus crvUSD retained in Treasury:", allocation.retainedSurplusCrvUsdAmount);
         console.log("External incentives already exceed cap:", allocation.externalCapExceeded);
     }
 

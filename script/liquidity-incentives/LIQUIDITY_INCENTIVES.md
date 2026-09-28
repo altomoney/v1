@@ -139,9 +139,9 @@ The script then:
 - Calculates the maximum post-fee crvUSD incentive allowed by the remaining USD cap.
 - Grosses that amount up using Votium's current onchain `platformFee` and `DENOMINATOR` values.
 - Deposits the lesser of that maximum gross amount and the selected crvUSD proceeds.
-- Creates a CoW order from every remaining selected crvUSD unit into USDC.
+- Creates a CoW order for the full surplus when it is at least 1 crvUSD. A smaller surplus remains in the Treasury instead of blocking the Votium deposit.
 
-The calculation uses Votium's stored external incentive amounts. Those amounts are already net of Votium's fee. The generated allocation report shows external USD value, remaining cap, the maximum stored and gross crvUSD amounts, Votium fee, resulting stored incentive, combined USD value, and crvUSD surplus.
+The calculation uses Votium's stored external incentive amounts. Those amounts are already net of Votium's fee. The generated allocation report shows external USD value, remaining cap, the maximum stored and gross crvUSD amounts, Votium fee, resulting stored incentive, combined USD value, total crvUSD surplus, the portion selected for CoW, and any dust retained in the Treasury. The 1 crvUSD order minimum is a conservative operational threshold, not a guarantee that CoW will quote every larger order. A failed quote for a surplus of at least 1 crvUSD still stops generation.
 
 First generate a read-only allocation plan. This does not post a CoW order:
 
@@ -154,10 +154,10 @@ forge script script/liquidity-incentives/GenerateLiquidityIncentivesTransactions
 
 Output: `contracts/deployments/ethereum-mainnet/output/votium-allocation-liquidity-04.json`
 
-Review that report. If `surplusCrvUsdAmount` is greater than zero, preview the exact surplus quote without posting it:
+Review that report. If `cowSurplusCrvUsdAmount` is greater than zero, preview the exact surplus quote without posting it:
 
 ```bash
-SURPLUS_CRVUSD_AMOUNT=$(jq -r '.surplusCrvUsdAmount' \
+SURPLUS_CRVUSD_AMOUNT=$(jq -r '.cowSurplusCrvUsdAmount' \
   contracts/deployments/ethereum-mainnet/output/votium-allocation-liquidity-04.json)
 
 node script/liquidity-incentives/createCowPresignOrder.mjs \
@@ -180,7 +180,8 @@ forge script script/liquidity-incentives/GenerateLiquidityIncentivesTransactions
   --rpc-url ethereum -vvvv
 ```
 
-If there is no surplus, omit the three `COW_*` variables. No CoW order will be created.
+If `cowSurplusCrvUsdAmount` is zero, omit the three `COW_*` variables. No CoW order will be created, even if the report shows a retained dust surplus below 1 crvUSD.
+If the external incentives have already consumed the cap and all selected proceeds are dust, the script writes an empty Safe batch and reports the amount retained in Treasury.
 
 Outputs:
 
@@ -194,8 +195,8 @@ The Phase 4 Safe batch contains these calls in order:
 
 1. If the calculated Alto incentive is non-zero, approve its exact gross crvUSD amount to Votium.
 2. Deposit that exact gross crvUSD amount with `depositIncentiveSimple`. Votium takes its current fee and stores the net incentive for the active round and DUSD/frxUSD gauge.
-3. If surplus exists, approve the exact surplus crvUSD amount to the CoW Vault Relayer.
-4. Presign the exact crvUSD-to-USDC order on the CoW Settlement contract.
+3. If swappable surplus exists, approve its exact crvUSD amount to the CoW Vault Relayer.
+4. Presign the exact crvUSD-to-USDC order on the CoW Settlement contract. Any reported dust remains unapproved in the Treasury.
 
 Execute the Safe batch before the Votium incentivization deadline. Then wait for the surplus CoW order to settle and verify that the Treasury received USDC.
 
@@ -209,8 +210,8 @@ Execute the Safe batch before the Votium incentivization deadline. Then wait for
 6. Run Phase 3 once with `COW_SUBMIT_ORDERS=true`. Review and execute its Safe batch. It redeems selected scrvUSD directly into crvUSD, gives the CoW Vault Relayer exact sell-token allowances, and presigns the submitted orders.
 7. Wait until every Phase 3 CoW order is fulfilled. Record the exact crvUSD proceeds attributable to this run.
 8. Run `votium-plan` with that exact proceeds amount. Review the onchain external incentives, USD prices, cap arithmetic, gross Votium amount, fee, stored amount, and surplus.
-9. If surplus exists, preview its exact crvUSD-to-USDC quote and review expected and minimum USDC output, USD values, network fee, and price impact.
-10. Run Phase 4 once. If surplus exists, use `COW_SUBMIT_ORDERS=true` with the approved slippage and validity. Review the refreshed allocation report, Safe batch, and surplus order manifest.
+9. If swappable surplus exists, preview its exact crvUSD-to-USDC quote and review expected and minimum USDC output, USD values, network fee, and price impact. Confirm any retained dust in the allocation report.
+10. Run Phase 4 once. If swappable surplus exists, use `COW_SUBMIT_ORDERS=true` with the approved slippage and validity. Review the refreshed allocation report, Safe batch, and surplus order manifest.
 11. Execute the Phase 4 Safe batch before Votium's incentivization deadline. This deposits the capped crvUSD incentive and authorizes the exact surplus conversion to USDC.
 12. Confirm the Votium incentive onchain. Then wait for the CoW surplus order to show `fulfilled` and verify the resulting USDC balance in the Treasury.
 

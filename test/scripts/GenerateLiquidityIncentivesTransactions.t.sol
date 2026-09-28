@@ -239,6 +239,16 @@ contract GenerateLiquidityIncentivesTransactionsTest is Test {
         assertEq(vm.parseJsonString(orderJson, ".orders[0].analytics.inputDisplay"), "100 CRV ($100.000000)");
     }
 
+    function test_BuildJson_writesEmptyBatchWhenOnlyDustIsRetained() public view {
+        LiquidityIncentivesSafeTx[] memory txs = new LiquidityIncentivesSafeTx[](0);
+        CowOrderData[] memory orders = new CowOrderData[](0);
+
+        assertEq(
+            vm.parseJsonString(generator.buildSafeBatchJson("test-votium-dust", txs), ".meta.name"), "test-votium-dust"
+        );
+        assertEq(generator.buildCowOrdersJson(orders), '{"version":"1.0","chainId":"1","orders":[]}');
+    }
+
     function _assertCowTransactions(
         LiquidityIncentivesSafeTx memory approvalTx,
         LiquidityIncentivesSafeTx memory presignTx,
