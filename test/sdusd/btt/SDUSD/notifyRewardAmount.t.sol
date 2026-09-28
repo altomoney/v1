@@ -36,18 +36,6 @@ contract SDUSD_NotifyRewardAmount_Test is SDUSDCommon {
         vault.notifyRewardAmount(REWARD_AMOUNT);
     }
 
-    function test_RevertWhen_SeedLockBalanceIsInsufficientEvenIfTotalSupplyExceedsSeedShares() public {
-        _useEmptyVault();
-        _depositFor(USER, SEED_SHARES + 1);
-
-        assertEq(vault.balanceOf(SEED_LOCK), 0);
-        assertGt(vault.totalSupply(), vault.seedShares());
-
-        vm.prank(address(collector));
-        vm.expectRevert(ISDUSDVaultErrors.SDUSDNotSeeded.selector);
-        vault.notifyRewardAmount(REWARD_AMOUNT);
-    }
-
     function test_RevertWhen_OnlySeedSharesRemain() public {
         uint256 userShares = vault.balanceOf(USER);
         vm.prank(USER);

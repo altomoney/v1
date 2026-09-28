@@ -10,9 +10,7 @@ SDUSD::notifyRewardAmount
         ├── when the previous reward period is active
         │   └── it should revert with SDUSDRewardPeriodNotFinished
         ├── when address(1) holds fewer shares than seedShares
-        │   ├── it should revert with SDUSDNotSeeded
-        │   └── when user-owned total supply exceeds seedShares
-        │       └── it should still revert with SDUSDNotSeeded
+        │   └── it should revert with SDUSDNotSeeded
         ├── when all real stakers have exited and all remaining shares belong to address(1)
         │   ├── it should revert with SDUSDNoActiveStakers
         │   ├── it should include shares transferred to the lock after deployment

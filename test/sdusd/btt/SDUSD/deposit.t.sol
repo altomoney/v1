@@ -85,7 +85,7 @@ contract SDUSD_Deposit_Test is SDUSDCommon {
         assertEq(vault.balanceOf(RECEIVER), 0);
     }
 
-    function test_EmptyVaultMintsAllPreviewedSharesToReceiver() public {
+    function test_EmptyVaultAcceptsExactSeedDeposit() public {
         _useEmptyVault();
         uint256 assets = SEED_SHARES;
         uint256 preview = vault.previewDeposit(assets);
@@ -94,19 +94,68 @@ contract SDUSD_Deposit_Test is SDUSDCommon {
         vm.startPrank(USER);
         dusd.approve(address(vault), assets);
         vm.expectEmit(true, true, false, true, address(vault));
-        emit IERC4626.Deposit(USER, USER, assets, preview);
-        uint256 returnedShares = vault.deposit(assets, USER);
+        emit IERC4626.Deposit(USER, SEED_LOCK, assets, preview);
+        uint256 returnedShares = vault.deposit(assets, SEED_LOCK);
         vm.stopPrank();
 
         assertEq(dusd.balanceOf(USER), 0);
         assertEq(dusd.balanceOf(address(vault)), assets);
         assertEq(vault.accountedAssets(), assets);
-        assertEq(vault.depositCapUsage(), assets);
-        assertEq(vault.balanceOf(USER), preview);
-        assertEq(vault.balanceOf(SEED_LOCK), 0);
+        assertEq(vault.depositCapUsage(), 0);
+        assertEq(vault.balanceOf(USER), 0);
+        assertEq(vault.balanceOf(SEED_LOCK), preview);
         assertEq(vault.totalSupply(), preview);
         assertEq(returnedShares, preview);
         _assertExchangeRateNotDecreased(exchangeRateBefore);
+    }
+
+    function test_RevertWhen_FirstDepositReceiverIsNotSeedLock() public {
+        _useEmptyVault();
+        dusd.mint(USER, SEED_SHARES);
+        vm.startPrank(USER);
+        dusd.approve(address(vault), SEED_SHARES);
+        vm.expectRevert(abi.encodeWithSelector(ERC4626.ERC4626ExceededMaxDeposit.selector, USER, SEED_SHARES, 0));
+        vault.deposit(SEED_SHARES, USER);
+        vm.stopPrank();
+
+        assertEq(dusd.balanceOf(USER), SEED_SHARES);
+        assertEq(dusd.balanceOf(address(vault)), 0);
+        assertEq(vault.accountedAssets(), 0);
+        assertEq(vault.totalSupply(), 0);
+    }
+
+    function test_RevertWhen_FirstDepositAssetsAreBelowSeedShares() public {
+        _useEmptyVault();
+        uint256 assets = SEED_SHARES - 1;
+        dusd.mint(USER, assets);
+        vm.startPrank(USER);
+        dusd.approve(address(vault), assets);
+        vm.expectRevert(ISDUSDVaultErrors.SDUSDInvalidSeedDeposit.selector);
+        vault.deposit(assets, SEED_LOCK);
+        vm.stopPrank();
+
+        assertEq(dusd.balanceOf(USER), assets);
+        assertEq(dusd.balanceOf(address(vault)), 0);
+        assertEq(vault.accountedAssets(), 0);
+        assertEq(vault.totalSupply(), 0);
+    }
+
+    function test_RevertWhen_FirstDepositAssetsExceedSeedShares() public {
+        _useEmptyVault();
+        uint256 assets = SEED_SHARES + 1;
+        dusd.mint(USER, assets);
+        vm.startPrank(USER);
+        dusd.approve(address(vault), assets);
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC4626.ERC4626ExceededMaxDeposit.selector, SEED_LOCK, assets, SEED_SHARES)
+        );
+        vault.deposit(assets, SEED_LOCK);
+        vm.stopPrank();
+
+        assertEq(dusd.balanceOf(USER), assets);
+        assertEq(dusd.balanceOf(address(vault)), 0);
+        assertEq(vault.accountedAssets(), 0);
+        assertEq(vault.totalSupply(), 0);
     }
 
     function test_SubsequentDepositTransfersAssetsMintsPreviewedSharesAndEmits() public {

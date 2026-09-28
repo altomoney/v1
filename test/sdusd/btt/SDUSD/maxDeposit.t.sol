@@ -4,6 +4,22 @@ pragma solidity ^0.8.28;
 import {SDUSDCommon} from "./SDUSDCommon.t.sol";
 
 contract SDUSD_MaxDeposit_Test is SDUSDCommon {
+    function test_EmptyVaultReturnsSeedAmountOnlyForSeedLock() public {
+        vault = _deployVaultWithCap(SEED_SHARES, REWARD_DURATION, 0);
+
+        assertEq(vault.maxDeposit(SEED_LOCK), SEED_SHARES);
+        assertEq(vault.maxDeposit(USER), 0);
+        assertEq(vault.maxDeposit(RECEIVER), 0);
+        assertEq(vault.maxDeposit(address(0)), 0);
+    }
+
+    function test_EmptyVaultReturnsZeroForSeedLockWhenPaused() public {
+        _useEmptyVault();
+        _pauseVault();
+
+        assertEq(vault.maxDeposit(SEED_LOCK), 0);
+    }
+
     function test_ReturnsZeroForEveryReceiverWhenPaused() public {
         _pauseVault();
         assertEq(vault.maxDeposit(USER), 0);

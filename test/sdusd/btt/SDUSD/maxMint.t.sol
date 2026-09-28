@@ -6,6 +6,22 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SDUSDCommon} from "./SDUSDCommon.t.sol";
 
 contract SDUSD_MaxMint_Test is SDUSDCommon {
+    function test_EmptyVaultReturnsSeedSharesOnlyForSeedLock() public {
+        vault = _deployVaultWithCap(SEED_SHARES, REWARD_DURATION, 0);
+
+        assertEq(vault.maxMint(SEED_LOCK), SEED_SHARES);
+        assertEq(vault.maxMint(USER), 0);
+        assertEq(vault.maxMint(RECEIVER), 0);
+        assertEq(vault.maxMint(address(0)), 0);
+    }
+
+    function test_EmptyVaultReturnsZeroForSeedLockWhenPaused() public {
+        _useEmptyVault();
+        _pauseVault();
+
+        assertEq(vault.maxMint(SEED_LOCK), 0);
+    }
+
     function test_ReturnsZeroForEveryReceiverWhenPaused() public {
         _pauseVault();
         assertEq(vault.maxMint(USER), 0);

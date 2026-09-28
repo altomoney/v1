@@ -52,6 +52,9 @@ interface ISDUSDVaultErrors {
     /// @notice Thrown when a non-zero asset deposit would mint zero shares
     error SDUSDZeroShares();
 
+    /// @notice Thrown when the first deposit is not the exact configured seed deposit to address(1)
+    error SDUSDInvalidSeedDeposit();
+
     /// @notice Thrown when the reward duration is set outside of the allowed bounds
     error SDUSDInvalidRewardDuration();
 

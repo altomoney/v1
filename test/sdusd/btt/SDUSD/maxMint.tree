@@ -1,7 +1,12 @@
 SDUSD::maxMint
 ├── given PAUSE_TYPE or FROZEN_TYPE is active
 │   └── it should return zero for every receiver
-└── given neither PAUSE_TYPE nor FROZEN_TYPE is active
+├── given neither PAUSE_TYPE nor FROZEN_TYPE is active and total supply is zero
+│   ├── when receiver is address(1)
+│   │   └── it should return seedShares independently of depositCap
+│   └── when receiver is not address(1)
+│       └── it should return zero
+└── given neither PAUSE_TYPE nor FROZEN_TYPE is active and total supply is non-zero
     ├── when depositCapUsage is below depositCap
     │   ├── it should convert the remaining DUSD headroom to shares with downward rounding
     │   ├── it should not vary by receiver
