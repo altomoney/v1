@@ -4,14 +4,22 @@ const DEFAULT_API_BASE_URL = "https://api.cow.fi/mainnet/api/v1";
 const DEFAULT_PRICE_API_BASE_URL = "https://bff.cow.fi/1/tokens";
 const TREASURY_SAFE = "0xa1148a1b94262540994cf9aa431a13ad39764228";
 const CRVUSD = "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e";
+const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const TOKEN_METADATA = new Map([
   ["0xd533a949740bb3306d119cc777fa900ba034cd52", { symbol: "CRV", decimals: 18 }],
   ["0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b", { symbol: "CVX", decimals: 18 }],
+  ["0x04acaf8d2865c0714f79da09645c13fd2888977f", { symbol: "WFRAX", decimals: 18 }],
   ["0xcacd6fd266af91b8aed52accc382b4e165586e29", { symbol: "frxUSD", decimals: 18 }],
   ["0x63d74d22e689c715a04f2c13962b1f77f443d35b", { symbol: "DUSD", decimals: 18 }],
   [CRVUSD, { symbol: "crvUSD", decimals: 18 }],
+  [USDC, { symbol: "USDC", decimals: 6 }],
 ]);
-const SUPPORTED_SELL_TOKENS = new Set([...TOKEN_METADATA.keys()].filter((token) => token !== CRVUSD));
+const SUPPORTED_PAIRS = new Set([
+  ...[...TOKEN_METADATA.keys()]
+    .filter((token) => token !== CRVUSD && token !== USDC)
+    .map((token) => `${token}:${CRVUSD}`),
+  `${CRVUSD}:${USDC}`,
+]);
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
 const UID_PATTERN = /^0x[0-9a-fA-F]{112}$/;
 
@@ -229,6 +237,7 @@ function validateServerOrder(serverOrder, expected, orderUid) {
 
 export async function createCowPresignOrder({
   sellToken,
+  buyToken = CRVUSD,
   sellAmount,
   slippageBps,
   validFor,
@@ -239,9 +248,10 @@ export async function createCowPresignOrder({
   now = () => new Date(),
 }) {
   const normalizedSellToken = normalizeAddress(sellToken, "sell token");
+  const normalizedBuyToken = normalizeAddress(buyToken, "buy token");
   requireCondition(
-    SUPPORTED_SELL_TOKENS.has(normalizedSellToken),
-    "sell token must be CRV, CVX, frxUSD, or DUSD",
+    SUPPORTED_PAIRS.has(`${normalizedSellToken}:${normalizedBuyToken}`),
+    "unsupported CoW pair",
   );
   const parsedSellAmount = parseUnsignedInteger(sellAmount, "sell amount");
   requireCondition(parsedSellAmount > 0n, "sell amount must be non-zero");
@@ -249,7 +259,7 @@ export async function createCowPresignOrder({
 
   const quoteRequest = {
     sellToken: normalizedSellToken,
-    buyToken: CRVUSD,
+    buyToken: normalizedBuyToken,
     from: TREASURY_SAFE,
     receiver: TREASURY_SAFE,
     sellAmountBeforeFee: parsedSellAmount.toString(),
@@ -268,7 +278,7 @@ export async function createCowPresignOrder({
   const order = buildPresignOrder(quoteResponse, parsedSellAmount.toString(), slippageBps);
 
   requireCondition(order.sellToken === normalizedSellToken, "quote changed the sell token");
-  requireCondition(order.buyToken === CRVUSD, "quote changed the buy token");
+  requireCondition(order.buyToken === normalizedBuyToken, "quote changed the buy token");
   requireCondition(order.receiver === TREASURY_SAFE, "quote changed the receiver");
 
   const [sellPrice, buyPrice] = await Promise.all([
@@ -334,6 +344,7 @@ function parseArguments(argv) {
     const value = argv[index + 1];
     requireCondition(value !== undefined, `missing value for ${key}`);
     if (key === "--sell-token") result.sellToken = value;
+    else if (key === "--buy-token") result.buyToken = value;
     else if (key === "--sell-amount") result.sellAmount = value;
     else if (key === "--slippage-bps") result.slippageBps = Number(value);
     else if (key === "--valid-for") result.validFor = Number(value);
