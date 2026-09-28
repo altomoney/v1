@@ -3,6 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Script, console} from "forge-std/Script.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
@@ -19,18 +20,11 @@ interface IConvexBaseRewardPool {
     function earned(address account) external view returns (uint256);
 }
 
-interface IConvexClaimZap {
-    function claimRewards(
-        address[] calldata rewardContracts,
-        address[] calldata extraRewardContracts,
-        address[] calldata tokenRewardContracts,
-        address[] calldata tokenRewardTokens,
-        uint256 depositCrvMaxAmount,
-        uint256 minAmountOut,
-        uint256 depositCvxMaxAmount,
-        uint256 spendCvxAmount,
-        uint256 options
-    ) external;
+interface IConvexCreditLineMarket {
+    function claimRewards() external returns (uint256[] memory claimedAmounts);
+    function convexRewardPool() external view returns (address);
+    function rewardRecipient() external view returns (address);
+    function rewardToken(uint256 index) external view returns (address);
 }
 
 interface IStakeDaoAccountant {
@@ -124,6 +118,10 @@ struct ClaimSimulationState {
     uint256 stakeDaoCrvPendingBefore;
     uint256 crvBefore;
     uint256 cvxBefore;
+    uint256 wfraxBefore;
+    uint256 marketCrvBefore;
+    uint256 marketCvxBefore;
+    uint256 marketWfraxBefore;
     uint256 yearnSharesBefore;
     uint256 curveLpBefore;
 }
@@ -189,26 +187,47 @@ struct CowOrderData {
     CowOrderAnalytics analytics;
 }
 
+struct ExternalVotiumIncentive {
+    address token;
+    uint256 amount;
+    uint8 decimals;
+    address depositor;
+}
+
+struct VotiumAllocationData {
+    uint256 round;
+    uint256 crvUsdProceedsAmount;
+    uint256 maximumStoredCrvUsdAmount;
+    uint256 maximumGrossCrvUsdAmount;
+    uint256 votiumGrossAmount;
+    uint256 votiumFeeAmount;
+    uint256 votiumStoredAmount;
+    uint256 surplusCrvUsdAmount;
+    bool externalCapExceeded;
+}
+
 /// @title Generate staged Liquidity Incentive Management Safe transactions
 /// @notice Generates claims, Curve withdrawal, consolidation, or Votium Safe batches without crossing state boundaries.
-/// @dev Set LIQUIDITY_PHASE to `claims`, `curve-withdrawal`, `consolidation`, or `votium`.
+/// @dev Set LIQUIDITY_PHASE to `claims`, `curve-withdrawal`, `consolidation`, `votium-plan`, or `votium`.
 contract GenerateLiquidityIncentivesTransactionsScript is Script {
     address public constant TREASURY_SAFE = 0xA1148A1b94262540994Cf9Aa431A13ad39764228;
     uint256 public constant BPS_DENOMINATOR = 10_000;
     uint256 public constant MAX_YEARN_LOSS_BPS = 100;
     uint256 public constant MAX_CURVE_SLIPPAGE_BPS = 100;
     uint256 public constant YEARN_RETAINED_PRINCIPAL_LP = 215_246 ether;
+    uint256 public constant VOTIUM_INCENTIVE_CAP_USD = 16_000;
 
     // Action C: Stake DAO's current vlCVX delegator UniversalRewardsDistributor.
     address public constant STAKEDAO_DELEGATOR_DISTRIBUTOR = 0x17F513CDE031C8B1E878Bde1Cb020cE29f77f380;
     address public constant MULTICALL3 = 0xcA11bde05977b3631167028862bE2a173976CA11;
     address public constant SCRVUSD = 0x0655977FEb2f289A4aB78af67BAB0d17aAb84367;
 
-    // Action D: current Convex ClaimZap payload for the DUSD/frxUSD POL reward pool.
-    address public constant CONVEX_CLAIM_ZAP = 0x3f29cB4111CbdA8081642DA1f75B3c12DECf2516;
+    // Action D: the credit line owns the DUSD/frxUSD Convex stake and forwards rewards to the Treasury Safe.
+    address public constant CONVEX_CREDIT_LINE_MARKET = 0x6b3458c87CD38aeFA6A5D059Eb19f609420DD852;
     address public constant CONVEX_REWARD_POOL = 0x0E80Fe9D6F6dF530ab2Ff69ad0259e77E2ffEdeb;
     address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
     address public constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
+    address public constant WFRAX = 0x04ACaF8D2865c0714F79da09645C13FD2888977f;
 
     // Optional Stake DAO gauge CRV claim. Disabled unless CLAIM_STAKEDAO_CRV=true.
     address public constant STAKEDAO_ACCOUNTANT = 0x93b4B9bd266fFA8AF68e39EDFa8cFe2A62011Ce0;
@@ -222,6 +241,7 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
     // Consolidation: CoW Protocol contracts used by prior Safe nonce 66.
     address public constant COW_SETTLEMENT = 0x9008D19f58AAbD9eD0D60971565AA8510560ab41;
     address public constant COW_VAULT_RELAYER = 0xC92E8bdf79f0507f65a392b0ab4667716BFE0110;
+    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
     // Action F2: Votium single-round crvUSD incentive for the DUSD/frxUSD Curve gauge.
     address public constant VOTIUM = 0x63942E31E98f1833A234077f47880A66136a2D1e;
@@ -231,6 +251,7 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
     string public constant STAKEDAO_MERKLE_URL = "https://raw.githubusercontent.com/stake-dao/bounties-report/refs/heads/main/"
         "bounties-reports/latest/vlCVX/vlcvx_merkle_delegators.json";
     string public constant COW_ORDER_HELPER = "script/liquidity-incentives/createCowPresignOrder.mjs";
+    string public constant VOTIUM_ALLOCATION_HELPER = "script/liquidity-incentives/calculateVotiumAllocation.mjs";
     string public constant CLAIMS_OUTPUT_PATH =
         "contracts/deployments/ethereum-mainnet/output/safe-tx-liquidity-01-claims.json";
     string public constant CURVE_WITHDRAWAL_OUTPUT_PATH =
@@ -241,6 +262,10 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
         "contracts/deployments/ethereum-mainnet/output/cow-orders-liquidity-03-consolidation.json";
     string public constant VOTIUM_OUTPUT_PATH =
         "contracts/deployments/ethereum-mainnet/output/safe-tx-liquidity-04-votium.json";
+    string public constant VOTIUM_ALLOCATION_OUTPUT_PATH =
+        "contracts/deployments/ethereum-mainnet/output/votium-allocation-liquidity-04.json";
+    string public constant VOTIUM_COW_ORDERS_OUTPUT_PATH =
+        "contracts/deployments/ethereum-mainnet/output/cow-orders-liquidity-04-surplus.json";
 
     string internal constant CLAIM_PATH = ".claims.0xA1148A1b94262540994Cf9Aa431A13ad39764228.tokens."
         "0x0655977FEb2f289A4aB78af67BAB0d17aAb84367";
@@ -252,26 +277,34 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
         if (_stringsEqual(phase, "claims")) _runClaims();
         else if (_stringsEqual(phase, "curve-withdrawal")) _runCurveWithdrawal();
         else if (_stringsEqual(phase, "consolidation")) _runConsolidation();
+        else if (_stringsEqual(phase, "votium-plan")) _runVotiumPlan();
         else if (_stringsEqual(phase, "votium")) _runVotium();
-        else revert("LIQUIDITY_PHASE must be claims, curve-withdrawal, consolidation, or votium");
+        else revert("invalid LIQUIDITY_PHASE");
     }
 
     function _runClaims() internal {
         StakeDaoClaimData memory claimData = fetchStakeDaoClaimData();
         bool claimStakeDaoCrv = vm.envOr("CLAIM_STAKEDAO_CRV", false);
-        uint256 retainedPrincipal = vm.envOr("YEARN_RETAINED_PRINCIPAL_LP", YEARN_RETAINED_PRINCIPAL_LP);
-        uint256 maxLossBps = vm.envOr("YEARN_MAX_LOSS_BPS", uint256(1));
-        YearnWithdrawalData memory yearnData = getYearnWithdrawalData(retainedPrincipal, maxLossBps);
+        bool claimYearnRewards = vm.envOr("CLAIM_YEARN_REWARDS", false);
+        YearnWithdrawalData memory yearnData;
+        if (claimYearnRewards) {
+            uint256 retainedPrincipal = vm.envOr("YEARN_RETAINED_PRINCIPAL_LP", YEARN_RETAINED_PRINCIPAL_LP);
+            uint256 maxLossBps = vm.envOr("YEARN_MAX_LOSS_BPS", uint256(1));
+            yearnData = getYearnWithdrawalData(retainedPrincipal, maxLossBps);
+        }
         LiquidityIncentivesSafeTx[] memory txs = getClaimTransactions(claimData, yearnData, claimStakeDaoCrv);
         validateAndSimulateClaimTransactions(txs, claimData, yearnData, claimStakeDaoCrv);
         vm.writeFile(
             CLAIMS_OUTPUT_PATH,
-            buildSafeBatchJson("Liquidity 01 - Claims C and D plus optional Stake DAO CRV and Yearn yield", txs)
+            buildSafeBatchJson("Liquidity 01 - Claims C and D plus explicitly enabled optional claims", txs)
         );
 
         console.log("Claims Safe JSON:", CLAIMS_OUTPUT_PATH);
         console.log("Stake DAO scrvUSD claim:", claimData.unclaimedAmount);
-        console.log("Convex pending CRV before claim:", IConvexBaseRewardPool(CONVEX_REWARD_POOL).earned(TREASURY_SAFE));
+        console.log(
+            "Credit line pending CRV before claim:",
+            IConvexBaseRewardPool(CONVEX_REWARD_POOL).earned(CONVEX_CREDIT_LINE_MARKET)
+        );
         console.log("Stake DAO CRV claim enabled:", claimStakeDaoCrv);
         if (claimStakeDaoCrv) {
             console.log(
@@ -279,6 +312,7 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
                 IStakeDaoAccountant(STAKEDAO_ACCOUNTANT).getPendingRewards(DUSD_FRXUSD_GAUGE, TREASURY_SAFE)
             );
         }
+        console.log("Yearn reward withdrawal enabled:", claimYearnRewards);
         console.log("Yearn Safe LP value:", yearnData.safeAssets);
         console.log("Yearn retained LP principal:", yearnData.retainedPrincipalAssets);
         console.log("Yearn reward shares selected:", yearnData.rewardShares);
@@ -309,16 +343,18 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
         uint256 scrvUsdAmount = vm.envOr("CONSOLIDATE_SCRVUSD_AMOUNT", uint256(0));
         uint256 crvAmount = vm.envOr("CONSOLIDATE_CRV_AMOUNT", uint256(0));
         uint256 cvxAmount = vm.envOr("CONSOLIDATE_CVX_AMOUNT", uint256(0));
+        uint256 wfraxAmount = vm.envOr("CONSOLIDATE_WFRAX_AMOUNT", uint256(0));
         uint256 frxUsdAmount = vm.envOr("CONSOLIDATE_FRXUSD_AMOUNT", uint256(0));
         uint256 dusdAmount = vm.envOr("CONSOLIDATE_DUSD_AMOUNT", uint256(0));
         require(
-            scrvUsdAmount > 0 || crvAmount > 0 || cvxAmount > 0 || frxUsdAmount > 0 || dusdAmount > 0,
+            scrvUsdAmount > 0 || crvAmount > 0 || cvxAmount > 0 || wfraxAmount > 0 || frxUsdAmount > 0
+                || dusdAmount > 0,
             "no consolidation amount selected"
         );
-        _validateConsolidationBalances(scrvUsdAmount, crvAmount, cvxAmount, frxUsdAmount, dusdAmount);
+        _validateConsolidationBalances(scrvUsdAmount, crvAmount, cvxAmount, wfraxAmount, frxUsdAmount, dusdAmount);
 
-        uint256 cowOrderCount =
-            (crvAmount > 0 ? 1 : 0) + (cvxAmount > 0 ? 1 : 0) + (frxUsdAmount > 0 ? 1 : 0) + (dusdAmount > 0 ? 1 : 0);
+        uint256 cowOrderCount = (crvAmount > 0 ? 1 : 0) + (cvxAmount > 0 ? 1 : 0) + (wfraxAmount > 0 ? 1 : 0)
+            + (frxUsdAmount > 0 ? 1 : 0) + (dusdAmount > 0 ? 1 : 0);
         CowOrderData[] memory orders = new CowOrderData[](cowOrderCount);
         if (cowOrderCount > 0) {
             require(vm.envOr("COW_SUBMIT_ORDERS", false), "set COW_SUBMIT_ORDERS=true to post orders");
@@ -328,12 +364,15 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
             require(validFor >= 1_800 && validFor <= 604_800, "CoW validity must be 1800-604800 seconds");
 
             uint256 orderIndex;
-            if (crvAmount > 0) orders[orderIndex++] = _createCowOrder(CRV, crvAmount, slippageBps, validFor);
-            if (cvxAmount > 0) orders[orderIndex++] = _createCowOrder(CVX, cvxAmount, slippageBps, validFor);
-            if (frxUsdAmount > 0) {
-                orders[orderIndex++] = _createCowOrder(FRXUSD, frxUsdAmount, slippageBps, validFor);
+            if (crvAmount > 0) orders[orderIndex++] = _createCowOrder(CRV, CRVUSD, crvAmount, slippageBps, validFor);
+            if (cvxAmount > 0) orders[orderIndex++] = _createCowOrder(CVX, CRVUSD, cvxAmount, slippageBps, validFor);
+            if (wfraxAmount > 0) {
+                orders[orderIndex++] = _createCowOrder(WFRAX, CRVUSD, wfraxAmount, slippageBps, validFor);
             }
-            if (dusdAmount > 0) orders[orderIndex] = _createCowOrder(DUSD, dusdAmount, slippageBps, validFor);
+            if (frxUsdAmount > 0) {
+                orders[orderIndex++] = _createCowOrder(FRXUSD, CRVUSD, frxUsdAmount, slippageBps, validFor);
+            }
+            if (dusdAmount > 0) orders[orderIndex] = _createCowOrder(DUSD, CRVUSD, dusdAmount, slippageBps, validFor);
         }
 
         LiquidityIncentivesSafeTx[] memory txs = getConsolidationTransactions(scrvUsdAmount, orders);
@@ -347,15 +386,36 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
         console.log("CoW orders posted:", orders.length);
     }
 
+    function _runVotiumPlan() internal {
+        (VotiumAllocationData memory allocation, string memory allocationJson) = _createVotiumAllocation();
+        vm.writeFile(VOTIUM_ALLOCATION_OUTPUT_PATH, allocationJson);
+        _logVotiumAllocation(allocation);
+    }
+
     function _runVotium() internal {
-        uint256 incentiveAmount = vm.envUint("VOTIUM_INCENTIVE_AMOUNT");
-        LiquidityIncentivesSafeTx[] memory txs = getVotiumTransactions(incentiveAmount);
-        uint256 votiumRound = validateAndSimulateVotiumTransactions(txs, incentiveAmount);
-        vm.writeFile(VOTIUM_OUTPUT_PATH, buildSafeBatchJson("Liquidity 04 - Votium F2", txs));
+        (VotiumAllocationData memory allocation, string memory allocationJson) = _createVotiumAllocation();
+        CowOrderData[] memory surplusOrders = new CowOrderData[](allocation.surplusCrvUsdAmount > 0 ? 1 : 0);
+        if (surplusOrders.length > 0) {
+            require(vm.envOr("COW_SUBMIT_ORDERS", false), "set COW_SUBMIT_ORDERS=true to post surplus order");
+            uint256 slippageBps = vm.envUint("COW_SLIPPAGE_BPS");
+            uint256 validFor = vm.envUint("COW_ORDER_VALIDITY_SECONDS");
+            require(slippageBps <= 1_000, "CoW slippage exceeds 10%");
+            require(validFor >= 1_800 && validFor <= 604_800, "CoW validity must be 1800-604800 seconds");
+            surplusOrders[0] = _createCowOrder(CRVUSD, USDC, allocation.surplusCrvUsdAmount, slippageBps, validFor);
+        }
+
+        LiquidityIncentivesSafeTx[] memory txs =
+            getVotiumAndSurplusTransactions(allocation.votiumGrossAmount, surplusOrders);
+        uint256 votiumRound = validateAndSimulateVotiumTransactions(txs, allocation.votiumGrossAmount, surplusOrders);
+        require(votiumRound == allocation.round, "Votium round changed during generation");
+        vm.writeFile(VOTIUM_OUTPUT_PATH, buildSafeBatchJson("Liquidity 04 - Votium F2 and surplus crvUSD to USDC", txs));
+        vm.writeFile(VOTIUM_ALLOCATION_OUTPUT_PATH, allocationJson);
+        vm.writeFile(VOTIUM_COW_ORDERS_OUTPUT_PATH, buildCowOrdersJson(surplusOrders));
 
         console.log("Votium Safe JSON:", VOTIUM_OUTPUT_PATH);
-        console.log("crvUSD incentive amount:", incentiveAmount);
-        console.log("Votium round:", votiumRound);
+        console.log("Votium allocation:", VOTIUM_ALLOCATION_OUTPUT_PATH);
+        console.log("Surplus CoW order manifest:", VOTIUM_COW_ORDERS_OUTPUT_PATH);
+        _logVotiumAllocation(allocation);
     }
 
     /// @notice Downloads the current Stake DAO delegator merkle and validates it against mainnet.
@@ -453,6 +513,129 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
         });
     }
 
+    function getExternalVotiumIncentives()
+        public
+        view
+        returns (uint256 round, ExternalVotiumIncentive[] memory externalIncentives)
+    {
+        IVotium votium = IVotium(VOTIUM);
+        round = votium.activeRound();
+        uint256 incentiveLength = votium.incentivesLength(round, DUSD_FRXUSD_GAUGE);
+        ExternalVotiumIncentive[] memory candidates = new ExternalVotiumIncentive[](incentiveLength);
+        uint256 externalCount;
+
+        for (uint256 i = 0; i < incentiveLength; ++i) {
+            (address token, uint256 amount,,,, address depositor) = votium.incentives(round, DUSD_FRXUSD_GAUGE, i);
+            if (amount == 0) continue;
+            require(depositor != TREASURY_SAFE, "Treasury already posted an incentive this round");
+            require(token.code.length > 0, "external incentive token has no code");
+            candidates[externalCount++] = ExternalVotiumIncentive({
+                token: token, amount: amount, decimals: IERC20Metadata(token).decimals(), depositor: depositor
+            });
+        }
+
+        externalIncentives = new ExternalVotiumIncentive[](externalCount);
+        for (uint256 i = 0; i < externalCount; ++i) {
+            externalIncentives[i] = candidates[i];
+        }
+    }
+
+    function _createVotiumAllocation()
+        internal
+        returns (VotiumAllocationData memory allocation, string memory allocationJson)
+    {
+        uint256 proceedsAmount = vm.envUint("LIQUIDITY_CRVUSD_PROCEEDS_AMOUNT");
+        require(proceedsAmount > 0, "zero selected crvUSD proceeds");
+        require(
+            IERC20(CRVUSD).balanceOf(TREASURY_SAFE) >= proceedsAmount,
+            "selected crvUSD proceeds exceed Treasury balance"
+        );
+
+        (uint256 round, ExternalVotiumIncentive[] memory externalIncentives) = getExternalVotiumIncentives();
+        IVotium votium = IVotium(VOTIUM);
+        uint256 platformFee = votium.platformFee();
+        uint256 feeDenominator = votium.DENOMINATOR();
+        require(platformFee < feeDenominator, "invalid Votium platform fee");
+
+        string[] memory command = new string[](12 + externalIncentives.length * 2);
+        command[0] = "node";
+        command[1] = VOTIUM_ALLOCATION_HELPER;
+        command[2] = "--round";
+        command[3] = vm.toString(round);
+        command[4] = "--cap-usd";
+        command[5] = vm.toString(VOTIUM_INCENTIVE_CAP_USD);
+        command[6] = "--crvusd-proceeds";
+        command[7] = vm.toString(proceedsAmount);
+        command[8] = "--platform-fee";
+        command[9] = vm.toString(platformFee);
+        command[10] = "--fee-denominator";
+        command[11] = vm.toString(feeDenominator);
+        for (uint256 i = 0; i < externalIncentives.length; ++i) {
+            command[12 + i * 2] = "--external-incentive";
+            command[13 + i * 2] = string.concat(
+                vm.toString(externalIncentives[i].token),
+                ":",
+                vm.toString(externalIncentives[i].amount),
+                ":",
+                vm.toString(uint256(externalIncentives[i].decimals)),
+                ":",
+                vm.toString(externalIncentives[i].depositor)
+            );
+        }
+
+        allocationJson = string(vm.ffi(command));
+        allocation = VotiumAllocationData({
+            round: vm.parseJsonUint(allocationJson, ".round"),
+            crvUsdProceedsAmount: vm.parseUint(vm.parseJsonString(allocationJson, ".crvUsdProceedsAmount")),
+            maximumStoredCrvUsdAmount: vm.parseUint(vm.parseJsonString(allocationJson, ".maximumStoredCrvUsdAmount")),
+            maximumGrossCrvUsdAmount: vm.parseUint(vm.parseJsonString(allocationJson, ".maximumGrossCrvUsdAmount")),
+            votiumGrossAmount: vm.parseUint(vm.parseJsonString(allocationJson, ".votiumGrossAmount")),
+            votiumFeeAmount: vm.parseUint(vm.parseJsonString(allocationJson, ".votiumFeeAmount")),
+            votiumStoredAmount: vm.parseUint(vm.parseJsonString(allocationJson, ".votiumStoredAmount")),
+            surplusCrvUsdAmount: vm.parseUint(vm.parseJsonString(allocationJson, ".surplusCrvUsdAmount")),
+            externalCapExceeded: vm.parseJsonBool(allocationJson, ".externalCapExceeded")
+        });
+
+        require(allocation.round == round, "allocation round mismatch");
+        require(allocation.crvUsdProceedsAmount == proceedsAmount, "allocation proceeds mismatch");
+        require(
+            allocation.votiumGrossAmount + allocation.surplusCrvUsdAmount == proceedsAmount,
+            "allocation does not consume selected proceeds"
+        );
+        require(
+            allocation.votiumGrossAmount <= allocation.maximumGrossCrvUsdAmount,
+            "allocation gross amount exceeds maximum"
+        );
+        require(
+            allocation.votiumFeeAmount == allocation.votiumGrossAmount * platformFee / feeDenominator,
+            "allocation fee mismatch"
+        );
+        require(
+            allocation.votiumStoredAmount == allocation.votiumGrossAmount - allocation.votiumFeeAmount,
+            "allocation stored amount mismatch"
+        );
+        require(
+            allocation.votiumStoredAmount <= allocation.maximumStoredCrvUsdAmount,
+            "allocation stored amount exceeds cap"
+        );
+        if (allocation.externalCapExceeded) {
+            require(allocation.votiumGrossAmount == 0, "external cap handling mismatch");
+        }
+    }
+
+    function _logVotiumAllocation(VotiumAllocationData memory allocation) internal pure {
+        console.log("Votium allocation:", VOTIUM_ALLOCATION_OUTPUT_PATH);
+        console.log("Votium round:", allocation.round);
+        console.log("Selected crvUSD proceeds:", allocation.crvUsdProceedsAmount);
+        console.log("Maximum stored crvUSD incentive:", allocation.maximumStoredCrvUsdAmount);
+        console.log("Maximum gross crvUSD deposit:", allocation.maximumGrossCrvUsdAmount);
+        console.log("Gross crvUSD deposited to Votium:", allocation.votiumGrossAmount);
+        console.log("Votium fee:", allocation.votiumFeeAmount);
+        console.log("Stored crvUSD incentive:", allocation.votiumStoredAmount);
+        console.log("Surplus crvUSD selected for USDC:", allocation.surplusCrvUsdAmount);
+        console.log("External incentives already exceed cap:", allocation.externalCapExceeded);
+    }
+
     function getClaimTransactions(StakeDaoClaimData memory claimData)
         public
         pure
@@ -489,7 +672,9 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
             )
         });
         txs[0] = LiquidityIncentivesSafeTx({to: MULTICALL3, data: abi.encodeCall(IMulticall3.aggregate3, (claimCalls))});
-        txs[1] = LiquidityIncentivesSafeTx({to: CONVEX_CLAIM_ZAP, data: _buildConvexClaimZapData()});
+        txs[1] = LiquidityIncentivesSafeTx({
+            to: CONVEX_CREDIT_LINE_MARKET, data: abi.encodeCall(IConvexCreditLineMarket.claimRewards, ())
+        });
 
         uint256 txIndex = 2;
         if (claimStakeDaoCrv) {
@@ -564,13 +749,42 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
         returns (LiquidityIncentivesSafeTx[] memory txs)
     {
         require(incentiveAmount > 0, "zero Votium incentive amount");
-        txs = new LiquidityIncentivesSafeTx[](2);
-        txs[0] =
-            LiquidityIncentivesSafeTx({to: CRVUSD, data: abi.encodeCall(IERC20.approve, (VOTIUM, incentiveAmount))});
-        txs[1] = LiquidityIncentivesSafeTx({
-            to: VOTIUM,
-            data: abi.encodeCall(IVotium.depositIncentiveSimple, (CRVUSD, incentiveAmount, DUSD_FRXUSD_GAUGE))
-        });
+        CowOrderData[] memory noSurplusOrders = new CowOrderData[](0);
+        return getVotiumAndSurplusTransactions(incentiveAmount, noSurplusOrders);
+    }
+
+    function getVotiumAndSurplusTransactions(uint256 incentiveAmount, CowOrderData[] memory surplusOrders)
+        public
+        pure
+        returns (LiquidityIncentivesSafeTx[] memory txs)
+    {
+        require(incentiveAmount > 0 || surplusOrders.length > 0, "empty Votium allocation batch");
+        require(surplusOrders.length <= 1, "multiple surplus orders");
+        txs = new LiquidityIncentivesSafeTx[]((incentiveAmount > 0 ? 2 : 0) + surplusOrders.length * 2);
+        uint256 txIndex;
+        if (incentiveAmount > 0) {
+            txs[txIndex++] = LiquidityIncentivesSafeTx({
+                to: CRVUSD, data: abi.encodeCall(IERC20.approve, (VOTIUM, incentiveAmount))
+            });
+            txs[txIndex++] = LiquidityIncentivesSafeTx({
+                to: VOTIUM,
+                data: abi.encodeCall(IVotium.depositIncentiveSimple, (CRVUSD, incentiveAmount, DUSD_FRXUSD_GAUGE))
+            });
+        }
+        if (surplusOrders.length > 0) {
+            _validateCowOrder(surplusOrders[0]);
+            require(
+                surplusOrders[0].sellToken == CRVUSD && surplusOrders[0].buyToken == USDC,
+                "surplus order is not crvUSD to USDC"
+            );
+            txs[txIndex++] = LiquidityIncentivesSafeTx({
+                to: CRVUSD, data: abi.encodeCall(IERC20.approve, (COW_VAULT_RELAYER, surplusOrders[0].sellAmount))
+            });
+            txs[txIndex] = LiquidityIncentivesSafeTx({
+                to: COW_SETTLEMENT,
+                data: abi.encodeCall(ICowSettlement.setPreSignature, (surplusOrders[0].orderUid, true))
+            });
+        }
     }
 
     function validateAndSimulateClaimTransactions(
@@ -603,8 +817,9 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
         _validateClaimData(claimData);
         _validateYearnWithdrawalData(yearnData);
         require(STAKEDAO_DELEGATOR_DISTRIBUTOR.code.length > 0, "Stake DAO distributor has no code");
-        require(CONVEX_CLAIM_ZAP.code.length > 0, "Convex claim zap has no code");
+        require(CONVEX_CREDIT_LINE_MARKET.code.length > 0, "Convex credit line has no code");
         require(CONVEX_REWARD_POOL.code.length > 0, "Convex reward pool has no code");
+        _validateConvexCreditLineState();
         if (claimStakeDaoCrv) _validateStakeDaoAccountantState();
 
         if (yearnData.retainedPrincipalAssets > 0) {
@@ -621,12 +836,16 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
 
         ClaimSimulationState memory state = ClaimSimulationState({
             scrvUsdBefore: IERC20(SCRVUSD).balanceOf(TREASURY_SAFE),
-            convexEarnedBefore: IConvexBaseRewardPool(CONVEX_REWARD_POOL).earned(TREASURY_SAFE),
+            convexEarnedBefore: IConvexBaseRewardPool(CONVEX_REWARD_POOL).earned(CONVEX_CREDIT_LINE_MARKET),
             stakeDaoCrvPendingBefore: claimStakeDaoCrv
                 ? IStakeDaoAccountant(STAKEDAO_ACCOUNTANT).getPendingRewards(DUSD_FRXUSD_GAUGE, TREASURY_SAFE)
                 : 0,
             crvBefore: IERC20(CRV).balanceOf(TREASURY_SAFE),
             cvxBefore: IERC20(CVX).balanceOf(TREASURY_SAFE),
+            wfraxBefore: IERC20(WFRAX).balanceOf(TREASURY_SAFE),
+            marketCrvBefore: IERC20(CRV).balanceOf(CONVEX_CREDIT_LINE_MARKET),
+            marketCvxBefore: IERC20(CVX).balanceOf(CONVEX_CREDIT_LINE_MARKET),
+            marketWfraxBefore: IERC20(WFRAX).balanceOf(CONVEX_CREDIT_LINE_MARKET),
             yearnSharesBefore: IYearnV2Vault(YEARN_VAULT).balanceOf(TREASURY_SAFE),
             curveLpBefore: IERC20(DUSD_FRXUSD_CURVE_POOL).balanceOf(TREASURY_SAFE)
         });
@@ -638,12 +857,30 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
             IERC20(SCRVUSD).balanceOf(TREASURY_SAFE) == state.scrvUsdBefore + claimData.unclaimedAmount,
             "Action C scrvUSD mismatch"
         );
-        require(IConvexBaseRewardPool(CONVEX_REWARD_POOL).earned(TREASURY_SAFE) == 0, "Action D rewards remain");
-        require(IERC20(CRV).balanceOf(TREASURY_SAFE) >= state.crvBefore, "Action D CRV balance decreased");
-        require(IERC20(CVX).balanceOf(TREASURY_SAFE) >= state.cvxBefore, "Action D CVX balance decreased");
+        require(
+            IConvexBaseRewardPool(CONVEX_REWARD_POOL).earned(CONVEX_CREDIT_LINE_MARKET) == 0, "Action D rewards remain"
+        );
+        require(IERC20(CRV).balanceOf(CONVEX_CREDIT_LINE_MARKET) == 0, "Action D CRV not forwarded");
+        require(IERC20(CVX).balanceOf(CONVEX_CREDIT_LINE_MARKET) == 0, "Action D CVX not forwarded");
+        require(IERC20(WFRAX).balanceOf(CONVEX_CREDIT_LINE_MARKET) == 0, "Action D WFRAX not forwarded");
+        require(
+            IERC20(CRV).balanceOf(TREASURY_SAFE) >= state.crvBefore + state.marketCrvBefore,
+            "Action D CRV balance decreased"
+        );
+        require(
+            IERC20(CVX).balanceOf(TREASURY_SAFE) >= state.cvxBefore + state.marketCvxBefore,
+            "Action D CVX balance decreased"
+        );
+        require(
+            IERC20(WFRAX).balanceOf(TREASURY_SAFE) >= state.wfraxBefore + state.marketWfraxBefore,
+            "Action D WFRAX balance decreased"
+        );
         if (state.convexEarnedBefore > 0) {
-            require(IERC20(CRV).balanceOf(TREASURY_SAFE) > state.crvBefore, "Action D did not receive CRV");
-            require(IERC20(CVX).balanceOf(TREASURY_SAFE) > state.cvxBefore, "Action D did not receive CVX");
+            require(
+                IERC20(CRV).balanceOf(TREASURY_SAFE)
+                    >= state.crvBefore + state.marketCrvBefore + state.convexEarnedBefore,
+                "Action D did not receive CRV"
+            );
         }
         if (claimStakeDaoCrv) {
             require(
@@ -745,10 +982,38 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
         public
         returns (uint256 votiumRound)
     {
-        require(block.chainid == 1, "not Ethereum mainnet");
-        require(txs.length == 2, "unexpected Votium transaction count");
-        require(incentiveAmount > 0, "zero Votium incentive amount");
         require(IERC20(CRVUSD).balanceOf(TREASURY_SAFE) >= incentiveAmount, "insufficient settled crvUSD balance");
+        CowOrderData[] memory noSurplusOrders = new CowOrderData[](0);
+        return validateAndSimulateVotiumTransactions(txs, incentiveAmount, noSurplusOrders);
+    }
+
+    function validateAndSimulateVotiumTransactions(
+        LiquidityIncentivesSafeTx[] memory txs,
+        uint256 incentiveAmount,
+        CowOrderData[] memory surplusOrders
+    ) public returns (uint256 votiumRound) {
+        require(block.chainid == 1, "not Ethereum mainnet");
+        require(incentiveAmount > 0 || surplusOrders.length > 0, "empty Votium allocation batch");
+        require(surplusOrders.length <= 1, "multiple surplus orders");
+        require(
+            txs.length == (incentiveAmount > 0 ? 2 : 0) + surplusOrders.length * 2,
+            "unexpected Votium transaction count"
+        );
+        uint256 surplusAmount;
+        if (surplusOrders.length > 0) {
+            _validateCowOrder(surplusOrders[0]);
+            require(
+                surplusOrders[0].sellToken == CRVUSD && surplusOrders[0].buyToken == USDC,
+                "surplus order is not crvUSD to USDC"
+            );
+            require(surplusOrders[0].validTo > block.timestamp + 15 minutes, "CoW order expires too soon");
+            require(ICowSettlement(COW_SETTLEMENT).vaultRelayer() == COW_VAULT_RELAYER, "CoW relayer mismatch");
+            surplusAmount = surplusOrders[0].sellAmount;
+        }
+        require(
+            IERC20(CRVUSD).balanceOf(TREASURY_SAFE) >= incentiveAmount + surplusAmount,
+            "insufficient selected crvUSD proceeds"
+        );
 
         IVotium votium = IVotium(VOTIUM);
         require(!votium.requireAllowlist() || votium.tokenAllowed(CRVUSD), "crvUSD is not Votium-allowed");
@@ -759,19 +1024,36 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
         _simulateSafeTransactions(txs);
 
         require(IERC20(CRVUSD).balanceOf(TREASURY_SAFE) == balanceBefore - incentiveAmount, "F2 balance mismatch");
-        require(IERC20(CRVUSD).allowance(TREASURY_SAFE, VOTIUM) == 0, "F2 allowance not consumed");
-        require(
-            votium.incentivesLength(votiumRound, DUSD_FRXUSD_GAUGE) == incentiveCountBefore + 1,
-            "F2 incentive not created"
-        );
-        (address storedToken, uint256 storedAmount, uint256 maxPerVote,,, address depositor) =
-            votium.incentives(votiumRound, DUSD_FRXUSD_GAUGE, incentiveCountBefore);
-        uint256 fee = incentiveAmount * votium.platformFee() / votium.DENOMINATOR();
-        require(fee > 0, "F2 amount is below minimum fee precision");
-        require(storedToken == CRVUSD, "F2 stored token mismatch");
-        require(storedAmount == incentiveAmount - fee, "F2 stored amount mismatch");
-        require(maxPerVote == 0, "F2 max per vote mismatch");
-        require(depositor == TREASURY_SAFE, "F2 depositor mismatch");
+        if (incentiveAmount > 0) {
+            require(IERC20(CRVUSD).allowance(TREASURY_SAFE, VOTIUM) == 0, "F2 allowance not consumed");
+            require(
+                votium.incentivesLength(votiumRound, DUSD_FRXUSD_GAUGE) == incentiveCountBefore + 1,
+                "F2 incentive not created"
+            );
+            (address storedToken, uint256 storedAmount, uint256 maxPerVote,,, address depositor) =
+                votium.incentives(votiumRound, DUSD_FRXUSD_GAUGE, incentiveCountBefore);
+            uint256 fee = incentiveAmount * votium.platformFee() / votium.DENOMINATOR();
+            require(fee > 0, "F2 amount is below minimum fee precision");
+            require(storedToken == CRVUSD, "F2 stored token mismatch");
+            require(storedAmount == incentiveAmount - fee, "F2 stored amount mismatch");
+            require(maxPerVote == 0, "F2 max per vote mismatch");
+            require(depositor == TREASURY_SAFE, "F2 depositor mismatch");
+        } else {
+            require(
+                votium.incentivesLength(votiumRound, DUSD_FRXUSD_GAUGE) == incentiveCountBefore,
+                "unexpected F2 incentive"
+            );
+        }
+        if (surplusOrders.length > 0) {
+            require(
+                IERC20(CRVUSD).allowance(TREASURY_SAFE, COW_VAULT_RELAYER) == surplusAmount,
+                "surplus CoW allowance mismatch"
+            );
+            require(
+                ICowSettlement(COW_SETTLEMENT).preSignature(surplusOrders[0].orderUid) != 0,
+                "surplus CoW presignature missing"
+            );
+        }
         require(vm.revertToState(snapshot), "failed to revert Votium simulation");
     }
 
@@ -845,22 +1127,27 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
         return string.concat(json, '","worstCasePriceImpactPercent":"', analytics.worstCasePriceImpactPercent, '"}}');
     }
 
-    function _createCowOrder(address sellToken, uint256 sellAmount, uint256 slippageBps, uint256 validFor)
-        internal
-        returns (CowOrderData memory order)
-    {
-        string[] memory command = new string[](11);
+    function _createCowOrder(
+        address sellToken,
+        address buyToken,
+        uint256 sellAmount,
+        uint256 slippageBps,
+        uint256 validFor
+    ) internal returns (CowOrderData memory order) {
+        string[] memory command = new string[](13);
         command[0] = "node";
         command[1] = COW_ORDER_HELPER;
         command[2] = "--sell-token";
         command[3] = vm.toString(sellToken);
-        command[4] = "--sell-amount";
-        command[5] = vm.toString(sellAmount);
-        command[6] = "--slippage-bps";
-        command[7] = vm.toString(slippageBps);
-        command[8] = "--valid-for";
-        command[9] = vm.toString(validFor);
-        command[10] = "--submit";
+        command[4] = "--buy-token";
+        command[5] = vm.toString(buyToken);
+        command[6] = "--sell-amount";
+        command[7] = vm.toString(sellAmount);
+        command[8] = "--slippage-bps";
+        command[9] = vm.toString(slippageBps);
+        command[10] = "--valid-for";
+        command[11] = vm.toString(validFor);
+        command[12] = "--submit";
 
         string memory result = string(vm.ffi(command));
         require(_stringsEqual(vm.parseJsonString(result, ".mode"), "submitted"), "CoW order was not submitted");
@@ -906,7 +1193,10 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
             orderUid: vm.parseJsonBytes(result, ".orderUid"),
             analytics: analytics
         });
-        require(order.sellToken == sellToken && order.sellAmount == sellAmount, "CoW helper changed sell input");
+        require(
+            order.sellToken == sellToken && order.buyToken == buyToken && order.sellAmount == sellAmount,
+            "CoW helper changed order input"
+        );
         require(order.analytics.slippageBps == slippageBps, "CoW helper changed slippage");
         _validateCowOrder(order);
     }
@@ -1026,6 +1316,7 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
         uint256 scrvUsdAmount,
         uint256 crvAmount,
         uint256 cvxAmount,
+        uint256 wfraxAmount,
         uint256 frxUsdAmount,
         uint256 dusdAmount
     ) internal view {
@@ -1034,16 +1325,20 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
         require(IERC20(SCRVUSD).balanceOf(TREASURY_SAFE) >= scrvUsdAmount, "insufficient scrvUSD balance");
         require(IERC20(CRV).balanceOf(TREASURY_SAFE) >= crvAmount, "insufficient CRV balance");
         require(IERC20(CVX).balanceOf(TREASURY_SAFE) >= cvxAmount, "insufficient CVX balance");
+        require(IERC20(WFRAX).balanceOf(TREASURY_SAFE) >= wfraxAmount, "insufficient WFRAX balance");
         require(IERC20(FRXUSD).balanceOf(TREASURY_SAFE) >= frxUsdAmount, "insufficient frxUSD balance");
         require(IERC20(DUSD).balanceOf(TREASURY_SAFE) >= dusdAmount, "insufficient DUSD balance");
     }
 
     function _validateCowOrder(CowOrderData memory order) internal pure {
-        require(
-            order.sellToken == CRV || order.sellToken == CVX || order.sellToken == FRXUSD || order.sellToken == DUSD,
-            "unsupported CoW sell token"
-        );
-        require(order.buyToken == CRVUSD, "CoW buy token is not crvUSD");
+        bool consolidationPair = order.buyToken == CRVUSD
+            && (order.sellToken == CRV
+                || order.sellToken == CVX
+                || order.sellToken == WFRAX
+                || order.sellToken == FRXUSD
+                || order.sellToken == DUSD);
+        bool surplusPair = order.sellToken == CRVUSD && order.buyToken == USDC;
+        require(consolidationPair || surplusPair, "unsupported CoW pair");
         require(order.sellAmount > 0 && order.buyAmount > 0, "zero CoW order amount");
         require(order.orderUid.length == 56, "invalid CoW order UID length");
         require(order.analytics.quotedBuyAmount >= order.buyAmount, "CoW quoted buy below minimum");
@@ -1067,11 +1362,16 @@ contract GenerateLiquidityIncentivesTransactionsScript is Script {
         require(uint256(uidValidTo) == order.validTo, "CoW order UID validity mismatch");
     }
 
-    function _buildConvexClaimZapData() internal pure returns (bytes memory) {
-        address[] memory rewardContracts = new address[](1);
-        rewardContracts[0] = CONVEX_REWARD_POOL;
-        address[] memory empty = new address[](0);
-        return abi.encodeCall(IConvexClaimZap.claimRewards, (rewardContracts, empty, empty, empty, 0, 0, 0, 0, 0));
+    function _validateConvexCreditLineState() internal view {
+        IConvexCreditLineMarket market = IConvexCreditLineMarket(CONVEX_CREDIT_LINE_MARKET);
+        require(market.convexRewardPool() == CONVEX_REWARD_POOL, "credit line reward pool changed");
+        require(market.rewardRecipient() == TREASURY_SAFE, "credit line reward recipient changed");
+        require(market.rewardToken(0) == CRV, "credit line CRV reward changed");
+        require(market.rewardToken(1) == CVX, "credit line CVX reward changed");
+        require(market.rewardToken(2) == WFRAX, "credit line WFRAX reward changed");
+        (bool unexpectedRewardToken,) =
+            CONVEX_CREDIT_LINE_MARKET.staticcall(abi.encodeCall(IConvexCreditLineMarket.rewardToken, (3)));
+        require(!unexpectedRewardToken, "unexpected credit line reward token");
     }
 
     function _simulateSafeTransactions(LiquidityIncentivesSafeTx[] memory txs) internal {
