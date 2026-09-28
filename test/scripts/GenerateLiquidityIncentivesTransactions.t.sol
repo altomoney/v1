@@ -203,20 +203,6 @@ contract GenerateLiquidityIncentivesTransactionsTest is Test {
         assertEq(gauge, generator.DUSD_FRXUSD_GAUGE());
     }
 
-    function test_GetVotiumAndSurplusTransactions_depositsIncentiveAndPresignsUsdcSwap() public view {
-        uint256 incentiveAmount = 100 ether;
-        CowOrderData[] memory surplusOrders = new CowOrderData[](1);
-        surplusOrders[0] = _cowOrderTo(generator.CRVUSD(), generator.USDC(), 50 ether, 49_000_000, 5);
-
-        LiquidityIncentivesSafeTx[] memory txs =
-            generator.getVotiumAndSurplusTransactions(incentiveAmount, surplusOrders);
-
-        assertEq(txs.length, 4);
-        assertEq(txs[0].to, generator.CRVUSD());
-        assertEq(txs[1].to, generator.VOTIUM());
-        _assertCowTransactions(txs[2], txs[3], surplusOrders[0]);
-    }
-
     function test_GetVotiumTransactions_rejectsZeroAmount() public {
         vm.expectRevert(bytes("zero Votium incentive amount"));
         generator.getVotiumTransactions(0);
@@ -239,12 +225,13 @@ contract GenerateLiquidityIncentivesTransactionsTest is Test {
         assertEq(vm.parseJsonString(orderJson, ".orders[0].analytics.inputDisplay"), "100 CRV ($100.000000)");
     }
 
-    function test_BuildJson_writesEmptyBatchWhenOnlyDustIsRetained() public view {
+    function test_BuildJson_writesEmptyBatchWhenAllProceedsAreRetained() public view {
         LiquidityIncentivesSafeTx[] memory txs = new LiquidityIncentivesSafeTx[](0);
         CowOrderData[] memory orders = new CowOrderData[](0);
 
         assertEq(
-            vm.parseJsonString(generator.buildSafeBatchJson("test-votium-dust", txs), ".meta.name"), "test-votium-dust"
+            vm.parseJsonString(generator.buildSafeBatchJson("test-votium-retained", txs), ".meta.name"),
+            "test-votium-retained"
         );
         assertEq(generator.buildCowOrdersJson(orders), '{"version":"1.0","chainId":"1","orders":[]}');
     }
@@ -288,7 +275,7 @@ contract GenerateLiquidityIncentivesTransactionsTest is Test {
         analytics.priceReferenceSource = "CoW Swap BFF USD prices";
         analytics.priceReferenceTimestamp = "2026-07-20T12:00:00.000Z";
         analytics.sellTokenSymbol = sellToken == generator.CRV() ? "CRV" : "CVX";
-        analytics.buyTokenSymbol = buyToken == generator.USDC() ? "USDC" : "crvUSD";
+        analytics.buyTokenSymbol = "crvUSD";
         analytics.inputDisplay = sellToken == generator.CRV() ? "100 CRV ($100.000000)" : "50 CVX ($50.000000)";
         analytics.expectedOutputDisplay = "20 crvUSD ($20.000000)";
         analytics.minimumOutputDisplay = "20 crvUSD ($20.000000)";
@@ -436,17 +423,18 @@ contract GenerateLiquidityIncentivesTransactionsForkTest is Test {
         assertEq(round, IVotium(generator.VOTIUM()).activeRound());
     }
 
-    function test_Fork_votiumPhasePresignsSurplusCrvUsdToUsdc() public {
+    function test_Fork_votiumPhaseRetainsSurplusCrvUsd() public {
         uint256 incentiveAmount = 100 ether;
         uint256 surplusAmount = 50 ether;
         deal(generator.CRVUSD(), generator.TREASURY_SAFE(), incentiveAmount + surplusAmount);
-        CowOrderData[] memory surplusOrders = new CowOrderData[](1);
-        surplusOrders[0] = _cowOrderTo(generator.CRVUSD(), generator.USDC(), surplusAmount, 49_000_000, 6);
-        LiquidityIncentivesSafeTx[] memory txs =
-            generator.getVotiumAndSurplusTransactions(incentiveAmount, surplusOrders);
+        LiquidityIncentivesSafeTx[] memory txs = generator.getVotiumTransactions(incentiveAmount);
+        assertEq(txs.length, 2);
+        assertEq(txs[0].to, generator.CRVUSD());
+        assertEq(txs[1].to, generator.VOTIUM());
 
-        uint256 round = generator.validateAndSimulateVotiumTransactions(txs, incentiveAmount, surplusOrders);
+        uint256 round = generator.validateAndSimulateVotiumTransactions(txs, incentiveAmount);
         assertEq(round, IVotium(generator.VOTIUM()).activeRound());
+        assertEq(IERC20(generator.CRVUSD()).balanceOf(generator.TREASURY_SAFE()), incentiveAmount + surplusAmount);
     }
 
     function test_Fork_votiumPhaseRejectsUnsettledAmount() public {

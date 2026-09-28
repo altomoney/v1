@@ -152,27 +152,17 @@ test("quote-only mode supports WFRAX rewards", async () => {
   assert.equal(result.analytics.inputDisplay, "1000 WFRAX ($1000.000000)");
 });
 
-test("quote-only mode supports converting surplus crvUSD to USDC", async () => {
-  const fetchImpl = async (url) => {
-    if (url.endsWith("/quote")) {
-      return new Response(JSON.stringify(quoteResponse(crvUsd, usdc)), { status: 200 });
-    }
-    return priceResponse(url);
-  };
-  const result = await createCowPresignOrder({
-    sellToken: crvUsd,
-    buyToken: usdc,
-    sellAmount: requestedSellAmount,
-    slippageBps: 100,
-    validFor: 86_400,
-    fetchImpl,
-    now: () => new Date(fixedTimestamp),
-  });
-
-  assert.equal(result.sellToken, crvUsd);
-  assert.equal(result.buyToken, usdc);
-  assert.equal(result.analytics.sellTokenSymbol, "crvUSD");
-  assert.equal(result.analytics.buyTokenSymbol, "USDC");
+test("rejects converting surplus crvUSD to USDC", async () => {
+  await assert.rejects(
+    createCowPresignOrder({
+      sellToken: crvUsd,
+      buyToken: usdc,
+      sellAmount: requestedSellAmount,
+      slippageBps: 100,
+      validFor: 86_400,
+    }),
+    /unsupported CoW pair/,
+  );
 });
 
 test("quote creation fails closed when reference prices are unavailable", async () => {

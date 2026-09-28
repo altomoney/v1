@@ -2,7 +2,6 @@
 
 const DEFAULT_PRICE_API_BASE_URL = "https://bff.cow.fi/1/tokens";
 const CRVUSD = "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e";
-const MIN_COW_SURPLUS_CRVUSD_AMOUNT = 10n ** 18n;
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
 
 function requireCondition(condition, message) {
@@ -156,10 +155,6 @@ export function calculateVotiumAllocation({
   const votiumStoredAmount = votiumGrossAmount - votiumFeeAmount;
   requireCondition(votiumStoredAmount <= maximumStoredCrvUsdAmount, "Votium gross-up exceeded remaining cap");
   const surplusCrvUsdAmount = proceeds - votiumGrossAmount;
-  const cowSurplusCrvUsdAmount = surplusCrvUsdAmount >= MIN_COW_SURPLUS_CRVUSD_AMOUNT
-    ? surplusCrvUsdAmount
-    : 0n;
-  const retainedSurplusCrvUsdAmount = surplusCrvUsdAmount - cowSurplusCrvUsdAmount;
   const altoUsd = tokenUsdValue(votiumStoredAmount, 18, crvUsdPrice);
   const combinedUsd = addFractions(externalUsd, altoUsd);
   if (capMinusExternalNumerator > 0n) {
@@ -201,11 +196,8 @@ export function calculateVotiumAllocation({
     combinedUsdValue: formatFraction(combinedUsd.numerator, combinedUsd.denominator, 6),
     surplusCrvUsdAmount: surplusCrvUsdAmount.toString(),
     surplusCrvUsdFormatted: formatUnits(surplusCrvUsdAmount, 18),
-    minimumCowSurplusCrvUsdAmount: MIN_COW_SURPLUS_CRVUSD_AMOUNT.toString(),
-    cowSurplusCrvUsdAmount: cowSurplusCrvUsdAmount.toString(),
-    cowSurplusCrvUsdFormatted: formatUnits(cowSurplusCrvUsdAmount, 18),
-    retainedSurplusCrvUsdAmount: retainedSurplusCrvUsdAmount.toString(),
-    retainedSurplusCrvUsdFormatted: formatUnits(retainedSurplusCrvUsdAmount, 18),
+    retainedSurplusCrvUsdAmount: surplusCrvUsdAmount.toString(),
+    retainedSurplusCrvUsdFormatted: formatUnits(surplusCrvUsdAmount, 18),
   };
 }
 
