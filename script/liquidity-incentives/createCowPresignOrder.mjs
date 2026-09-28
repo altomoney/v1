@@ -4,7 +4,6 @@ const DEFAULT_API_BASE_URL = "https://api.cow.fi/mainnet/api/v1";
 const DEFAULT_PRICE_API_BASE_URL = "https://bff.cow.fi/1/tokens";
 const TREASURY_SAFE = "0xa1148a1b94262540994cf9aa431a13ad39764228";
 const CRVUSD = "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e";
-const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const TOKEN_METADATA = new Map([
   ["0xd533a949740bb3306d119cc777fa900ba034cd52", { symbol: "CRV", decimals: 18 }],
   ["0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b", { symbol: "CVX", decimals: 18 }],
@@ -12,13 +11,11 @@ const TOKEN_METADATA = new Map([
   ["0xcacd6fd266af91b8aed52accc382b4e165586e29", { symbol: "frxUSD", decimals: 18 }],
   ["0x63d74d22e689c715a04f2c13962b1f77f443d35b", { symbol: "DUSD", decimals: 18 }],
   [CRVUSD, { symbol: "crvUSD", decimals: 18 }],
-  [USDC, { symbol: "USDC", decimals: 6 }],
 ]);
 const SUPPORTED_PAIRS = new Set([
   ...[...TOKEN_METADATA.keys()]
-    .filter((token) => token !== CRVUSD && token !== USDC)
+    .filter((token) => token !== CRVUSD)
     .map((token) => `${token}:${CRVUSD}`),
-  `${CRVUSD}:${USDC}`,
 ]);
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
 const UID_PATTERN = /^0x[0-9a-fA-F]{112}$/;

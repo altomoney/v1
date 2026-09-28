@@ -51,8 +51,8 @@ test("caps combined stored incentives and sends the remaining proceeds to surplu
     BigInt(result.votiumGrossAmount) + BigInt(result.surplusCrvUsdAmount),
     20_000n * oneEther,
   );
-  assert.equal(result.cowSurplusCrvUsdAmount, result.surplusCrvUsdAmount);
-  assert.equal(result.retainedSurplusCrvUsdAmount, "0");
+  assert.equal(result.retainedSurplusCrvUsdAmount, result.surplusCrvUsdAmount);
+  assert.equal(result.cowSurplusCrvUsdAmount, undefined);
   assert.ok(Number(result.combinedUsdValue) <= 16_000);
   assert.ok(Number(result.combinedUsdValue) > 15_999.99);
 });
@@ -63,7 +63,6 @@ test("deposits all proceeds when they are below the remaining cap", () => {
 
   assert.equal(result.votiumGrossAmount, proceeds.toString());
   assert.equal(result.surplusCrvUsdAmount, "0");
-  assert.equal(result.cowSurplusCrvUsdAmount, "0");
   assert.equal(result.retainedSurplusCrvUsdAmount, "0");
 });
 
@@ -79,8 +78,7 @@ test("uses no Alto incentive when third-party incentives already consume the cap
 
   assert.equal(result.votiumGrossAmount, "0");
   assert.equal(result.surplusCrvUsdAmount, (20_000n * oneEther).toString());
-  assert.equal(result.cowSurplusCrvUsdAmount, result.surplusCrvUsdAmount);
-  assert.equal(result.retainedSurplusCrvUsdAmount, "0");
+  assert.equal(result.retainedSurplusCrvUsdAmount, result.surplusCrvUsdAmount);
   assert.equal(result.externalCapExceeded, true);
 });
 
@@ -94,11 +92,10 @@ test("retains one wei of surplus while preserving the Votium deposit amount", ()
 
   assert.equal(result.votiumGrossAmount, maximumGross.toString());
   assert.equal(result.surplusCrvUsdAmount, "1");
-  assert.equal(result.cowSurplusCrvUsdAmount, "0");
   assert.equal(result.retainedSurplusCrvUsdAmount, "1");
 });
 
-test("sends a one crvUSD surplus to CoW", () => {
+test("retains a one crvUSD surplus in Treasury", () => {
   const maximumGross = 16_000n * oneEther * 10_000n / 9_800n;
   const result = allocation({
     crvUsdProceeds: (maximumGross + oneEther).toString(),
@@ -107,11 +104,10 @@ test("sends a one crvUSD surplus to CoW", () => {
   });
 
   assert.equal(result.surplusCrvUsdAmount, oneEther.toString());
-  assert.equal(result.cowSurplusCrvUsdAmount, oneEther.toString());
-  assert.equal(result.retainedSurplusCrvUsdAmount, "0");
+  assert.equal(result.retainedSurplusCrvUsdAmount, oneEther.toString());
 });
 
-test("reports dust without a Votium deposit when external incentives exhaust the cap", () => {
+test("retains all proceeds without a Votium deposit when external incentives exhaust the cap", () => {
   const result = allocation({
     crvUsdProceeds: "1",
     externalIncentives: [{
@@ -124,7 +120,6 @@ test("reports dust without a Votium deposit when external incentives exhaust the
 
   assert.equal(result.votiumGrossAmount, "0");
   assert.equal(result.surplusCrvUsdAmount, "1");
-  assert.equal(result.cowSurplusCrvUsdAmount, "0");
   assert.equal(result.retainedSurplusCrvUsdAmount, "1");
 });
 
