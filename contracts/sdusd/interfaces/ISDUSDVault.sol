@@ -101,6 +101,10 @@ interface ISDUSDVaultBase is ISDUSDVaultErrors, ISDUSDVaultEvents {
     /// @dev Callable only by the configured rewarder while reward notification is not paused. `amount` must be nonzero,
     ///      the previous period must have fully finished, address(1) must hold at least `seedShares`, and total supply
     ///      must exceed the full balance of address(1) so at least one share exists outside the permanent lock.
+    ///      This participation condition is evaluated only when the period starts; it does not require any holder to
+    ///      remain until the period finishes. When shares are redeemed during an active period, rewards that have not
+    ///      yet unlocked continue releasing to the remaining supply. If all shares outside address(1) are redeemed,
+    ///      the remaining rewards increase the assets backing only address(1)'s irrecoverably locked shares.
     ///      The vault pulls `amount` DUSD from the rewarder via `transferFrom`, so the rewarder must approve the vault
     ///      beforehand. A successful call starts a fresh release period. Rewards from an active period are never
     ///      rolled over or retroactively diluted.
@@ -158,7 +162,9 @@ interface ISDUSDVaultBase is ISDUSDVaultErrors, ISDUSDVaultEvents {
     /// @dev Deployment must deposit this amount of DUSD with address(1) as the receiver. Those shares are
     ///      irrecoverably locked, so `totalSupply()` can never fall below this value. A new reward release is
     ///      only permitted while shares exist outside address(1). This condition is checked at period start,
-    ///      and does not prevent holders from exiting during the release.
+    ///      and does not prevent holders from exiting during the release. Any rewards still locked when all
+    ///      outside shares exit will release solely to the shares held by address(1), permanently increasing
+    ///      the assets represented by those inaccessible shares.
     function seedShares() external view returns (uint256);
 
     /// @notice DUSD asset limit for new deposits, excluding the fixed initial seed amount
