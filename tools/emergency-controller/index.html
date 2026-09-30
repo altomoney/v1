@@ -262,7 +262,7 @@
         pauserSafe: "0x45007ee3",
         marketRegistry: "0xecb96fe6",
         usmRegistry: "0x49347a63",
-        pauseWhitelist: "0x69717349",
+        contractWhitelist: "0x4c999f5e",
         getMintMarkets: "0xf0f783d2",
         getBorrowMarkets: "0x89545353",
         getUsmList: "0xeeba88ec",
@@ -589,7 +589,7 @@
 
       async function canPauseWhitelistedTarget(address) {
         const [whitelisted, authorized] = await Promise.all([
-          callBool(CONTROLLER, SELECTOR.pauseWhitelist + encodeAddress(address)),
+          callBool(CONTROLLER, SELECTOR.contractWhitelist + encodeAddress(address)),
           callBool(address, SELECTOR.pausers + encodeAddress(CONTROLLER) + strip0x(PAUSE_TYPE))
         ])
         return whitelisted && authorized

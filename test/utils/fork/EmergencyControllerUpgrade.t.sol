@@ -6,7 +6,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import {EmergencyController} from "@alto/utils/EmergencyController.sol";
-import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {FROZEN_TYPE, PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {Pausable} from "@alto/utils/Pausable.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 
@@ -56,14 +56,18 @@ contract EmergencyControllerUpgradeForkTest is Test {
         for (uint256 i; i < legacySlots.length; ++i) {
             assertEq(vm.load(CONTROLLER, bytes32(i)), legacySlots[i]);
         }
-        assertTrue(controller.pauseWhitelist(dusd));
-        assertTrue(controller.pauseWhitelist(rewardsDistributor));
-        assertFalse(controller.frozenWhitelist(dusd));
-        assertFalse(controller.frozenWhitelist(rewardsDistributor));
+        assertTrue(controller.contractWhitelist(dusd));
+        assertTrue(controller.contractWhitelist(rewardsDistributor));
         assertTrue(Pausable(dusd).pausers(CONTROLLER, PAUSE_TYPE));
         assertTrue(Pausable(rewardsDistributor).pausers(CONTROLLER, PAUSE_TYPE));
+        assertFalse(Pausable(dusd).pausers(CONTROLLER, FROZEN_TYPE));
+        assertFalse(Pausable(rewardsDistributor).pausers(CONTROLLER, FROZEN_TYPE));
 
         vm.startPrank(responder);
+        vm.expectRevert(abi.encodeWithSelector(IPausable.Unauthorized.selector, CONTROLLER, FROZEN_TYPE));
+        controller.freeze(dusd);
+        vm.expectRevert(abi.encodeWithSelector(IPausable.Unauthorized.selector, CONTROLLER, FROZEN_TYPE));
+        controller.freeze(rewardsDistributor);
         controller.pause(dusd);
         controller.pause(dusd);
         controller.pause(rewardsDistributor);
@@ -80,17 +84,23 @@ contract EmergencyControllerUpgradeForkTest is Test {
     function test_MainnetWhitelistRevocationBlocksLegacyPauseTargets() public {
         _upgrade();
         vm.startPrank(governance);
-        controller.setPauseWhitelist(dusd, false);
-        controller.setPauseWhitelist(rewardsDistributor, false);
+        controller.setContractWhitelist(dusd, false);
+        controller.setContractWhitelist(rewardsDistributor, false);
         vm.stopPrank();
 
         vm.startPrank(responder);
         vm.expectRevert(abi.encodeWithSelector(EmergencyController.UnsupportedTarget.selector, dusd, PAUSE_TYPE));
         controller.pause(dusd);
+        vm.expectRevert(abi.encodeWithSelector(EmergencyController.UnsupportedTarget.selector, dusd, FROZEN_TYPE));
+        controller.freeze(dusd);
         vm.expectRevert(
             abi.encodeWithSelector(EmergencyController.UnsupportedTarget.selector, rewardsDistributor, PAUSE_TYPE)
         );
         controller.pause(rewardsDistributor);
+        vm.expectRevert(
+            abi.encodeWithSelector(EmergencyController.UnsupportedTarget.selector, rewardsDistributor, FROZEN_TYPE)
+        );
+        controller.freeze(rewardsDistributor);
         vm.stopPrank();
     }
 
