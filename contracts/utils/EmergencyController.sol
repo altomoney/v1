@@ -28,8 +28,7 @@ contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPS
     event PauserSafeSet(address indexed oldPauserSafe, address indexed newPauserSafe);
     event MarketRegistrySet(address indexed oldMarketRegistry, address indexed newMarketRegistry);
     event UsmRegistrySet(address indexed oldUsmRegistry, address indexed newUsmRegistry);
-    event PauseWhitelistSet(address indexed target, bool allowed);
-    event FrozenWhitelistSet(address indexed target, bool allowed);
+    event ContractWhitelistSet(address indexed target, bool allowed);
 
     ISafeOwnerManager public pauserSafe;
     IMarketRegistry public marketRegistry;
@@ -42,10 +41,10 @@ contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPS
     /// @custom:oz-renamed-from universalRewardsDistributor
     IPausable private __deprecatedUniversalRewardsDistributor;
 
-    mapping(address target => bool allowed) public pauseWhitelist;
-    mapping(address target => bool allowed) public frozenWhitelist;
+    /// @notice Targets eligible for pause and freeze, subject to their own pause-type permissions.
+    mapping(address target => bool allowed) public contractWhitelist;
 
-    uint256[43] private __gap;
+    uint256[44] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -75,8 +74,8 @@ contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPS
     /// @notice Migrates the existing DUSD and rewards distributor pause targets into the whitelist.
     /// @dev Call through upgradeToAndCall when upgrading a legacy proxy.
     function initializeV2() external reinitializer(2) onlyOwner {
-        _setPauseWhitelist(address(__deprecatedDusd), true);
-        _setPauseWhitelist(address(__deprecatedUniversalRewardsDistributor), true);
+        _setContractWhitelist(address(__deprecatedDusd), true);
+        _setContractWhitelist(address(__deprecatedUniversalRewardsDistributor), true);
     }
 
     modifier onlyPauserSafeOwner() {
@@ -105,25 +104,20 @@ contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPS
         usmRegistry = IUsmRegistry(newUsmRegistry);
     }
 
-    /// @notice Adds or removes a target from the pause whitelist.
-    function setPauseWhitelist(address target, bool allowed) external onlyOwner {
-        _setPauseWhitelist(target, allowed);
-    }
-
-    /// @notice Adds or removes a target from the frozen whitelist.
-    function setFrozenWhitelist(address target, bool allowed) external onlyOwner {
-        _setFrozenWhitelist(target, allowed);
+    /// @notice Adds or removes a target from the contract whitelist.
+    function setContractWhitelist(address target, bool allowed) external onlyOwner {
+        _setContractWhitelist(target, allowed);
     }
 
     /// @notice Pauses a whitelisted target or registered mint or borrow market.
     function pause(address target) external onlyPauserSafeOwner {
-        if (!pauseWhitelist[target] && !_isRegisteredMarket(target)) revert UnsupportedTarget(target, PAUSE_TYPE);
+        if (!contractWhitelist[target] && !_isRegisteredMarket(target)) revert UnsupportedTarget(target, PAUSE_TYPE);
         _pause(target, PAUSE_TYPE);
     }
 
     /// @notice Freezes a whitelisted target or registered mint or borrow market.
     function freeze(address target) external onlyPauserSafeOwner {
-        if (!frozenWhitelist[target] && !_isRegisteredMarket(target)) revert UnsupportedTarget(target, FROZEN_TYPE);
+        if (!contractWhitelist[target] && !_isRegisteredMarket(target)) revert UnsupportedTarget(target, FROZEN_TYPE);
         _pause(target, FROZEN_TYPE);
     }
 
@@ -133,16 +127,10 @@ contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPS
         _freezeUsm(usm);
     }
 
-    function _setPauseWhitelist(address target, bool allowed) internal {
+    function _setContractWhitelist(address target, bool allowed) internal {
         if (target == address(0)) revert ZeroAddress();
-        pauseWhitelist[target] = allowed;
-        emit PauseWhitelistSet(target, allowed);
-    }
-
-    function _setFrozenWhitelist(address target, bool allowed) internal {
-        if (target == address(0)) revert ZeroAddress();
-        frozenWhitelist[target] = allowed;
-        emit FrozenWhitelistSet(target, allowed);
+        contractWhitelist[target] = allowed;
+        emit ContractWhitelistSet(target, allowed);
     }
 
     function _isRegisteredMarket(address target) internal view returns (bool) {

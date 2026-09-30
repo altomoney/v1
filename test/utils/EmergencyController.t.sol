@@ -13,6 +13,7 @@ import {EmergencyController} from "@alto/utils/EmergencyController.sol";
 import {FROZEN_TYPE, PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {UsmRegistry} from "@alto/utils/UsmRegistry.sol";
+import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {PausableMock} from "@alto-test/lending/btt/Pausable/PausableMock.sol";
 
 contract MockSafeOwnerManager {
@@ -130,8 +131,8 @@ contract EmergencyControllerTest is Test {
         controller = EmergencyController(proxy);
 
         vm.startPrank(governance);
-        controller.setPauseWhitelist(address(dusd), true);
-        controller.setPauseWhitelist(address(rewardsDistributor), true);
+        controller.setContractWhitelist(address(dusd), true);
+        controller.setContractWhitelist(address(rewardsDistributor), true);
         vm.stopPrank();
 
         mintMarket.setPauser(address(controller), PAUSE_TYPE, true);
@@ -178,8 +179,7 @@ contract EmergencyControllerTest is Test {
         sdusdVault.setPauser(address(controller), FROZEN_TYPE, true);
 
         vm.startPrank(governance);
-        controller.setPauseWhitelist(address(sdusdVault), true);
-        controller.setFrozenWhitelist(address(sdusdVault), true);
+        controller.setContractWhitelist(address(sdusdVault), true);
         vm.stopPrank();
 
         vm.startPrank(responder);
@@ -187,8 +187,7 @@ contract EmergencyControllerTest is Test {
         controller.pause(address(sdusdVault));
         vm.stopPrank();
 
-        assertTrue(controller.pauseWhitelist(address(sdusdVault)));
-        assertTrue(controller.frozenWhitelist(address(sdusdVault)));
+        assertTrue(controller.contractWhitelist(address(sdusdVault)));
         assertTrue(sdusdVault.paused(FROZEN_TYPE));
         assertTrue(sdusdVault.paused(PAUSE_TYPE));
     }
@@ -198,23 +197,28 @@ contract EmergencyControllerTest is Test {
         protocolFeeCollector.setPauser(address(controller), PAUSE_TYPE, true);
 
         vm.prank(governance);
-        controller.setPauseWhitelist(address(protocolFeeCollector), true);
+        controller.setContractWhitelist(address(protocolFeeCollector), true);
 
         vm.prank(responder);
         controller.pause(address(protocolFeeCollector));
 
-        assertTrue(controller.pauseWhitelist(address(protocolFeeCollector)));
+        assertTrue(controller.contractWhitelist(address(protocolFeeCollector)));
         assertTrue(protocolFeeCollector.paused(PAUSE_TYPE));
     }
 
-    function test_RejectsUnregisteredMarket() public {
+    function test_RejectsUnregisteredTargetsForPauseAndFreeze() public {
         PausableMock unregistered = new PausableMock(address(this));
 
-        vm.prank(responder);
+        vm.startPrank(responder);
         vm.expectRevert(
             abi.encodeWithSelector(EmergencyController.UnsupportedTarget.selector, address(unregistered), PAUSE_TYPE)
         );
         controller.pause(address(unregistered));
+        vm.expectRevert(
+            abi.encodeWithSelector(EmergencyController.UnsupportedTarget.selector, address(unregistered), FROZEN_TYPE)
+        );
+        controller.freeze(address(unregistered));
+        vm.stopPrank();
     }
 
     function test_FreezesRegisteredUsmsIdempotently() public {
@@ -248,8 +252,8 @@ contract EmergencyControllerTest is Test {
 
     function test_RevokingWhitelistBlocksDusdAndRewardsDistributor() public {
         vm.startPrank(governance);
-        controller.setPauseWhitelist(address(dusd), false);
-        controller.setPauseWhitelist(address(rewardsDistributor), false);
+        controller.setContractWhitelist(address(dusd), false);
+        controller.setContractWhitelist(address(rewardsDistributor), false);
         vm.stopPrank();
 
         vm.startPrank(responder);
@@ -269,27 +273,64 @@ contract EmergencyControllerTest is Test {
         assertFalse(rewardsDistributor.paused(PAUSE_TYPE));
     }
 
-    function test_PauseWhitelistDoesNotAuthorizeFreezingDusdOrRewardsDistributor() public {
+    function test_WhitelistedTargetsEnforceFreezePermissions() public {
         vm.startPrank(responder);
-        vm.expectRevert(
-            abi.encodeWithSelector(EmergencyController.UnsupportedTarget.selector, address(dusd), FROZEN_TYPE)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPausable.Unauthorized.selector, address(controller), FROZEN_TYPE));
         controller.freeze(address(dusd));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                EmergencyController.UnsupportedTarget.selector, address(rewardsDistributor), FROZEN_TYPE
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPausable.Unauthorized.selector, address(controller), FROZEN_TYPE));
         controller.freeze(address(rewardsDistributor));
         vm.stopPrank();
+
+        assertFalse(dusd.paused(FROZEN_TYPE));
+        assertFalse(rewardsDistributor.paused(FROZEN_TYPE));
     }
 
-    function test_GovernanceCanSetDependenciesAndWhitelists() public {
+    function test_WhitelistedFreezeOnlyTargetCannotBePaused() public {
+        PausableMock target = new PausableMock(address(this));
+        target.setPauser(address(controller), FROZEN_TYPE, true);
+        vm.prank(governance);
+        controller.setContractWhitelist(address(target), true);
+
+        vm.startPrank(responder);
+        controller.freeze(address(target));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.Unauthorized.selector, address(controller), PAUSE_TYPE));
+        controller.pause(address(target));
+        vm.stopPrank();
+
+        assertTrue(target.paused(FROZEN_TYPE));
+        assertFalse(target.paused(PAUSE_TYPE));
+    }
+
+    function test_RevokingWhitelistBlocksPauseAndFreeze() public {
+        PausableMock target = new PausableMock(address(this));
+        target.setPauser(address(controller), PAUSE_TYPE, true);
+        target.setPauser(address(controller), FROZEN_TYPE, true);
+
+        vm.startPrank(governance);
+        controller.setContractWhitelist(address(target), true);
+        controller.setContractWhitelist(address(target), false);
+        vm.stopPrank();
+
+        vm.startPrank(responder);
+        vm.expectRevert(
+            abi.encodeWithSelector(EmergencyController.UnsupportedTarget.selector, address(target), PAUSE_TYPE)
+        );
+        controller.pause(address(target));
+        vm.expectRevert(
+            abi.encodeWithSelector(EmergencyController.UnsupportedTarget.selector, address(target), FROZEN_TYPE)
+        );
+        controller.freeze(address(target));
+        vm.stopPrank();
+
+        assertFalse(target.paused(PAUSE_TYPE));
+        assertFalse(target.paused(FROZEN_TYPE));
+    }
+
+    function test_GovernanceCanSetDependenciesAndWhitelist() public {
         MockSafeOwnerManager newSafe = new MockSafeOwnerManager();
         MarketRegistry newMarketRegistry = new MarketRegistry(address(this));
         UsmRegistry newUsmRegistry = new UsmRegistry(address(this));
-        PausableMock pauseTarget = new PausableMock(address(this));
-        PausableMock frozenTarget = new PausableMock(address(this));
+        PausableMock target = new PausableMock(address(this));
 
         vm.startPrank(governance);
 
@@ -306,23 +347,22 @@ contract EmergencyControllerTest is Test {
         controller.setUsmRegistry(address(newUsmRegistry));
 
         vm.expectEmit(true, false, false, true, address(controller));
-        emit EmergencyController.PauseWhitelistSet(address(pauseTarget), true);
-        controller.setPauseWhitelist(address(pauseTarget), true);
+        emit EmergencyController.ContractWhitelistSet(address(target), true);
+        controller.setContractWhitelist(address(target), true);
 
         vm.expectEmit(true, false, false, true, address(controller));
-        emit EmergencyController.FrozenWhitelistSet(address(frozenTarget), true);
-        controller.setFrozenWhitelist(address(frozenTarget), true);
+        emit EmergencyController.ContractWhitelistSet(address(target), false);
+        controller.setContractWhitelist(address(target), false);
 
         vm.stopPrank();
 
         assertEq(address(controller.pauserSafe()), address(newSafe));
         assertEq(address(controller.marketRegistry()), address(newMarketRegistry));
         assertEq(address(controller.usmRegistry()), address(newUsmRegistry));
-        assertTrue(controller.pauseWhitelist(address(pauseTarget)));
-        assertTrue(controller.frozenWhitelist(address(frozenTarget)));
+        assertFalse(controller.contractWhitelist(address(target)));
     }
 
-    function test_OnlyGovernanceCanSetDependenciesAndWhitelists() public {
+    function test_OnlyGovernanceCanSetDependenciesAndWhitelist() public {
         vm.startPrank(responder);
 
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, responder));
@@ -335,10 +375,7 @@ contract EmergencyControllerTest is Test {
         controller.setUsmRegistry(outsider);
 
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, responder));
-        controller.setPauseWhitelist(outsider, true);
-
-        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, responder));
-        controller.setFrozenWhitelist(outsider, true);
+        controller.setContractWhitelist(outsider, true);
 
         vm.stopPrank();
     }
@@ -356,10 +393,7 @@ contract EmergencyControllerTest is Test {
         controller.setUsmRegistry(address(0));
 
         vm.expectRevert(EmergencyController.ZeroAddress.selector);
-        controller.setPauseWhitelist(address(0), true);
-
-        vm.expectRevert(EmergencyController.ZeroAddress.selector);
-        controller.setFrozenWhitelist(address(0), true);
+        controller.setContractWhitelist(address(0), true);
 
         vm.stopPrank();
     }
@@ -376,8 +410,8 @@ contract EmergencyControllerTest is Test {
 
         assertEq(EmergencyControllerV2(proxy).version(), 2);
         assertEq(address(EmergencyControllerV2(proxy).pauserSafe()), address(safe));
-        assertTrue(EmergencyControllerV2(proxy).pauseWhitelist(address(dusd)));
-        assertTrue(EmergencyControllerV2(proxy).pauseWhitelist(address(rewardsDistributor)));
+        assertTrue(EmergencyControllerV2(proxy).contractWhitelist(address(dusd)));
+        assertTrue(EmergencyControllerV2(proxy).contractWhitelist(address(rewardsDistributor)));
     }
 
     function test_UpgradePreservesLegacyStorageAndMigratesPauseTargetsAtomically() public {
@@ -400,10 +434,8 @@ contract EmergencyControllerTest is Test {
         assertEq(address(upgraded.usmRegistry()), address(usmRegistry));
         assertEq(address(uint160(uint256(vm.load(legacyProxy, bytes32(uint256(3)))))), address(dusd));
         assertEq(address(uint160(uint256(vm.load(legacyProxy, bytes32(uint256(4)))))), address(rewardsDistributor));
-        assertTrue(upgraded.pauseWhitelist(address(dusd)));
-        assertTrue(upgraded.pauseWhitelist(address(rewardsDistributor)));
-        assertFalse(upgraded.frozenWhitelist(address(dusd)));
-        assertFalse(upgraded.frozenWhitelist(address(rewardsDistributor)));
+        assertTrue(upgraded.contractWhitelist(address(dusd)));
+        assertTrue(upgraded.contractWhitelist(address(rewardsDistributor)));
 
         vm.startPrank(responder);
         upgraded.pause(address(dusd));
@@ -415,8 +447,8 @@ contract EmergencyControllerTest is Test {
         vm.startPrank(governance);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         upgraded.initializeV2();
-        upgraded.setPauseWhitelist(address(dusd), false);
-        upgraded.setPauseWhitelist(address(rewardsDistributor), false);
+        upgraded.setContractWhitelist(address(dusd), false);
+        upgraded.setContractWhitelist(address(rewardsDistributor), false);
         vm.stopPrank();
 
         vm.startPrank(responder);
@@ -443,22 +475,22 @@ contract EmergencyControllerTest is Test {
         vm.prank(responder);
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, responder));
         upgraded.initializeV2();
-        assertFalse(upgraded.pauseWhitelist(address(dusd)));
-        assertFalse(upgraded.pauseWhitelist(address(rewardsDistributor)));
+        assertFalse(upgraded.contractWhitelist(address(dusd)));
+        assertFalse(upgraded.contractWhitelist(address(rewardsDistributor)));
 
         vm.prank(governance);
         upgraded.initializeV2();
-        assertTrue(upgraded.pauseWhitelist(address(dusd)));
-        assertTrue(upgraded.pauseWhitelist(address(rewardsDistributor)));
+        assertTrue(upgraded.contractWhitelist(address(dusd)));
+        assertTrue(upgraded.contractWhitelist(address(rewardsDistributor)));
     }
 
     function test_FreshProxyCannotMigrateEmptyLegacyTargets() public {
         vm.prank(governance);
         vm.expectRevert(EmergencyController.ZeroAddress.selector);
         controller.initializeV2();
-        assertFalse(controller.pauseWhitelist(address(0)));
-        assertTrue(controller.pauseWhitelist(address(dusd)));
-        assertTrue(controller.pauseWhitelist(address(rewardsDistributor)));
+        assertFalse(controller.contractWhitelist(address(0)));
+        assertTrue(controller.contractWhitelist(address(dusd)));
+        assertTrue(controller.contractWhitelist(address(rewardsDistributor)));
     }
 
     function test_ProxyCannotBeReinitialized() public {
@@ -488,8 +520,8 @@ contract EmergencyControllerTest is Test {
         assertEq(address(controller.pauserSafe()), address(safe));
         assertEq(address(controller.marketRegistry()), address(marketRegistry));
         assertEq(address(controller.usmRegistry()), address(usmRegistry));
-        assertTrue(controller.pauseWhitelist(address(dusd)));
-        assertTrue(controller.pauseWhitelist(address(rewardsDistributor)));
+        assertTrue(controller.contractWhitelist(address(dusd)));
+        assertTrue(controller.contractWhitelist(address(rewardsDistributor)));
         assertEq(controller.owner(), governance);
     }
 

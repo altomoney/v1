@@ -38,9 +38,8 @@ contract SDUSDEmergencyControlsTest is SDUSDCommon {
         );
 
         vm.startPrank(ADMIN);
-        controller.setPauseWhitelist(address(vault), true);
-        controller.setFrozenWhitelist(address(vault), true);
-        controller.setPauseWhitelist(address(collector), true);
+        controller.setContractWhitelist(address(vault), true);
+        controller.setContractWhitelist(address(collector), true);
         vault.setPauser(address(controller), FROZEN_TYPE, true);
         vault.setPauser(address(controller), PAUSE_TYPE, true);
         vault.setPauser(address(pauserSafe), FROZEN_TYPE, true);
