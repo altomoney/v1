@@ -8,6 +8,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
+import {AltoOwnable2StepUpgradeable} from "@alto/utils/AltoOwnable2StepUpgradeable.sol";
 import {EmergencyController} from "@alto/utils/EmergencyController.sol";
 import {FROZEN_TYPE, PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {MarketRegistry} from "@alto/utils/MarketRegistry.sol";
@@ -45,6 +46,42 @@ contract EmergencyControllerV2 is EmergencyController {
     function version() external pure returns (uint256) {
         return 2;
     }
+}
+
+/// @dev Models the storage and initialization of the controller before whitelists were introduced.
+contract EmergencyControllerLegacy is Initializable, AltoOwnable2StepUpgradeable, UUPSUpgradeable {
+    address public pauserSafe;
+    address public marketRegistry;
+    address public usmRegistry;
+    address public dusd;
+    address public universalRewardsDistributor;
+
+    uint256[45] private __gap;
+
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
+        address admin,
+        address pauserSafe_,
+        address marketRegistry_,
+        address usmRegistry_,
+        address dusd_,
+        address universalRewardsDistributor_
+    ) external initializer {
+        pauserSafe = pauserSafe_;
+        marketRegistry = marketRegistry_;
+        usmRegistry = usmRegistry_;
+        dusd = dusd_;
+        universalRewardsDistributor = universalRewardsDistributor_;
+
+        __Ownable_init(admin);
+        __Ownable2Step_init();
+        __UUPSUpgradeable_init();
+    }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }
 
 contract EmergencyControllerTest is Test {
@@ -87,17 +124,15 @@ contract EmergencyControllerTest is Test {
             address(implementation),
             abi.encodeCall(
                 EmergencyController.initialize,
-                (
-                    governance,
-                    address(safe),
-                    address(marketRegistry),
-                    address(usmRegistry),
-                    address(dusd),
-                    address(rewardsDistributor)
-                )
+                (governance, address(safe), address(marketRegistry), address(usmRegistry))
             )
         );
         controller = EmergencyController(proxy);
+
+        vm.startPrank(governance);
+        controller.setPauseWhitelist(address(dusd), true);
+        controller.setPauseWhitelist(address(rewardsDistributor), true);
+        vm.stopPrank();
 
         mintMarket.setPauser(address(controller), PAUSE_TYPE, true);
         mintMarket.setPauser(address(controller), FROZEN_TYPE, true);
@@ -199,7 +234,7 @@ contract EmergencyControllerTest is Test {
         controller.freezeUsm(address(unregistered));
     }
 
-    function test_PausesSingletonsIdempotently() public {
+    function test_PausesWhitelistedDusdAndRewardsDistributorIdempotently() public {
         vm.startPrank(responder);
         controller.pause(address(dusd));
         controller.pause(address(dusd));
@@ -209,6 +244,44 @@ contract EmergencyControllerTest is Test {
 
         assertTrue(dusd.paused(PAUSE_TYPE));
         assertTrue(rewardsDistributor.paused(PAUSE_TYPE));
+    }
+
+    function test_RevokingWhitelistBlocksDusdAndRewardsDistributor() public {
+        vm.startPrank(governance);
+        controller.setPauseWhitelist(address(dusd), false);
+        controller.setPauseWhitelist(address(rewardsDistributor), false);
+        vm.stopPrank();
+
+        vm.startPrank(responder);
+        vm.expectRevert(
+            abi.encodeWithSelector(EmergencyController.UnsupportedTarget.selector, address(dusd), PAUSE_TYPE)
+        );
+        controller.pause(address(dusd));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                EmergencyController.UnsupportedTarget.selector, address(rewardsDistributor), PAUSE_TYPE
+            )
+        );
+        controller.pause(address(rewardsDistributor));
+        vm.stopPrank();
+
+        assertFalse(dusd.paused(PAUSE_TYPE));
+        assertFalse(rewardsDistributor.paused(PAUSE_TYPE));
+    }
+
+    function test_PauseWhitelistDoesNotAuthorizeFreezingDusdOrRewardsDistributor() public {
+        vm.startPrank(responder);
+        vm.expectRevert(
+            abi.encodeWithSelector(EmergencyController.UnsupportedTarget.selector, address(dusd), FROZEN_TYPE)
+        );
+        controller.freeze(address(dusd));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                EmergencyController.UnsupportedTarget.selector, address(rewardsDistributor), FROZEN_TYPE
+            )
+        );
+        controller.freeze(address(rewardsDistributor));
+        vm.stopPrank();
     }
 
     function test_GovernanceCanSetDependenciesAndWhitelists() public {
@@ -245,8 +318,6 @@ contract EmergencyControllerTest is Test {
         assertEq(address(controller.pauserSafe()), address(newSafe));
         assertEq(address(controller.marketRegistry()), address(newMarketRegistry));
         assertEq(address(controller.usmRegistry()), address(newUsmRegistry));
-        assertEq(address(controller.dusd()), address(dusd));
-        assertEq(address(controller.universalRewardsDistributor()), address(rewardsDistributor));
         assertTrue(controller.pauseWhitelist(address(pauseTarget)));
         assertTrue(controller.frozenWhitelist(address(frozenTarget)));
     }
@@ -305,31 +376,135 @@ contract EmergencyControllerTest is Test {
 
         assertEq(EmergencyControllerV2(proxy).version(), 2);
         assertEq(address(EmergencyControllerV2(proxy).pauserSafe()), address(safe));
+        assertTrue(EmergencyControllerV2(proxy).pauseWhitelist(address(dusd)));
+        assertTrue(EmergencyControllerV2(proxy).pauseWhitelist(address(rewardsDistributor)));
+    }
+
+    function test_UpgradePreservesLegacyStorageAndMigratesPauseTargetsAtomically() public {
+        address legacyProxy = _newLegacyProxy();
+        vm.prank(governance);
+        EmergencyControllerLegacy(legacyProxy).transferOwnership(outsider);
+
+        EmergencyController implementation = _newImplementation();
+        dusd.setPauser(legacyProxy, PAUSE_TYPE, true);
+        rewardsDistributor.setPauser(legacyProxy, PAUSE_TYPE, true);
+        vm.prank(governance);
+        UUPSUpgradeable(legacyProxy)
+            .upgradeToAndCall(address(implementation), abi.encodeCall(EmergencyController.initializeV2, ()));
+        EmergencyController upgraded = EmergencyController(legacyProxy);
+
+        assertEq(upgraded.owner(), governance);
+        assertEq(upgraded.pendingOwner(), outsider);
+        assertEq(address(upgraded.pauserSafe()), address(safe));
+        assertEq(address(upgraded.marketRegistry()), address(marketRegistry));
+        assertEq(address(upgraded.usmRegistry()), address(usmRegistry));
+        assertEq(address(uint160(uint256(vm.load(legacyProxy, bytes32(uint256(3)))))), address(dusd));
+        assertEq(address(uint160(uint256(vm.load(legacyProxy, bytes32(uint256(4)))))), address(rewardsDistributor));
+        assertTrue(upgraded.pauseWhitelist(address(dusd)));
+        assertTrue(upgraded.pauseWhitelist(address(rewardsDistributor)));
+        assertFalse(upgraded.frozenWhitelist(address(dusd)));
+        assertFalse(upgraded.frozenWhitelist(address(rewardsDistributor)));
+
+        vm.startPrank(responder);
+        upgraded.pause(address(dusd));
+        upgraded.pause(address(rewardsDistributor));
+        vm.stopPrank();
+        assertTrue(dusd.paused(PAUSE_TYPE));
+        assertTrue(rewardsDistributor.paused(PAUSE_TYPE));
+
+        vm.startPrank(governance);
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        upgraded.initializeV2();
+        upgraded.setPauseWhitelist(address(dusd), false);
+        upgraded.setPauseWhitelist(address(rewardsDistributor), false);
+        vm.stopPrank();
+
+        vm.startPrank(responder);
+        vm.expectRevert(
+            abi.encodeWithSelector(EmergencyController.UnsupportedTarget.selector, address(dusd), PAUSE_TYPE)
+        );
+        upgraded.pause(address(dusd));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                EmergencyController.UnsupportedTarget.selector, address(rewardsDistributor), PAUSE_TYPE
+            )
+        );
+        upgraded.pause(address(rewardsDistributor));
+        vm.stopPrank();
+    }
+
+    function test_OnlyGovernanceCanMigrateLegacyPauseTargets() public {
+        address legacyProxy = _newLegacyProxy();
+        EmergencyController implementation = _newImplementation();
+        vm.prank(governance);
+        UUPSUpgradeable(legacyProxy).upgradeToAndCall(address(implementation), "");
+        EmergencyController upgraded = EmergencyController(legacyProxy);
+
+        vm.prank(responder);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, responder));
+        upgraded.initializeV2();
+        assertFalse(upgraded.pauseWhitelist(address(dusd)));
+        assertFalse(upgraded.pauseWhitelist(address(rewardsDistributor)));
+
+        vm.prank(governance);
+        upgraded.initializeV2();
+        assertTrue(upgraded.pauseWhitelist(address(dusd)));
+        assertTrue(upgraded.pauseWhitelist(address(rewardsDistributor)));
+    }
+
+    function test_FreshProxyCannotMigrateEmptyLegacyTargets() public {
+        vm.prank(governance);
+        vm.expectRevert(EmergencyController.ZeroAddress.selector);
+        controller.initializeV2();
+        assertFalse(controller.pauseWhitelist(address(0)));
+        assertTrue(controller.pauseWhitelist(address(dusd)));
+        assertTrue(controller.pauseWhitelist(address(rewardsDistributor)));
     }
 
     function test_ProxyCannotBeReinitialized() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        controller.initialize(
-            outsider,
-            address(safe),
-            address(marketRegistry),
-            address(usmRegistry),
-            address(dusd),
-            address(rewardsDistributor)
-        );
+        controller.initialize(outsider, address(safe), address(marketRegistry), address(usmRegistry));
     }
 
     function test_InitializerRejectsZeroAddress() public {
         EmergencyController implementation = _newImplementation();
 
-        vm.expectRevert(EmergencyController.ZeroAddress.selector);
-        UnsafeUpgrades.deployUUPSProxy(
-            address(implementation),
+        address[4] memory dependencies = [governance, address(safe), address(marketRegistry), address(usmRegistry)];
+        for (uint256 i; i < dependencies.length; ++i) {
+            address dependency = dependencies[i];
+            dependencies[i] = address(0);
+            vm.expectRevert(EmergencyController.ZeroAddress.selector);
+            UnsafeUpgrades.deployUUPSProxy(
+                address(implementation),
+                abi.encodeCall(
+                    EmergencyController.initialize, (dependencies[0], dependencies[1], dependencies[2], dependencies[3])
+                )
+            );
+            dependencies[i] = dependency;
+        }
+    }
+
+    function test_ProxyConfiguration() public view {
+        assertEq(address(controller.pauserSafe()), address(safe));
+        assertEq(address(controller.marketRegistry()), address(marketRegistry));
+        assertEq(address(controller.usmRegistry()), address(usmRegistry));
+        assertTrue(controller.pauseWhitelist(address(dusd)));
+        assertTrue(controller.pauseWhitelist(address(rewardsDistributor)));
+        assertEq(controller.owner(), governance);
+    }
+
+    function _newImplementation() internal returns (EmergencyController) {
+        return new EmergencyController();
+    }
+
+    function _newLegacyProxy() internal returns (address) {
+        return UnsafeUpgrades.deployUUPSProxy(
+            address(new EmergencyControllerLegacy()),
             abi.encodeCall(
-                EmergencyController.initialize,
+                EmergencyControllerLegacy.initialize,
                 (
                     governance,
-                    address(0),
+                    address(safe),
                     address(marketRegistry),
                     address(usmRegistry),
                     address(dusd),
@@ -337,18 +512,5 @@ contract EmergencyControllerTest is Test {
                 )
             )
         );
-    }
-
-    function test_ProxyConfiguration() public view {
-        assertEq(address(controller.pauserSafe()), address(safe));
-        assertEq(address(controller.marketRegistry()), address(marketRegistry));
-        assertEq(address(controller.usmRegistry()), address(usmRegistry));
-        assertEq(address(controller.dusd()), address(dusd));
-        assertEq(address(controller.universalRewardsDistributor()), address(rewardsDistributor));
-        assertEq(controller.owner(), governance);
-    }
-
-    function _newImplementation() internal returns (EmergencyController) {
-        return new EmergencyController();
     }
 }

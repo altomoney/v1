@@ -18,6 +18,7 @@ interface ISafeOwnerManager {
 /// @custom:contact security@altofoundation.org
 /// @notice Lets any current Pauser Safe owner take explicitly permitted emergency actions.
 /// @dev Deploy behind a UUPS proxy owned by protocol governance.
+/// @dev Upgrade existing proxies with initializeV2 calldata to migrate their pause targets atomically.
 contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPSUpgradeable {
     error Unauthorized(address caller);
     error UnsupportedTarget(address target, bytes32 pauseType);
@@ -33,8 +34,14 @@ contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPS
     ISafeOwnerManager public pauserSafe;
     IMarketRegistry public marketRegistry;
     IUsmRegistry public usmRegistry;
-    IPausable public dusd;
-    IPausable public universalRewardsDistributor;
+
+    /// @dev Reserved to preserve the storage layout of existing proxies.
+    /// @custom:oz-renamed-from dusd
+    IPausable private __deprecatedDusd;
+    /// @dev Reserved to preserve the storage layout of existing proxies.
+    /// @custom:oz-renamed-from universalRewardsDistributor
+    IPausable private __deprecatedUniversalRewardsDistributor;
+
     mapping(address target => bool allowed) public pauseWhitelist;
     mapping(address target => bool allowed) public frozenWhitelist;
 
@@ -47,28 +54,29 @@ contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPS
 
     /// @notice Initializes the controller configuration and governance upgrade authority.
     /// @custom:oz-upgrades-validate-as-initializer
-    function initialize(
-        address admin,
-        address pauserSafe_,
-        address marketRegistry_,
-        address usmRegistry_,
-        address dusd_,
-        address universalRewardsDistributor_
-    ) external initializer {
+    function initialize(address admin, address pauserSafe_, address marketRegistry_, address usmRegistry_)
+        external
+        initializer
+    {
         if (
             admin == address(0) || pauserSafe_ == address(0) || marketRegistry_ == address(0)
-                || usmRegistry_ == address(0) || dusd_ == address(0) || universalRewardsDistributor_ == address(0)
+                || usmRegistry_ == address(0)
         ) revert ZeroAddress();
 
         pauserSafe = ISafeOwnerManager(pauserSafe_);
         marketRegistry = IMarketRegistry(marketRegistry_);
         usmRegistry = IUsmRegistry(usmRegistry_);
-        dusd = IPausable(dusd_);
-        universalRewardsDistributor = IPausable(universalRewardsDistributor_);
 
         __Ownable_init(admin);
         __Ownable2Step_init();
         __UUPSUpgradeable_init();
+    }
+
+    /// @notice Migrates the existing DUSD and rewards distributor pause targets into the whitelist.
+    /// @dev Call through upgradeToAndCall when upgrading a legacy proxy.
+    function initializeV2() external reinitializer(2) onlyOwner {
+        _setPauseWhitelist(address(__deprecatedDusd), true);
+        _setPauseWhitelist(address(__deprecatedUniversalRewardsDistributor), true);
     }
 
     modifier onlyPauserSafeOwner() {
@@ -109,10 +117,7 @@ contract EmergencyController is Initializable, AltoOwnable2StepUpgradeable, UUPS
 
     /// @notice Pauses a whitelisted target or registered mint or borrow market.
     function pause(address target) external onlyPauserSafeOwner {
-        if (
-            target != address(dusd) && target != address(universalRewardsDistributor) && !pauseWhitelist[target]
-                && !_isRegisteredMarket(target)
-        ) revert UnsupportedTarget(target, PAUSE_TYPE);
+        if (!pauseWhitelist[target] && !_isRegisteredMarket(target)) revert UnsupportedTarget(target, PAUSE_TYPE);
         _pause(target, PAUSE_TYPE);
     }
 
