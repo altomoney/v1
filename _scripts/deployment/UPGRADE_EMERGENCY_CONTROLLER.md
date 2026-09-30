@@ -1,9 +1,8 @@
 # EmergencyController mainnet upgrade
 
-This deployment is maintained separately from the
-[controller refactor](https://github.com/altomoney/v1/pull/661). After that PR merges,
-update this deployment branch from `dev` before running it. The script and fork
-tests require the refactor's `initializeV2()` and `contractWhitelist` API.
+This deployment builds on the
+[controller refactor](https://github.com/altomoney/v1/pull/661). The script and fork
+tests use the refactor's `initializeV2()` and `contractWhitelist` API.
 
 Run from the repository with the same `.env`, Foundry keystore `ACCOUNT`, and
 deployer `SENDER` used by `alto-1.sh`. The deployment mode also requires `jq`.
