@@ -251,6 +251,8 @@
       "use strict";
 
       const CONTROLLER = "0x3c822f14a90955bf35278b42BA509FeEcAD3a305";
+      const DUSD = "0x63d74d22E689C715a04F2C13962b1f77F443d35b"
+      const REWARDS_DISTRIBUTOR = "0xF3fF591a625705BA9e99D333e1cd1e70fa0B64E4"
       const MAINNET_CHAIN_ID = "0x1";
       const EXPLORER = "https://etherscan.io";
       const PAUSE_TYPE = "0x31533cf09d9fd562a4609906b5c62508f0dd93bd2222c49d6a9d4cd4326f5725";
@@ -260,8 +262,7 @@
         pauserSafe: "0x45007ee3",
         marketRegistry: "0xecb96fe6",
         usmRegistry: "0x49347a63",
-        dusd: "0xde1409ce",
-        universalRewardsDistributor: "0x6e395620",
+        pauseWhitelist: "0x69717349",
         getMintMarkets: "0xf0f783d2",
         getBorrowMarkets: "0x89545353",
         getUsmList: "0xeeba88ec",
@@ -278,11 +279,9 @@
         pausers: "0x48780d2e",
         swapFreezerRole: "0x353f03bd",
         hasRole: "0x91d14854",
-        pauseMarket: "0xe952cba9",
-        freezeMarket: "0x0403188d",
-        freezeUsm: "0x20f9b461",
-        pauseDusd: "0x2ef6d674",
-        pauseUniversalRewardsDistributor: "0xe8f17d34"
+        pause: "0x76a67a51",
+        freeze: "0x8d1fdf2f",
+        freezeUsm: "0x20f9b461"
       });
 
       const state = {
@@ -533,13 +532,13 @@
           const code = await request("eth_getCode", [CONTROLLER, "latest"]);
           if (!code || code === "0x") throw new Error("Emergency Controller is not deployed at the configured address");
 
-          const [safe, marketRegistry, usmRegistry, dusd, rewardsDistributor] = await Promise.all([
+          const [safe, marketRegistry, usmRegistry] = await Promise.all([
             callAddress(CONTROLLER, SELECTOR.pauserSafe),
             callAddress(CONTROLLER, SELECTOR.marketRegistry),
-            callAddress(CONTROLLER, SELECTOR.usmRegistry),
-            callAddress(CONTROLLER, SELECTOR.dusd),
-            callAddress(CONTROLLER, SELECTOR.universalRewardsDistributor)
-          ]);
+            callAddress(CONTROLLER, SELECTOR.usmRegistry)
+          ])
+          const dusd = DUSD
+          const rewardsDistributor = REWARDS_DISTRIBUTOR
 
           const [authorized, mintAddresses, borrowAddresses, usmAddresses] = await Promise.all([
             callBool(safe, SELECTOR.isOwner + encodeAddress(state.account)),
@@ -555,8 +554,8 @@
             Promise.all(usmAddresses.map(address => loadUsm(address, symbolCache))),
             callBool(dusd, SELECTOR.paused + strip0x(PAUSE_TYPE)),
             callBool(rewardsDistributor, SELECTOR.paused + strip0x(PAUSE_TYPE)),
-            callBool(dusd, SELECTOR.pausers + encodeAddress(CONTROLLER) + strip0x(PAUSE_TYPE)),
-            callBool(rewardsDistributor, SELECTOR.pausers + encodeAddress(CONTROLLER) + strip0x(PAUSE_TYPE))
+            canPauseWhitelistedTarget(dusd),
+            canPauseWhitelistedTarget(rewardsDistributor)
           ]);
 
           if (loadId !== state.loadId) return;
@@ -586,6 +585,14 @@
           if (loadId !== state.loadId) return;
           setStatus(errorMessage(error), "error");
         }
+      }
+
+      async function canPauseWhitelistedTarget(address) {
+        const [whitelisted, authorized] = await Promise.all([
+          callBool(CONTROLLER, SELECTOR.pauseWhitelist + encodeAddress(address)),
+          callBool(address, SELECTOR.pausers + encodeAddress(CONTROLLER) + strip0x(PAUSE_TYPE))
+        ])
+        return whitelisted && authorized
       }
 
       function makeAction(label, kind, target, active, activeLabel, supported) {
@@ -661,13 +668,13 @@
 
         el("singletons").replaceChildren(
           makeTarget("DUSD minting and burning", singletons.dusd, [
-            makeAction("Pause", "pauseDusd", "", singletons.dusdPaused, "Paused", singletons.canPauseDusd)
+            makeAction("Pause", "pauseDusd", singletons.dusd, singletons.dusdPaused, "Paused", singletons.canPauseDusd)
           ]),
           makeTarget("Universal Rewards Distributor claims", singletons.rewardsDistributor, [
             makeAction(
               "Pause",
               "pauseUniversalRewardsDistributor",
-              "",
+              singletons.rewardsDistributor,
               singletons.rewardsPaused,
               "Paused",
               singletons.canPauseRewards
@@ -682,12 +689,12 @@
           const kind = input.dataset.kind;
           const suffix = target ? ` (${shortAddress(target)})` : "";
           const definitions = {
-            pauseMarket: { selector: SELECTOR.pauseMarket, description: `Pause market${suffix}` },
-            freezeMarket: { selector: SELECTOR.freezeMarket, description: `Freeze market${suffix}` },
+            pauseMarket: { selector: SELECTOR.pause, description: `Pause market${suffix}` },
+            freezeMarket: { selector: SELECTOR.freeze, description: `Freeze market${suffix}` },
             freezeUsm: { selector: SELECTOR.freezeUsm, description: `Freeze USM swaps${suffix}` },
-            pauseDusd: { selector: SELECTOR.pauseDusd, description: "Pause DUSD minting and burning" },
+            pauseDusd: { selector: SELECTOR.pause, description: "Pause DUSD minting and burning" },
             pauseUniversalRewardsDistributor: {
-              selector: SELECTOR.pauseUniversalRewardsDistributor,
+              selector: SELECTOR.pause,
               description: "Pause Universal Rewards Distributor claims"
             }
           };

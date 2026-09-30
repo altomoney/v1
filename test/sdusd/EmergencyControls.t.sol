@@ -31,14 +31,7 @@ contract SDUSDEmergencyControlsTest is SDUSDCommon {
                     address(new EmergencyController()),
                     abi.encodeCall(
                         EmergencyController.initialize,
-                        (
-                            ADMIN,
-                            address(pauserSafe),
-                            address(marketRegistry),
-                            address(usmRegistry),
-                            address(dusd),
-                            RECEIVER
-                        )
+                        (ADMIN, address(pauserSafe), address(marketRegistry), address(usmRegistry))
                     )
                 )
             )
