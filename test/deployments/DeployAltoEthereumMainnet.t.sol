@@ -143,6 +143,7 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
     address immutable STAKING_URD = makeAddr("STAKING_URD");
     address immutable MERKLE_ROOT_UPDATER = makeAddr("MERKLE_ROOT_UPDATER");
     address immutable FUTURE_EMERGENCY_CONTROLLER = makeAddr("FUTURE_EMERGENCY_CONTROLLER");
+    address immutable FUTURE_PROTOCOL_FEE_COLLECTOR = makeAddr("FUTURE_PROTOCOL_FEE_COLLECTOR");
     address DEPLOYER;
 
     bytes32 immutable CONFIGURATOR_ROLE = keccak256("CONFIGURATOR_ROLE");
@@ -494,6 +495,13 @@ abstract contract DeployMarketPhaseTestBase is DeployAltoEthereumMainnetTestBase
     address internal constant PRODUCTION_FREEZER = 0x1c11d2d42929bd17aB7212b79c91862Adfa8bbe4;
     address internal constant TREASURY_MULTISIG = 0xA1148A1b94262540994Cf9Aa431A13ad39764228;
     address internal constant PRODUCTION_UPDATER = 0x7db7C14533a4186EcC07950F78835859320835Be;
+
+    function setUp() public virtual override {
+        super.setUp();
+        if (input.contracts.protocolFeeCollector == address(0)) {
+            input.contracts.protocolFeeCollector = FUTURE_PROTOCOL_FEE_COLLECTOR;
+        }
+    }
 
     function _deployMarket(DeploymentPhase phase) internal {
         input.contracts.emergencyController = FUTURE_EMERGENCY_CONTROLLER;
