@@ -19,8 +19,6 @@ contract GenerateSDUSDFeeCollateralWithdrawalForkTest is Test {
     uint256 internal constant SDUSD_DEPLOYMENT_ID_TO_LOAD = 1765364975;
 
     address internal constant MAINNET_TIMELOCK_ADMIN = 0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0;
-    address internal constant LEGACY_BORROW_FEE_RECIPIENT = 0xb9F06fEFc4c53dEd77A90Cb798eD08DC068Bb6dd;
-    address internal constant LEGACY_MINT_FEE_RECIPIENT = 0x5F80c18b6B73B1C4F06fa5233De32778eC90FA96;
 
     string internal constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
     string internal constant BORROW_SCHEDULE_PATH =
@@ -33,6 +31,8 @@ contract GenerateSDUSDFeeCollateralWithdrawalForkTest is Test {
         "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-mint-fee-collateral-withdrawal-execute.json";
 
     address internal marketRegistry;
+    address internal legacyFeeRecipient;
+    address internal legacyMintMarketFeeRecipient;
     address internal dummyFeeRecipient;
 
     function setUp() public {
@@ -50,6 +50,8 @@ contract GenerateSDUSDFeeCollateralWithdrawalForkTest is Test {
             )
         );
         marketRegistry = vm.parseJsonAddress(json, ".contracts.marketRegistry");
+        legacyFeeRecipient = vm.parseJsonAddress(json, ".contracts.legacyFeeRecipient");
+        legacyMintMarketFeeRecipient = vm.parseJsonAddress(json, ".contracts.legacyMintMarketFeeRecipient");
         dummyFeeRecipient = makeAddr("dummyFeeRecipient");
     }
 
@@ -57,8 +59,8 @@ contract GenerateSDUSDFeeCollateralWithdrawalForkTest is Test {
         address[] memory borrowMarkets = IMarketRegistry(marketRegistry).getBorrowMarkets();
         address[] memory mintMarkets = IMarketRegistry(marketRegistry).getMintMarkets();
 
-        uint256 borrowCollateralMarketCount = _collateralMarketCount(borrowMarkets, LEGACY_BORROW_FEE_RECIPIENT);
-        uint256 mintCollateralMarketCount = _collateralMarketCount(mintMarkets, LEGACY_MINT_FEE_RECIPIENT);
+        uint256 borrowCollateralMarketCount = _collateralMarketCount(borrowMarkets, legacyFeeRecipient);
+        uint256 mintCollateralMarketCount = _collateralMarketCount(mintMarkets, legacyMintMarketFeeRecipient);
         assertGt(borrowCollateralMarketCount, 0, "no legacy borrow collateral positions");
         assertGt(mintCollateralMarketCount, 0, "no legacy mint collateral positions");
 
@@ -67,14 +69,14 @@ contract GenerateSDUSDFeeCollateralWithdrawalForkTest is Test {
 
         GenerateSDUSDFeeCollateralWithdrawalScript generator = new GenerateSDUSDFeeCollateralWithdrawalScript();
         LegacyFeeCollateralWithdrawalSafeBatch memory borrowBatch =
-            generator.buildCollateralWithdrawal(borrowMarkets, LEGACY_BORROW_FEE_RECIPIENT);
+            generator.buildCollateralWithdrawal(borrowMarkets, legacyFeeRecipient);
         LegacyFeeCollateralWithdrawalSafeBatch memory mintBatch =
-            generator.buildCollateralWithdrawal(mintMarkets, LEGACY_MINT_FEE_RECIPIENT);
+            generator.buildCollateralWithdrawal(mintMarkets, legacyMintMarketFeeRecipient);
         assertEq(borrowBatch.targets.length, borrowCollateralMarketCount, "unexpected borrow call count");
         assertEq(mintBatch.targets.length, mintCollateralMarketCount, "unexpected mint call count");
 
-        _mockCollateralPrices(borrowMarkets, LEGACY_BORROW_FEE_RECIPIENT);
-        _mockCollateralPrices(mintMarkets, LEGACY_MINT_FEE_RECIPIENT);
+        _mockCollateralPrices(borrowMarkets, legacyFeeRecipient);
+        _mockCollateralPrices(mintMarkets, legacyMintMarketFeeRecipient);
 
         generator.run();
         assertTrue(vm.exists(BORROW_SCHEDULE_PATH), "missing borrow schedule file");
@@ -82,18 +84,18 @@ contract GenerateSDUSDFeeCollateralWithdrawalForkTest is Test {
         assertTrue(vm.exists(MINT_SCHEDULE_PATH), "missing mint schedule file");
         assertTrue(vm.exists(MINT_EXECUTE_PATH), "missing mint execute file");
 
-        _callTimelock(LEGACY_BORROW_FEE_RECIPIENT, BORROW_SCHEDULE_PATH);
-        _callTimelock(LEGACY_MINT_FEE_RECIPIENT, MINT_SCHEDULE_PATH);
+        _callTimelock(legacyFeeRecipient, BORROW_SCHEDULE_PATH);
+        _callTimelock(legacyMintMarketFeeRecipient, MINT_SCHEDULE_PATH);
 
-        uint256 borrowDelay = TimelockController(payable(LEGACY_BORROW_FEE_RECIPIENT)).getMinDelay();
-        uint256 mintDelay = TimelockController(payable(LEGACY_MINT_FEE_RECIPIENT)).getMinDelay();
+        uint256 borrowDelay = TimelockController(payable(legacyFeeRecipient)).getMinDelay();
+        uint256 mintDelay = TimelockController(payable(legacyMintMarketFeeRecipient)).getMinDelay();
         vm.warp(block.timestamp + (borrowDelay > mintDelay ? borrowDelay : mintDelay) + 1);
 
-        _callTimelock(LEGACY_BORROW_FEE_RECIPIENT, BORROW_EXECUTE_PATH);
-        _callTimelock(LEGACY_MINT_FEE_RECIPIENT, MINT_EXECUTE_PATH);
+        _callTimelock(legacyFeeRecipient, BORROW_EXECUTE_PATH);
+        _callTimelock(legacyMintMarketFeeRecipient, MINT_EXECUTE_PATH);
 
-        _assertNoCollateral(borrowMarkets, LEGACY_BORROW_FEE_RECIPIENT);
-        _assertNoCollateral(mintMarkets, LEGACY_MINT_FEE_RECIPIENT);
+        _assertNoCollateral(borrowMarkets, legacyFeeRecipient);
+        _assertNoCollateral(mintMarkets, legacyMintMarketFeeRecipient);
 
         _deleteGeneratedFiles();
     }
@@ -107,23 +109,23 @@ contract GenerateSDUSDFeeCollateralWithdrawalForkTest is Test {
         }
     }
 
-    function _collateralMarketCount(address[] memory markets, address legacyFeeRecipient)
+    function _collateralMarketCount(address[] memory markets, address feeRecipient)
         private
         view
         returns (uint256 count)
     {
         for (uint256 i; i < markets.length; ++i) {
-            Position memory position = IMarket(markets[i]).position(legacyFeeRecipient);
+            Position memory position = IMarket(markets[i]).position(feeRecipient);
             if (position.collateralAssets == 0) continue;
             assertEq(position.borrowShares, 0, "legacy fee recipient has debt");
             ++count;
         }
     }
 
-    function _mockCollateralPrices(address[] memory markets, address legacyFeeRecipient) private {
+    function _mockCollateralPrices(address[] memory markets, address feeRecipient) private {
         for (uint256 i; i < markets.length; ++i) {
             IMarket market = IMarket(markets[i]);
-            if (market.position(legacyFeeRecipient).collateralAssets == 0) continue;
+            if (market.position(feeRecipient).collateralAssets == 0) continue;
 
             address oracle = market.oracle();
             uint256 price = ILendingOracle(oracle).getPrice();
@@ -131,9 +133,9 @@ contract GenerateSDUSDFeeCollateralWithdrawalForkTest is Test {
         }
     }
 
-    function _assertNoCollateral(address[] memory markets, address legacyFeeRecipient) private view {
+    function _assertNoCollateral(address[] memory markets, address feeRecipient) private view {
         for (uint256 i; i < markets.length; ++i) {
-            assertEq(IMarket(markets[i]).position(legacyFeeRecipient).collateralAssets, 0, "legacy collateral remains");
+            assertEq(IMarket(markets[i]).position(feeRecipient).collateralAssets, 0, "legacy collateral remains");
         }
     }
 

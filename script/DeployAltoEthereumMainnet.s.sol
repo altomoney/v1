@@ -148,9 +148,10 @@ contract DeployAltoEthereumMainnetScript is Script {
         // Serialize core contracts
         contractsJson = vm.serializeAddress("contracts", "timelock", input.contracts.timelock);
         contractsJson = vm.serializeAddress("contracts", "altoAdapter", input.contracts.altoAdapter);
-        contractsJson = vm.serializeAddress("contracts", "feeRecipient", input.contracts.feeRecipient);
-        contractsJson =
-            vm.serializeAddress("contracts", "feeRecipientMintMarkets", input.contracts.feeRecipientMintMarkets);
+        contractsJson = vm.serializeAddress("contracts", "legacyFeeRecipient", input.contracts.legacyFeeRecipient);
+        contractsJson = vm.serializeAddress(
+            "contracts", "legacyMintMarketFeeRecipient", input.contracts.legacyMintMarketFeeRecipient
+        );
         contractsJson = vm.serializeAddress("contracts", "dusd", input.contracts.dusd);
         contractsJson = vm.serializeAddress("contracts", "dusdFlashMinter", input.contracts.dusdFlashMinter);
         contractsJson = vm.serializeAddress("contracts", "marketRegistry", input.contracts.marketRegistry);
@@ -386,8 +387,9 @@ contract DeployAltoEthereumMainnetScript is Script {
         // Load core contracts
         loadedInput.contracts.timelock = _tryParseAddress(json, ".contracts.timelock");
         loadedInput.contracts.altoAdapter = _tryParseAddress(json, ".contracts.altoAdapter");
-        loadedInput.contracts.feeRecipient = _tryParseAddress(json, ".contracts.feeRecipient");
-        loadedInput.contracts.feeRecipientMintMarkets = _tryParseAddress(json, ".contracts.feeRecipientMintMarkets");
+        loadedInput.contracts.legacyFeeRecipient = _tryParseAddress(json, ".contracts.legacyFeeRecipient");
+        loadedInput.contracts.legacyMintMarketFeeRecipient =
+            _tryParseAddress(json, ".contracts.legacyMintMarketFeeRecipient");
         loadedInput.contracts.dusd = _tryParseAddress(json, ".contracts.dusd");
         loadedInput.contracts.dusdFlashMinter = _tryParseAddress(json, ".contracts.dusdFlashMinter");
         loadedInput.contracts.marketRegistry = _tryParseAddress(json, ".contracts.marketRegistry");

@@ -46,7 +46,6 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalScript is Script {
     string internal constant REPORT_PATH =
         "contracts/deployments/ethereum-mainnet/output/sdusd-borrow-fee-supply-withdrawal-report.json";
     string internal constant SAFE_BATCH_NAME = "sdusd-borrow-fee-supply-withdrawal";
-    address internal constant OLD_FEE_RECIPIENT = 0xb9F06fEFc4c53dEd77A90Cb798eD08DC068Bb6dd;
 
     function run() public {
         require(block.chainid == 1, "Not Ethereum mainnet");
@@ -62,14 +61,18 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalScript is Script {
             )
         );
 
-        generate(vm.parseJsonAddress(json, ".contracts.marketRegistry"));
+        generate(
+            vm.parseJsonAddress(json, ".contracts.marketRegistry"),
+            vm.parseJsonAddress(json, ".contracts.legacyFeeRecipient")
+        );
     }
 
-    function generate(address marketRegistry) public {
+    function generate(address marketRegistry, address legacyFeeRecipient) public {
         require(marketRegistry != address(0), "Invalid market registry");
+        require(legacyFeeRecipient != address(0), "Invalid legacy fee recipient");
 
         (BorrowFeeSupplyWithdrawalSafeBatch memory batch, BorrowFeeSupplyWithdrawalMarketReport[] memory report) =
-            buildBorrowFeeSupplyWithdrawal(marketRegistry);
+            buildBorrowFeeSupplyWithdrawal(marketRegistry, legacyFeeRecipient);
 
         _writeReport(report);
 
@@ -80,18 +83,18 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalScript is Script {
 
         SafeTransactionBuilder.writeTimelockBatch(
             SAFE_BATCH_NAME,
-            OLD_FEE_RECIPIENT,
+            legacyFeeRecipient,
             batch.targets,
             batch.values,
             batch.payloads,
-            TimelockController(payable(OLD_FEE_RECIPIENT)).getMinDelay()
+            TimelockController(payable(legacyFeeRecipient)).getMinDelay()
         );
     }
 
     /// @notice Builds direct market withdrawals and projected residuals for all registered borrow markets.
-    /// @dev Reverts unless every market has migrated away from `OLD_FEE_RECIPIENT`. Paused markets and positions with
+    /// @dev Reverts unless every market has migrated away from `legacyFeeRecipient`. Paused markets and positions with
     ///      no available liquidity are included in `report` but omitted from the Safe batch.
-    function buildBorrowFeeSupplyWithdrawal(address marketRegistry)
+    function buildBorrowFeeSupplyWithdrawal(address marketRegistry, address legacyFeeRecipient)
         public
         view
         returns (BorrowFeeSupplyWithdrawalSafeBatch memory batch, BorrowFeeSupplyWithdrawalMarketReport[] memory report)
@@ -103,9 +106,9 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalScript is Script {
 
         for (uint256 i; i < markets.length; ++i) {
             IMarket market = IMarket(markets[i]);
-            require(market.feeRecipient() != OLD_FEE_RECIPIENT, "Legacy fee recipient still configured");
+            require(market.feeRecipient() != legacyFeeRecipient, "Legacy fee recipient still configured");
 
-            uint256 supplyShares = market.position(OLD_FEE_RECIPIENT).supplyShares;
+            uint256 supplyShares = market.position(legacyFeeRecipient).supplyShares;
             report[i].market = markets[i];
             report[i].remainingShares = supplyShares;
 
@@ -151,8 +154,12 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalScript is Script {
             if (withdrawal.assets == 0 && withdrawal.shares == 0) continue;
 
             bytes memory payload = withdrawal.assets != 0
-                ? abi.encodeCall(IMarketBase.removeSupply, (withdrawal.assets, 0, OLD_FEE_RECIPIENT, OLD_FEE_RECIPIENT))
-                : abi.encodeCall(IMarketBase.removeSupply, (0, withdrawal.shares, OLD_FEE_RECIPIENT, OLD_FEE_RECIPIENT));
+                ? abi.encodeCall(
+                    IMarketBase.removeSupply, (withdrawal.assets, 0, legacyFeeRecipient, legacyFeeRecipient)
+                )
+                : abi.encodeCall(
+                    IMarketBase.removeSupply, (0, withdrawal.shares, legacyFeeRecipient, legacyFeeRecipient)
+                );
 
             _append(batch, index++, markets[i], payload);
         }

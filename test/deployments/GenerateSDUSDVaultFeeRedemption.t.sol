@@ -21,8 +21,6 @@ struct DecodedVaultFeeRedemptionBatch {
 contract GenerateSDUSDVaultFeeRedemptionForkTest is Test {
     uint256 internal constant SDUSD_DEPLOYMENT_ID_TO_LOAD = 1765364975;
 
-    address internal constant OLD_FEE_RECIPIENT = 0xb9F06fEFc4c53dEd77A90Cb798eD08DC068Bb6dd;
-
     string internal constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
     string internal constant SCHEDULE_PATH =
         "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-vault-fee-redemption-schedule.json";
@@ -33,6 +31,7 @@ contract GenerateSDUSDVaultFeeRedemptionForkTest is Test {
 
     address internal vaultRegistry;
     address internal dusd;
+    address internal legacyFeeRecipient;
     address internal dummyFeeRecipient;
 
     function setUp() public {
@@ -51,6 +50,7 @@ contract GenerateSDUSDVaultFeeRedemptionForkTest is Test {
         );
         vaultRegistry = vm.parseJsonAddress(json, ".contracts.vaultRegistry");
         dusd = vm.parseJsonAddress(json, ".contracts.dusd");
+        legacyFeeRecipient = vm.parseJsonAddress(json, ".contracts.legacyFeeRecipient");
         dummyFeeRecipient = makeAddr("dummyFeeRecipient");
     }
 
@@ -97,22 +97,22 @@ contract GenerateSDUSDVaultFeeRedemptionForkTest is Test {
             IAltoVaultBase(vaults[i]).setFeeRecipient(dummyFeeRecipient);
 
             assertEq(IAltoVaultBase(vaults[i]).feeRecipient(), dummyFeeRecipient, "vault fee recipient not updated");
-            legacyShares += vault.balanceOf(OLD_FEE_RECIPIENT);
+            legacyShares += vault.balanceOf(legacyFeeRecipient);
         }
     }
 
     function _ensureLegacyShares(IERC4626 vault) private {
-        if (vault.balanceOf(OLD_FEE_RECIPIENT) != 0) return;
+        if (vault.balanceOf(legacyFeeRecipient) != 0) return;
 
         uint256 assets = 1e18;
-        deal(dusd, OLD_FEE_RECIPIENT, IERC20(dusd).balanceOf(OLD_FEE_RECIPIENT) + assets);
+        deal(dusd, legacyFeeRecipient, IERC20(dusd).balanceOf(legacyFeeRecipient) + assets);
 
-        vm.startPrank(OLD_FEE_RECIPIENT);
+        vm.startPrank(legacyFeeRecipient);
         IERC20(dusd).approve(address(vault), assets);
-        vault.deposit(assets, OLD_FEE_RECIPIENT);
+        vault.deposit(assets, legacyFeeRecipient);
         vm.stopPrank();
 
-        assertGt(vault.balanceOf(OLD_FEE_RECIPIENT), 0, "failed to seed legacy shares");
+        assertGt(vault.balanceOf(legacyFeeRecipient), 0, "failed to seed legacy shares");
     }
 
     function _assertGeneratedBatch(address[] memory vaults, DecodedVaultFeeRedemptionBatch memory batch)
@@ -128,11 +128,11 @@ contract GenerateSDUSDVaultFeeRedemptionForkTest is Test {
             if (vault.asset() != dusd) continue;
 
             assertTrue(
-                IAltoVaultBase(vaults[i]).feeRecipient() != OLD_FEE_RECIPIENT, "legacy fee recipient still configured"
+                IAltoVaultBase(vaults[i]).feeRecipient() != legacyFeeRecipient, "legacy fee recipient still configured"
             );
 
-            uint256 legacyShares = vault.balanceOf(OLD_FEE_RECIPIENT);
-            uint256 maximumRedeem = vault.maxRedeem(OLD_FEE_RECIPIENT);
+            uint256 legacyShares = vault.balanceOf(legacyFeeRecipient);
+            uint256 maximumRedeem = vault.maxRedeem(legacyFeeRecipient);
             expectedRemainingShares[i] = legacyShares - maximumRedeem;
             if (expectedRemainingShares[i] != 0) ++residualCount;
 
@@ -148,8 +148,8 @@ contract GenerateSDUSDVaultFeeRedemptionForkTest is Test {
 
             (uint256 shares, address receiver, address owner) = _decodeRedeem(batch.payloads[batchIndex]);
             assertEq(shares, maximumRedeem, "generated shares differ from maxRedeem");
-            assertEq(receiver, OLD_FEE_RECIPIENT, "wrong receiver");
-            assertEq(owner, OLD_FEE_RECIPIENT, "wrong owner");
+            assertEq(receiver, legacyFeeRecipient, "wrong receiver");
+            assertEq(owner, legacyFeeRecipient, "wrong owner");
         }
 
         assertEq(batch.targets.length, expectedCallCount, "unexpected generated call");
@@ -162,12 +162,12 @@ contract GenerateSDUSDVaultFeeRedemptionForkTest is Test {
             IERC4626 vault = IERC4626(batch.targets[i]);
             (uint256 encodedShares,,) = _decodeRedeem(batch.payloads[i]);
 
-            uint256 sharesBefore = vault.balanceOf(OLD_FEE_RECIPIENT);
+            uint256 sharesBefore = vault.balanceOf(legacyFeeRecipient);
             uint256 totalSupplyBefore = vault.totalSupply();
-            uint256 feeRecipientDusdBefore = IERC20(dusd).balanceOf(OLD_FEE_RECIPIENT);
+            uint256 feeRecipientDusdBefore = IERC20(dusd).balanceOf(legacyFeeRecipient);
             uint256 expectedAssets = vault.previewRedeem(encodedShares);
 
-            vm.prank(OLD_FEE_RECIPIENT);
+            vm.prank(legacyFeeRecipient);
             (bool success, bytes memory result) = batch.targets[i].call(batch.payloads[i]);
             if (!success) {
                 assembly ("memory-safe") {
@@ -179,7 +179,9 @@ contract GenerateSDUSDVaultFeeRedemptionForkTest is Test {
             assertGt(redeemedAssets, 0, "fee recipient received no DUSD");
             assertEq(redeemedAssets, expectedAssets, "redeemed assets differ from preview");
             assertEq(
-                vault.balanceOf(OLD_FEE_RECIPIENT), sharesBefore - encodedShares, "fee recipient shares were not burned"
+                vault.balanceOf(legacyFeeRecipient),
+                sharesBefore - encodedShares,
+                "fee recipient shares were not burned"
             );
             assertEq(
                 vault.totalSupply(),
@@ -187,7 +189,7 @@ contract GenerateSDUSDVaultFeeRedemptionForkTest is Test {
                 "vault total supply did not burn generated shares"
             );
             assertEq(
-                IERC20(dusd).balanceOf(OLD_FEE_RECIPIENT),
+                IERC20(dusd).balanceOf(legacyFeeRecipient),
                 feeRecipientDusdBefore + expectedAssets,
                 "fee recipient DUSD balance did not increase by redeemed assets"
             );
@@ -216,7 +218,7 @@ contract GenerateSDUSDVaultFeeRedemptionForkTest is Test {
             if (IERC4626(vaults[i]).asset() != dusd) continue;
 
             assertEq(
-                IERC4626(vaults[i]).balanceOf(OLD_FEE_RECIPIENT),
+                IERC4626(vaults[i]).balanceOf(legacyFeeRecipient),
                 expectedRemainingShares[i],
                 "actual residual shares differ from projection"
             );
@@ -246,7 +248,7 @@ contract GenerateSDUSDVaultFeeRedemptionForkTest is Test {
 
     function _readExecuteBatch() private view returns (DecodedVaultFeeRedemptionBatch memory batch) {
         string memory json = vm.readFile(EXECUTE_PATH);
-        assertEq(vm.parseJsonAddress(json, ".transactions[0].to"), OLD_FEE_RECIPIENT, "wrong Safe target");
+        assertEq(vm.parseJsonAddress(json, ".transactions[0].to"), legacyFeeRecipient, "wrong Safe target");
 
         bytes memory data = vm.parseJsonBytes(json, ".transactions[0].data");
         assertEq(bytes4(data), TimelockController.executeBatch.selector, "wrong execute selector");

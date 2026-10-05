@@ -25,8 +25,6 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalForkTest is Test {
 
     uint256 internal constant SDUSD_DEPLOYMENT_ID_TO_LOAD = 1765364975;
 
-    address internal constant OLD_FEE_RECIPIENT = 0xb9F06fEFc4c53dEd77A90Cb798eD08DC068Bb6dd;
-
     string internal constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
     string internal constant SCHEDULE_PATH =
         "contracts/deployments/ethereum-mainnet/output/safe-tx-sdusd-borrow-fee-supply-withdrawal-schedule.json";
@@ -36,6 +34,7 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalForkTest is Test {
         "contracts/deployments/ethereum-mainnet/output/sdusd-borrow-fee-supply-withdrawal-report.json";
 
     address internal marketRegistry;
+    address internal legacyFeeRecipient;
     address internal dummyFeeRecipient;
 
     function setUp() public {
@@ -53,6 +52,7 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalForkTest is Test {
             )
         );
         marketRegistry = vm.parseJsonAddress(json, ".contracts.marketRegistry");
+        legacyFeeRecipient = vm.parseJsonAddress(json, ".contracts.legacyFeeRecipient");
         dummyFeeRecipient = makeAddr("dummyFeeRecipient");
     }
 
@@ -91,7 +91,7 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalForkTest is Test {
             IMarket market = IMarket(markets[i]);
 
             market.accrueInterest();
-            uint256 sharesAfterAccrual = market.position(OLD_FEE_RECIPIENT).supplyShares;
+            uint256 sharesAfterAccrual = market.position(legacyFeeRecipient).supplyShares;
             legacyShares += sharesAfterAccrual;
 
             vm.prank(Ownable(markets[i]).owner());
@@ -99,7 +99,7 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalForkTest is Test {
 
             assertEq(market.feeRecipient(), dummyFeeRecipient, "fee recipient not updated");
             assertEq(
-                market.position(OLD_FEE_RECIPIENT).supplyShares,
+                market.position(legacyFeeRecipient).supplyShares,
                 sharesAfterAccrual,
                 "legacy shares changed during migration"
             );
@@ -113,11 +113,11 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalForkTest is Test {
             IMarket market = IMarket(batch.targets[i]);
             (uint256 encodedAssets, uint256 encodedShares,,) = _decodeRemoveSupply(batch.payloads[i]);
 
-            uint256 sharesBefore = market.position(OLD_FEE_RECIPIENT).supplyShares;
+            uint256 sharesBefore = market.position(legacyFeeRecipient).supplyShares;
             IERC20 borrowToken = IERC20(market.borrowToken());
-            uint256 assetsBefore = borrowToken.balanceOf(OLD_FEE_RECIPIENT);
+            uint256 assetsBefore = borrowToken.balanceOf(legacyFeeRecipient);
 
-            vm.prank(OLD_FEE_RECIPIENT);
+            vm.prank(legacyFeeRecipient);
             (bool success, bytes memory result) = batch.targets[i].call(batch.payloads[i]);
             if (!success) {
                 assembly ("memory-safe") {
@@ -127,12 +127,12 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalForkTest is Test {
 
             (uint256 withdrawnAssets, uint256 withdrawnShares) = abi.decode(result, (uint256, uint256));
             assertEq(
-                borrowToken.balanceOf(OLD_FEE_RECIPIENT) - assetsBefore,
+                borrowToken.balanceOf(legacyFeeRecipient) - assetsBefore,
                 withdrawnAssets,
                 "received assets differ from generated call"
             );
             assertEq(
-                sharesBefore - market.position(OLD_FEE_RECIPIENT).supplyShares,
+                sharesBefore - market.position(legacyFeeRecipient).supplyShares,
                 withdrawnShares,
                 "burned shares differ from generated call"
             );
@@ -153,7 +153,7 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalForkTest is Test {
 
             IMarket market = IMarket(markets[i]);
             assertEq(
-                market.position(OLD_FEE_RECIPIENT).supplyShares, remainingShares, "actual shares differ from report"
+                market.position(legacyFeeRecipient).supplyShares, remainingShares, "actual shares differ from report"
             );
 
             (uint256 totalSupplyAssets, uint256 totalSupplyShares,,) = markets[i].expectedMarketBalances();
@@ -164,9 +164,9 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalForkTest is Test {
             );
 
             if (remainingShares != 0) {
-                vm.startPrank(OLD_FEE_RECIPIENT);
+                vm.startPrank(legacyFeeRecipient);
                 vm.expectRevert(IMarketErrors.AltoBaseMarketInsufficientMarketLiquidity.selector);
-                market.removeSupply(1, 0, OLD_FEE_RECIPIENT, OLD_FEE_RECIPIENT);
+                market.removeSupply(1, 0, legacyFeeRecipient, legacyFeeRecipient);
                 vm.stopPrank();
             }
         }
@@ -174,7 +174,7 @@ contract GenerateSDUSDBorrowFeeSupplyWithdrawalForkTest is Test {
 
     function _readExecuteBatch() private view returns (DecodedBorrowFeeSupplyWithdrawalBatch memory batch) {
         string memory json = vm.readFile(EXECUTE_PATH);
-        assertEq(vm.parseJsonAddress(json, ".transactions[0].to"), OLD_FEE_RECIPIENT, "wrong Safe target");
+        assertEq(vm.parseJsonAddress(json, ".transactions[0].to"), legacyFeeRecipient, "wrong Safe target");
 
         bytes memory data = vm.parseJsonBytes(json, ".transactions[0].data");
         assertEq(bytes4(data), TimelockController.executeBatch.selector, "wrong execute selector");

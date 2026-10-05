@@ -222,8 +222,9 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
 
         loaded.contracts.timelock = _tryParseAddress(json, ".contracts.timelock");
         loaded.contracts.altoAdapter = _tryParseAddress(json, ".contracts.altoAdapter");
-        loaded.contracts.feeRecipient = _tryParseAddress(json, ".contracts.feeRecipient");
-        loaded.contracts.feeRecipientMintMarkets = _tryParseAddress(json, ".contracts.feeRecipientMintMarkets");
+        loaded.contracts.legacyFeeRecipient = _tryParseAddress(json, ".contracts.legacyFeeRecipient");
+        loaded.contracts.legacyMintMarketFeeRecipient =
+            _tryParseAddress(json, ".contracts.legacyMintMarketFeeRecipient");
         loaded.contracts.protocolFeeCollector = _tryParseAddress(json, ".contracts.protocolFeeCollector");
         loaded.contracts.protocolFeeCollectorImplementation =
             _tryParseAddress(json, ".contracts.protocolFeeCollectorImplementation");
@@ -1550,9 +1551,9 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         LegacyVaultFeeSnapshot[] memory vaultSnapshots = _snapshotLegacyVaultFees(registeredVaults);
 
         (LegacyFeePositionSnapshot[] memory borrowSnapshots, uint256 borrowCollateralMarketCount) =
-            _snapshotLegacyPositions(borrowMarkets, input.contracts.feeRecipient, true);
+            _snapshotLegacyPositions(borrowMarkets, input.contracts.legacyFeeRecipient, true);
         (LegacyFeePositionSnapshot[] memory mintSnapshots, uint256 mintCollateralMarketCount) =
-            _snapshotLegacyPositions(mintMarkets, input.contracts.feeRecipientMintMarkets, false);
+            _snapshotLegacyPositions(mintMarkets, input.contracts.legacyMintMarketFeeRecipient, false);
 
         assertEq(borrowCollateralMarketCount, 5, "unexpected borrow collateral market count");
         assertEq(mintCollateralMarketCount, 5, "unexpected mint collateral market count");
@@ -1646,10 +1647,10 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
             vault.balanceOf(address(1)), vault.seedShares(), "required seed shares must remain locked after activation"
         );
         _assertActivationPreservedLegacyPositions(
-            borrowMarkets, input.contracts.feeRecipient, borrowSnapshots, address(collector), true
+            borrowMarkets, input.contracts.legacyFeeRecipient, borrowSnapshots, address(collector), true
         );
         _assertActivationPreservedLegacyPositions(
-            mintMarkets, input.contracts.feeRecipientMintMarkets, mintSnapshots, address(collector), false
+            mintMarkets, input.contracts.legacyMintMarketFeeRecipient, mintSnapshots, address(collector), false
         );
         _assertAncillaryFeeSourcesActivated(usms, originalUsmFeeRecipients, address(collector));
         _assertVaultFeeSourcesActivated(registeredVaults, vaultSnapshots, address(collector));
@@ -1946,7 +1947,7 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
             if (isDusdVault) {
                 assertEq(
                     snapshots[i].feeRecipient,
-                    input.contracts.feeRecipient,
+                    input.contracts.legacyFeeRecipient,
                     "unexpected legacy DUSD vault fee recipient"
                 );
                 assertGe(

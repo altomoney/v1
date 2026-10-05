@@ -594,7 +594,7 @@ abstract contract DeployAltoEthereumMainnetDeprecatedTestBase is DeployAltoEther
         assertEq(IAltoVaultBase(vault).guardian(), MULTISIG_FREEZER_PAUSER, "guardian mismatch");
 
         assertEq(IAltoVaultBase(vault).fee(), 0, "fee should be zero");
-        assertEq(IAltoVaultBase(vault).feeRecipient(), input.contracts.feeRecipient, "feeRecipient mismatch");
+        assertEq(IAltoVaultBase(vault).feeRecipient(), input.contracts.legacyFeeRecipient, "feeRecipient mismatch");
         assertEq(IAltoVaultBase(vault).skimRecipient(), params.treasuryMultisig, "skimRecipient mismatch");
 
         assertEq(IAltoVaultBase(vault).timelock(), 1 days, "vault timelock mismatch");
@@ -954,7 +954,7 @@ contract DeployAdvancedPermissionsFrxUsdUsmPhaseTest is DeployAltoEthereumMainne
         assertEq(FixedPriceStrategy(priceStrategy).priceRatio(), 1 ether, "price ratio should be 1:1 with DUSD");
         assertEq(FixedPriceStrategy(priceStrategy).UNDERLYING_ASSET(), FRXUSD_MAINNET, "price strategy underlying");
         assertEq(usmContract.getFeeStrategy(), feeStrategy, "fee strategy mismatch");
-        assertEq(usmContract.getFeeRecipient(), input.contracts.feeRecipient, "fee recipient mismatch");
+        assertEq(usmContract.getFeeRecipient(), input.contracts.legacyFeeRecipient, "fee recipient mismatch");
 
         _verifyHasRole(usm, timelock, DEFAULT_ADMIN_ROLE, "advanced permissions frxUSD USM");
         _verifyHasRole(usm, timelock, CONFIGURATOR_ROLE, "advanced permissions frxUSD USM");

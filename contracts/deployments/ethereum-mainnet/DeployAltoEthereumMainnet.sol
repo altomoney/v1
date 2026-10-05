@@ -820,15 +820,15 @@ library DeployAltoEthereumMainnet {
         address[] memory feeRecipientRoleHolders = new address[](1);
         feeRecipientRoleHolders[0] = params.timelockAdmin;
 
-        // Deploy fee collector with timelock admin as owner, proposer, executor and canceller
-        input.contracts.feeRecipient = address(
+        // Deploy the legacy fee recipient timelock with timelock admin as owner, proposer, executor and canceller
+        input.contracts.legacyFeeRecipient = address(
             new AltoTimelockController(
                 params.timelockDelay, feeRecipientRoleHolders, feeRecipientRoleHolders, params.timelockAdmin
             )
         );
 
-        // Deploy timelock controller for mint market fee recipients
-        input.contracts.feeRecipientMintMarkets = address(
+        // Deploy the legacy timelock controller for mint market fee recipients
+        input.contracts.legacyMintMarketFeeRecipient = address(
             new AltoTimelockControllerMintMarketFee(
                 params.timelockDelay, feeRecipientRoleHolders, feeRecipientRoleHolders, params.timelockAdmin
             )
