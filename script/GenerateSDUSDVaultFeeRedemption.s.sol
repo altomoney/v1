@@ -30,8 +30,6 @@ struct VaultFeeRedemptionReport {
 contract GenerateSDUSDVaultFeeRedemptionScript is Script {
     uint256 internal constant SDUSD_DEPLOYMENT_ID_TO_LOAD = 1765364975;
 
-    address internal constant OLD_FEE_RECIPIENT = 0xb9F06fEFc4c53dEd77A90Cb798eD08DC068Bb6dd;
-
     string internal constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
     string internal constant SAFE_BATCH_NAME = "sdusd-vault-fee-redemption";
     string internal constant REPORT_PATH =
@@ -51,15 +49,20 @@ contract GenerateSDUSDVaultFeeRedemptionScript is Script {
             )
         );
 
-        generate(vm.parseJsonAddress(json, ".contracts.vaultRegistry"), vm.parseJsonAddress(json, ".contracts.dusd"));
+        generate(
+            vm.parseJsonAddress(json, ".contracts.vaultRegistry"),
+            vm.parseJsonAddress(json, ".contracts.dusd"),
+            vm.parseJsonAddress(json, ".contracts.legacyFeeRecipient")
+        );
     }
 
-    function generate(address vaultRegistry, address dusd) public {
+    function generate(address vaultRegistry, address dusd, address legacyFeeRecipient) public {
         require(vaultRegistry != address(0), "Invalid vault registry");
         require(dusd != address(0), "Invalid DUSD");
+        require(legacyFeeRecipient != address(0), "Invalid legacy fee recipient");
 
         (VaultFeeRedemptionSafeBatch memory batch, VaultFeeRedemptionReport[] memory report) =
-            buildVaultFeeRedemption(vaultRegistry, dusd);
+            buildVaultFeeRedemption(vaultRegistry, dusd, legacyFeeRecipient);
 
         _writeReport(report);
 
@@ -70,17 +73,17 @@ contract GenerateSDUSDVaultFeeRedemptionScript is Script {
 
         SafeTransactionBuilder.writeTimelockBatch(
             SAFE_BATCH_NAME,
-            OLD_FEE_RECIPIENT,
+            legacyFeeRecipient,
             batch.targets,
             batch.values,
             batch.payloads,
-            TimelockController(payable(OLD_FEE_RECIPIENT)).getMinDelay()
+            TimelockController(payable(legacyFeeRecipient)).getMinDelay()
         );
     }
 
     /// @notice Builds maximum-redemption calls and reports projected residual shares for registered DUSD vaults.
-    /// @dev Reverts unless every eligible vault has migrated away from `OLD_FEE_RECIPIENT`.
-    function buildVaultFeeRedemption(address vaultRegistry, address dusd)
+    /// @dev Reverts unless every eligible vault has migrated away from `legacyFeeRecipient`.
+    function buildVaultFeeRedemption(address vaultRegistry, address dusd, address legacyFeeRecipient)
         public
         view
         returns (VaultFeeRedemptionSafeBatch memory batch, VaultFeeRedemptionReport[] memory report)
@@ -96,13 +99,13 @@ contract GenerateSDUSDVaultFeeRedemptionScript is Script {
             if (vault.asset() != dusd) continue;
 
             require(
-                IAltoVaultBase(vaults[i]).feeRecipient() != OLD_FEE_RECIPIENT, "Legacy fee recipient still configured"
+                IAltoVaultBase(vaults[i]).feeRecipient() != legacyFeeRecipient, "Legacy fee recipient still configured"
             );
 
-            uint256 legacyShares = vault.balanceOf(OLD_FEE_RECIPIENT);
+            uint256 legacyShares = vault.balanceOf(legacyFeeRecipient);
             if (legacyShares == 0) continue;
 
-            uint256 maximumRedeem = vault.maxRedeem(OLD_FEE_RECIPIENT);
+            uint256 maximumRedeem = vault.maxRedeem(legacyFeeRecipient);
             require(maximumRedeem <= legacyShares, "Invalid max redeem");
 
             redeemableShares[i] = maximumRedeem;
@@ -122,7 +125,7 @@ contract GenerateSDUSDVaultFeeRedemptionScript is Script {
             if (redeemableShares[i] != 0) {
                 batch.targets[batchIndex] = vaults[i];
                 batch.payloads[batchIndex] =
-                    abi.encodeCall(IERC4626.redeem, (redeemableShares[i], OLD_FEE_RECIPIENT, OLD_FEE_RECIPIENT));
+                    abi.encodeCall(IERC4626.redeem, (redeemableShares[i], legacyFeeRecipient, legacyFeeRecipient));
                 ++batchIndex;
             }
 

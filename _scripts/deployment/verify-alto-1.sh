@@ -139,7 +139,7 @@ verify_contract() {
 
 # Extract addresses
 TIMELOCK=$(get_address ".contracts.timelock")
-FEE_RECIPIENT=$(get_address ".contracts.feeRecipient")
+LEGACY_FEE_RECIPIENT=$(get_address ".contracts.legacyFeeRecipient")
 ALTO_ADAPTER=$(get_address ".contracts.altoAdapter")
 ALTO_REFERRAL_ADAPTER=$(get_address ".contracts.referralAdapter")
 DUSD=$(get_address ".contracts.dusd")
@@ -310,7 +310,7 @@ ADVANCED_PERMISSIONS_FRXUSD_USM_FEE_STRATEGY=$(get_address ".contracts.advancedP
 
 echo "📋 Contract verification plan:"
 echo "- Timelock: $TIMELOCK"
-echo "- Fee Recipient: $FEE_RECIPIENT"
+echo "- Legacy Fee Recipient: $LEGACY_FEE_RECIPIENT"
 echo "- Alto Adapter: $ALTO_ADAPTER"
 echo "- Alto Referral Adapter: $ALTO_REFERRAL_ADAPTER"
 echo "- DUSD: $DUSD"
@@ -453,7 +453,7 @@ echo ""
 
 # Verify contracts
 verify_contract "Timelock" "$TIMELOCK" "contracts/utils/AltoTimelockController.sol:AltoTimelockController"
-verify_contract "FeeRecipient" "$FEE_RECIPIENT" "contracts/utils/AltoTimelockController.sol:AltoTimelockController"
+verify_contract "LegacyFeeRecipient" "$LEGACY_FEE_RECIPIENT" "contracts/utils/AltoTimelockController.sol:AltoTimelockController"
 verify_contract "AltoAdapter" "$ALTO_ADAPTER" "contracts/utils/AltoAdapter.sol:AltoAdapter"
 verify_contract "AltoReferralAdapter" "$ALTO_REFERRAL_ADAPTER" "contracts/rewards/adapters/AltoReferralWhitelistAdapter.sol:AltoReferralWhitelistAdapter"
 verify_contract "DUSD" "$DUSD" "contracts/tokens/DUSD.sol:DUSD"

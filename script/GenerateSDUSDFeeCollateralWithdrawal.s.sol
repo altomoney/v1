@@ -26,9 +26,6 @@ contract GenerateSDUSDFeeCollateralWithdrawalScript is Script {
     string internal constant BORROW_BATCH_NAME = "sdusd-borrow-fee-collateral-withdrawal";
     string internal constant MINT_BATCH_NAME = "sdusd-mint-fee-collateral-withdrawal";
 
-    address internal constant LEGACY_BORROW_FEE_RECIPIENT = 0xb9F06fEFc4c53dEd77A90Cb798eD08DC068Bb6dd;
-    address internal constant LEGACY_MINT_FEE_RECIPIENT = 0x5F80c18b6B73B1C4F06fa5233De32778eC90FA96;
-
     function run() public {
         string memory json = vm.readFile(
             string.concat(
@@ -41,22 +38,30 @@ contract GenerateSDUSDFeeCollateralWithdrawalScript is Script {
             )
         );
 
-        generate(vm.parseJsonAddress(json, ".contracts.marketRegistry"));
+        generate(
+            vm.parseJsonAddress(json, ".contracts.marketRegistry"),
+            vm.parseJsonAddress(json, ".contracts.legacyFeeRecipient"),
+            vm.parseJsonAddress(json, ".contracts.legacyMintMarketFeeRecipient")
+        );
     }
 
-    function generate(address marketRegistry) public {
+    function generate(address marketRegistry, address legacyFeeRecipient, address legacyMintMarketFeeRecipient) public {
         require(marketRegistry != address(0), "Invalid market registry");
+        require(
+            legacyFeeRecipient != address(0) && legacyMintMarketFeeRecipient != address(0),
+            "Invalid legacy fee recipient"
+        );
 
         IMarketRegistry registry = IMarketRegistry(marketRegistry);
         _writeBatch(
             BORROW_BATCH_NAME,
-            LEGACY_BORROW_FEE_RECIPIENT,
-            buildCollateralWithdrawal(registry.getBorrowMarkets(), LEGACY_BORROW_FEE_RECIPIENT)
+            legacyFeeRecipient,
+            buildCollateralWithdrawal(registry.getBorrowMarkets(), legacyFeeRecipient)
         );
         _writeBatch(
             MINT_BATCH_NAME,
-            LEGACY_MINT_FEE_RECIPIENT,
-            buildCollateralWithdrawal(registry.getMintMarkets(), LEGACY_MINT_FEE_RECIPIENT)
+            legacyMintMarketFeeRecipient,
+            buildCollateralWithdrawal(registry.getMintMarkets(), legacyMintMarketFeeRecipient)
         );
     }
 

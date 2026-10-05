@@ -96,8 +96,8 @@ struct AltoEthereumMainnetInput {
 struct Contracts {
     address timelock;
     address altoAdapter;
-    address feeRecipient; // Timelock controller for fee recipients
-    address feeRecipientMintMarkets; // Timelock controller for mint market fee recipients
+    address legacyFeeRecipient; // Legacy fee recipient timelock, kept for settlement and recovery
+    address legacyMintMarketFeeRecipient; // Legacy mint market fee recipient timelock, kept for settlement and recovery
     address dusd;
     address dusdFlashMinter;
     address marketRegistry;
@@ -169,14 +169,14 @@ struct DeployCoreParams {
 struct DeployDUSDParams {
     address owner;
     address lzEndpoint; // LayerZero endpoint address
-    address feeRecipient; // Fee recipient address (treasury) from previous CORE phase
+    address feeRecipient; // ProtocolFeeCollector from the SDUSD phase
 }
 
 struct DeployBorrowMarketParams {
     address owner;
     address dusd; // From previous DUSD phase
     address altoAdapter; // From previous CORE phase
-    address feeRecipient; // From previous CORE phase
+    address feeRecipient; // ProtocolFeeCollector from the SDUSD phase
     address collateralToken; // WBTC_MAINNET, CBBTC_MAINNET, SUSDE_MAINNET, etc.
     EthereumMainnetLendingOracleAsset oracleAsset; // Oracle asset type
     AdaptiveCurveIrm.AdaptiveCurveIrmConfig irmConfig; // AdaptiveCurveIrm configuration
@@ -194,7 +194,7 @@ struct DeployUsmParams {
     address dusd; // From previous DUSD phase
     address underlyingAsset; // Underlying asset address (USDC_MAINNET, etc.)
     address altoAdapter; // From previous CORE phase
-    address feeRecipient; // From previous CORE phase
+    address feeRecipient; // ProtocolFeeCollector from the SDUSD phase
     address freezer; // Pauser/Freezer Multisig address
     uint256 buyFee; // Buy fee for USM
     uint256 sellFee; // Sell fee for USM
@@ -209,7 +209,7 @@ struct DeployMintMarketParams {
     address owner;
     address dusd; // From previous DUSD phase
     address altoAdapter; // From previous CORE phase
-    address feeRecipient; // From previous CORE phase
+    address feeRecipient; // ProtocolFeeCollector from the SDUSD phase
     address collateralToken; // WETH_MAINNET, WSTETH_MAINNET, etc.
     EthereumMainnetLendingOracleAsset oracleAsset; // Oracle asset type
     uint256 irmInterestRate; // Interest rate for FixedRateIrm (annual rate)
