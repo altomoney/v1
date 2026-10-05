@@ -8,6 +8,7 @@ import {IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
 import {IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
 import {ProtocolFeeCollector} from "@alto/sdusd/ProtocolFeeCollector.sol";
 import {SDUSD} from "@alto/sdusd/SDUSD.sol";
+import {AdapterContractApproval} from "@alto/utils/AdapterContractApproval.sol";
 import {EmergencyController} from "@alto/utils/EmergencyController.sol";
 import {FROZEN_TYPE, PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IAltoMintMarketFees} from "@alto/sdusd/interfaces/IProtocolFeeCollector.sol";
@@ -47,6 +48,7 @@ library SDUSDActivationSafeBuilder {
         returns (SDUSDActivationSafeBatch memory batch)
     {
         _validateEmergencyControls(input);
+        bool approveSdusdOnAltoAdapter = _requiresAltoAdapterApproval(input);
         address[] memory borrowMarkets = IMarketRegistry(input.contracts.marketRegistry).getBorrowMarkets();
         address[] memory mintMarkets = IMarketRegistry(input.contracts.marketRegistry).getMintMarkets();
         address[] memory usms = IUsmRegistry(input.contracts.usmRegistry).getUsmList();
@@ -67,13 +69,14 @@ library SDUSDActivationSafeBuilder {
         // Activation timelock calls:
         //   2                              EmergencyController whitelist for sDUSD and the collector
         // + 1                              ProtocolFeeCollector.setSdusdVault
+        // + 1                              AltoAdapter approval for sDUSD, skipped when already approved
         // + dusdVaults                     setFeeRecipient for each registered DUSD vault (accrues fees internally)
         // + 2 * borrowMarkets.length       accrueInterest + setFeeRecipient for each borrow market
         // + 3 * mintMarkets.length         accrueInterest + claimInterest + setFeeRecipient for each mint market
         // + 2 * usmsWithFeeRecipient       distributeFeesToFeeRecipient + updateFeeRecipient for fee-bearing USMs
         // + 2                              distributeFeesToFeeRecipient + updateFeeRecipient for the flash minter
-        uint256 callCount =
-            3 + dusdVaults + borrowMarkets.length * 2 + mintMarkets.length * 3 + usmsWithFeeRecipient * 2 + 2;
+        uint256 callCount = 3 + (approveSdusdOnAltoAdapter ? 1 : 0) + dusdVaults + borrowMarkets.length * 2
+            + mintMarkets.length * 3 + usmsWithFeeRecipient * 2 + 2;
         batch.targets = new address[](callCount);
         batch.values = new uint256[](callCount);
         batch.payloads = new bytes[](callCount);
@@ -81,6 +84,7 @@ library SDUSDActivationSafeBuilder {
         uint256 index;
         index = _appendEmergencyControllerConfiguration(input, batch, index);
         index = _appendCollectorVaultConfiguration(input, batch, index);
+        if (approveSdusdOnAltoAdapter) index = _appendAltoAdapterApproval(input, batch, index);
         index = _appendVaultFeeRecipientUpdates(input, batch, index);
         index = _appendBorrowMarketFeeAccrualAndRecipientUpdates(input, batch, index);
         index = _appendMintMarketFeeSettlementAndRecipientUpdates(input, batch, index);
@@ -105,6 +109,13 @@ library SDUSDActivationSafeBuilder {
                 && collector.pausers(address(controller), PAUSE_TYPE),
             "Missing emergency controller permissions"
         );
+    }
+
+    /// @dev `approveContract` reverts for an already approved contract, so the call is skipped in that case.
+    function _requiresAltoAdapterApproval(AltoEthereumMainnetInput memory input) private view returns (bool) {
+        AdapterContractApproval adapter = AdapterContractApproval(input.contracts.altoAdapter);
+        require(adapter.owner() == input.contracts.timelock, "Unexpected AltoAdapter owner");
+        return !adapter.isApprovedContract(input.contracts.sdusd);
     }
 
     function _appendEmergencyControllerConfiguration(
@@ -138,6 +149,20 @@ library SDUSDActivationSafeBuilder {
             index++,
             input.contracts.protocolFeeCollector,
             abi.encodeCall(ProtocolFeeCollector.setSdusdVault, (input.contracts.sdusd))
+        );
+        return index;
+    }
+
+    function _appendAltoAdapterApproval(
+        AltoEthereumMainnetInput memory input,
+        SDUSDActivationSafeBatch memory batch,
+        uint256 index
+    ) private pure returns (uint256) {
+        _append(
+            batch,
+            index++,
+            input.contracts.altoAdapter,
+            abi.encodeCall(AdapterContractApproval.approveContract, (input.contracts.sdusd))
         );
         return index;
     }

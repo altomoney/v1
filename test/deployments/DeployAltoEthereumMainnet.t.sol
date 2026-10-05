@@ -96,7 +96,11 @@ import {SDUSD} from "@alto/sdusd/SDUSD.sol";
 import {EmergencyController} from "@alto/utils/EmergencyController.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {FeeSourceType} from "@alto/sdusd/interfaces/IProtocolFeeCollector.sol";
-import {SDUSDActivationSafeBuilder} from "@alto/deployments/ethereum-mainnet/SDUSDActivationSafeBuilder.sol";
+import {
+    SDUSDActivationSafeBuilder,
+    SDUSDActivationSafeBatch
+} from "@alto/deployments/ethereum-mainnet/SDUSDActivationSafeBuilder.sol";
+import {AdapterContractApproval} from "@alto/utils/AdapterContractApproval.sol";
 import {IStableTokenFacilitator} from "@alto/usm/interfaces/IStableTokenFacilitator.sol";
 import {IUsmRegistry} from "@alto/utils/interfaces/IUsmRegistry.sol";
 import {IVaultRegistry} from "@alto/utils/interfaces/IVaultRegistry.sol";
@@ -1589,6 +1593,10 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         assertFalse(vault.pausers(input.contracts.timelock, PAUSE_TYPE));
         assertFalse(vault.pausers(input.contracts.timelock, FROZEN_TYPE));
         assertFalse(collector.pausers(input.contracts.timelock, PAUSE_TYPE));
+        assertFalse(
+            AltoAdapter(payable(input.contracts.altoAdapter)).isApprovedContract(address(vault)),
+            "sDUSD approved on AltoAdapter before activation"
+        );
 
         deal(input.contracts.dusd, address(this), 1 ether);
         IDUSD(input.contracts.dusd).approve(address(vault), 1 ether);
@@ -1615,6 +1623,10 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         EmergencyController controller = EmergencyController(input.contracts.emergencyController);
         assertTrue(controller.contractWhitelist(address(vault)));
         assertTrue(controller.contractWhitelist(address(collector)));
+        assertTrue(
+            AltoAdapter(payable(input.contracts.altoAdapter)).isApprovedContract(address(vault)),
+            "sDUSD not approved on AltoAdapter"
+        );
         assertEq(collector.sdusdVault(), address(vault));
         assertEq(
             address(collector.vaultRegistry()), input.contracts.vaultRegistry, "collector vault registry not configured"
@@ -1631,6 +1643,21 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         _assertAncillaryFeeSourcesActivated(usms, originalUsmFeeRecipients, address(collector));
         _assertVaultFeeSourcesActivated(registeredVaults, vaultSnapshots, address(collector));
         _assertEmergencyControls(vault, collector);
+    }
+
+    function testFork_ActivationSkipsExistingAltoAdapterApproval() public {
+        params.phase = DeploymentPhase.SDUSD;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        SDUSDActivationSafeBatch memory withApproval = SDUSDActivationSafeBuilder.buildActivationBatch(input);
+        assertEq(_altoAdapterApprovalCalls(withApproval), 1, "missing AltoAdapter approval");
+
+        vm.prank(input.contracts.timelock);
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.sdusd);
+
+        SDUSDActivationSafeBatch memory withoutApproval = SDUSDActivationSafeBuilder.buildActivationBatch(input);
+        assertEq(_altoAdapterApprovalCalls(withoutApproval), 0, "existing AltoAdapter approval not skipped");
+        assertEq(withoutApproval.targets.length + 1, withApproval.targets.length, "unexpected call count");
     }
 
     function testFork_DeploymentRejectsMismatchedPauserSafe() public {
@@ -1692,6 +1719,15 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
 
     function buildActivationExternal() external view {
         SDUSDActivationSafeBuilder.buildActivationBatch(input);
+    }
+
+    function _altoAdapterApprovalCalls(SDUSDActivationSafeBatch memory batch) private view returns (uint256 count) {
+        bytes memory expectedPayload = abi.encodeCall(AdapterContractApproval.approveContract, (input.contracts.sdusd));
+        for (uint256 i; i < batch.targets.length; ++i) {
+            if (batch.targets[i] != input.contracts.altoAdapter) continue;
+            assertEq(batch.payloads[i], expectedPayload, "unexpected AltoAdapter call");
+            ++count;
+        }
     }
 
     function _controllerConfigurationHash() private view returns (bytes32) {
