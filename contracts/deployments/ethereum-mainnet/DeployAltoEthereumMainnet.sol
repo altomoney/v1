@@ -1972,8 +1972,6 @@ library DeployAltoEthereumMainnet {
         EmergencyController controller = EmergencyController(input.contracts.emergencyController);
         require(controller.owner() == input.contracts.timelock, "Unexpected emergency controller owner");
         require(address(controller.pauserSafe()) == params.freezer, "Unexpected emergency controller Pauser Safe");
-        // The implementation is deployed now. The existing proxy is upgraded atomically during activation.
-        input.contracts.emergencyControllerImplementation = address(new EmergencyController());
         address[] memory collateralOperators = new address[](1);
         collateralOperators[0] = params.treasuryMultisig;
 

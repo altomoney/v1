@@ -3,7 +3,6 @@ pragma solidity ^0.8.28;
 
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import {IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
 import {IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
@@ -66,7 +65,7 @@ library SDUSDActivationSafeBuilder {
         }
 
         // Activation timelock calls:
-        //   4                              EmergencyController upgrade + sDUSD pause/frozen whitelist + collector pause whitelist
+        //   2                              EmergencyController whitelist for sDUSD and the collector
         // + 1                              ProtocolFeeCollector.setSdusdVault
         // + dusdVaults                     setFeeRecipient for each registered DUSD vault (accrues fees internally)
         // + 2 * borrowMarkets.length       accrueInterest + setFeeRecipient for each borrow market
@@ -74,7 +73,7 @@ library SDUSDActivationSafeBuilder {
         // + 2 * usmsWithFeeRecipient       distributeFeesToFeeRecipient + updateFeeRecipient for fee-bearing USMs
         // + 2                              distributeFeesToFeeRecipient + updateFeeRecipient for the flash minter
         uint256 callCount =
-            5 + dusdVaults + borrowMarkets.length * 2 + mintMarkets.length * 3 + usmsWithFeeRecipient * 2 + 2;
+            3 + dusdVaults + borrowMarkets.length * 2 + mintMarkets.length * 3 + usmsWithFeeRecipient * 2 + 2;
         batch.targets = new address[](callCount);
         batch.values = new uint256[](callCount);
         batch.payloads = new bytes[](callCount);
@@ -93,7 +92,6 @@ library SDUSDActivationSafeBuilder {
     function _validateEmergencyControls(AltoEthereumMainnetInput memory input) private view {
         EmergencyController controller = EmergencyController(input.contracts.emergencyController);
         require(controller.owner() == input.contracts.timelock, "Unexpected emergency controller owner");
-        require(input.contracts.emergencyControllerImplementation.code.length != 0, "Missing controller implementation");
         address pauserSafe = address(controller.pauserSafe());
         SDUSD vault = SDUSD(input.contracts.sdusd);
         ProtocolFeeCollector collector = ProtocolFeeCollector(input.contracts.protocolFeeCollector);
@@ -119,27 +117,13 @@ library SDUSDActivationSafeBuilder {
             batch,
             index++,
             controller,
-            abi.encodeCall(
-                UUPSUpgradeable.upgradeToAndCall, (input.contracts.emergencyControllerImplementation, bytes(""))
-            )
+            abi.encodeCall(EmergencyController.setContractWhitelist, (input.contracts.sdusd, true))
         );
         _append(
             batch,
             index++,
             controller,
-            abi.encodeCall(EmergencyController.setPauseWhitelist, (input.contracts.sdusd, true))
-        );
-        _append(
-            batch,
-            index++,
-            controller,
-            abi.encodeCall(EmergencyController.setFrozenWhitelist, (input.contracts.sdusd, true))
-        );
-        _append(
-            batch,
-            index++,
-            controller,
-            abi.encodeCall(EmergencyController.setPauseWhitelist, (input.contracts.protocolFeeCollector, true))
+            abi.encodeCall(EmergencyController.setContractWhitelist, (input.contracts.protocolFeeCollector, true))
         );
         return index;
     }
