@@ -1499,7 +1499,7 @@ interface ISdusdPauserSafeOwners {
 }
 
 contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
-    uint256 internal constant MAINNET_FORK_BLOCK = 26025105;
+    uint256 internal constant MAINNET_FORK_BLOCK = 26096500;
     bytes32 private _originalControllerConfiguration;
     address private _originalControllerImplementation;
 
@@ -1538,7 +1538,7 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         (LegacyFeePositionSnapshot[] memory mintSnapshots, uint256 mintCollateralMarketCount) =
             _snapshotLegacyPositions(mintMarkets, input.contracts.feeRecipientMintMarkets, false);
 
-        assertEq(borrowCollateralMarketCount, 3, "unexpected borrow collateral market count");
+        assertEq(borrowCollateralMarketCount, 5, "unexpected borrow collateral market count");
         assertEq(mintCollateralMarketCount, 5, "unexpected mint collateral market count");
 
         address[] memory originalUsmFeeRecipients = new address[](usms.length);
@@ -1553,7 +1553,6 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         assertEq(
             Upgrades.getImplementationAddress(input.contracts.emergencyController), _originalControllerImplementation
         );
-        assertTrue(input.contracts.emergencyControllerImplementation != _originalControllerImplementation);
 
         ProtocolFeeCollector collector = ProtocolFeeCollector(input.contracts.protocolFeeCollector);
         SDUSD vault = SDUSD(input.contracts.sdusd);
@@ -1610,13 +1609,12 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         assertEq(_controllerConfigurationHash(), _originalControllerConfiguration, "controller configuration changed");
         assertEq(
             Upgrades.getImplementationAddress(input.contracts.emergencyController),
-            input.contracts.emergencyControllerImplementation,
-            "controller implementation was not upgraded"
+            _originalControllerImplementation,
+            "controller implementation changed"
         );
         EmergencyController controller = EmergencyController(input.contracts.emergencyController);
-        assertTrue(controller.pauseWhitelist(address(vault)));
-        assertTrue(controller.frozenWhitelist(address(vault)));
-        assertTrue(controller.pauseWhitelist(address(collector)));
+        assertTrue(controller.contractWhitelist(address(vault)));
+        assertTrue(controller.contractWhitelist(address(collector)));
         assertEq(collector.sdusdVault(), address(vault));
         assertEq(
             address(collector.vaultRegistry()), input.contracts.vaultRegistry, "collector vault registry not configured"
@@ -1704,9 +1702,7 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
                 controller.pendingOwner(),
                 address(controller.pauserSafe()),
                 address(controller.marketRegistry()),
-                address(controller.usmRegistry()),
-                address(controller.dusd()),
-                address(controller.universalRewardsDistributor())
+                address(controller.usmRegistry())
             )
         );
     }
