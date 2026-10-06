@@ -9,7 +9,7 @@ node_modules
 cache
 out
 broadcast
-/ERP/ERP-OFFBOARD-02/output/**
+/ERP/*/output/
 
 # coverage
 /coverage
