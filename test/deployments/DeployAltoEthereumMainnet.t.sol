@@ -1582,7 +1582,7 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         assertEq(collector.minimumRewardAmount(), 100 ether);
         assertTrue(collector.isCollateralOperator(params.treasuryMultisig));
         assertEq(vault.seedShares(), 1 ether);
-        assertEq(vault.depositCap(), 115_000 ether);
+        assertEq(vault.depositCap(), 250_000 ether);
         assertEq(vault.rewardDuration(), 7 days);
         assertTrue(collector.pausers(params.freezer, PAUSE_TYPE));
         assertTrue(collector.pausers(input.contracts.emergencyController, PAUSE_TYPE));
@@ -1612,7 +1612,7 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         uint256 activationDelay = TimelockController(payable(input.contracts.timelock)).getMinDelay();
         vm.warp(block.timestamp + activationDelay + 1);
 
-        _executeScheduledTimelockBatch(input.contracts.timelock, ACTIVATION_EXECUTE_PATH);
+        _executeActivationAndAssertCreditLineRouting();
 
         assertEq(_controllerConfigurationHash(), _originalControllerConfiguration, "controller configuration changed");
         assertEq(
@@ -1844,7 +1844,9 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
             IMarket market = IMarket(markets[i]);
             Position memory legacyPosition = market.position(legacyFeeRecipient);
 
-            assertEq(market.feeRecipient(), collector, "market fee recipient was not activated");
+            address expectedRecipient =
+                markets[i] == input.contracts.convexCreditLineMarket.market ? params.treasuryMultisig : collector;
+            assertEq(market.feeRecipient(), expectedRecipient, "market fee recipient was not activated");
             if (supplyMayAccrue) {
                 assertGe(
                     legacyPosition.supplyShares,
@@ -1861,6 +1863,52 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
                 "activation must preserve legacy collateral"
             );
         }
+    }
+
+    /// @dev Executes the scheduled activation batch and checks that credit line interest went to Treasury.
+    function _executeActivationAndAssertCreditLineRouting() private {
+        uint256 treasuryDusdBefore = IDUSD(input.contracts.dusd).balanceOf(params.treasuryMultisig);
+        uint256 creditLineClaimableBefore =
+            AltoConvexCreditLineMarket(input.contracts.convexCreditLineMarket.market).claimableFeesAssets();
+        assertGt(creditLineClaimableBefore, 0, "credit line has no accrued interest");
+
+        vm.recordLogs();
+        _executeScheduledTimelockBatch(input.contracts.timelock, ACTIVATION_EXECUTE_PATH);
+        _assertCreditLineInterestSentToTreasury(vm.getRecordedLogs(), treasuryDusdBefore, creditLineClaimableBefore);
+    }
+
+    /// @dev Requires one credit line claim, sent to Treasury, covering at least the interest accrued before activation.
+    function _assertCreditLineInterestSentToTreasury(
+        Vm.Log[] memory logs,
+        uint256 treasuryDusdBefore,
+        uint256 claimableBefore
+    ) private view {
+        address creditLine = input.contracts.convexCreditLineMarket.market;
+        uint256 claimed;
+        uint256 claims;
+        for (uint256 i; i < logs.length; ++i) {
+            Vm.Log memory entry = logs[i];
+            if (entry.emitter != creditLine || entry.topics[0] != keccak256("InterestClaimed(address,uint256)")) {
+                continue;
+            }
+            assertEq(
+                address(uint160(uint256(entry.topics[1]))),
+                params.treasuryMultisig,
+                "credit line interest not sent to Treasury"
+            );
+            claimed = abi.decode(entry.data, (uint256));
+            ++claims;
+        }
+        assertEq(claims, 1, "unexpected credit line interest claims");
+        assertGe(claimed, claimableBefore, "accrued credit line interest was not claimed");
+        assertEq(
+            IDUSD(input.contracts.dusd).balanceOf(params.treasuryMultisig) - treasuryDusdBefore,
+            claimed,
+            "Treasury did not receive credit line interest"
+        );
+        assertEq(
+            AltoConvexCreditLineMarket(creditLine).claimableFeesAssets(), 0, "credit line interest remains claimable"
+        );
     }
 
     function _assertVaultFeeSourcesActivated(

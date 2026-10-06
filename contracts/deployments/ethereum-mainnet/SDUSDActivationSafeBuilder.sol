@@ -48,6 +48,10 @@ library SDUSDActivationSafeBuilder {
         returns (SDUSDActivationSafeBatch memory batch)
     {
         _validateEmergencyControls(input);
+        require(
+            IMarketRegistry(input.contracts.marketRegistry).isMintMarket(input.contracts.convexCreditLineMarket.market),
+            "Credit line is not a registered mint market"
+        );
         bool approveSdusdOnAltoAdapter = _requiresAltoAdapterApproval(input);
         address[] memory borrowMarkets = IMarketRegistry(input.contracts.marketRegistry).getBorrowMarkets();
         address[] memory mintMarkets = IMarketRegistry(input.contracts.marketRegistry).getMintMarkets();
@@ -73,6 +77,7 @@ library SDUSDActivationSafeBuilder {
         // + dusdVaults                     setFeeRecipient for each registered DUSD vault (accrues fees internally)
         // + 2 * borrowMarkets.length       accrueInterest + setFeeRecipient for each borrow market
         // + 3 * mintMarkets.length         accrueInterest + claimInterest + setFeeRecipient for each mint market
+        //                                  (the credit line switches to Treasury before its claim)
         // + 2 * usmsWithFeeRecipient       distributeFeesToFeeRecipient + updateFeeRecipient for fee-bearing USMs
         // + 2                              distributeFeesToFeeRecipient + updateFeeRecipient for the flash minter
         uint256 callCount = 3 + (approveSdusdOnAltoAdapter ? 1 : 0) + dusdVaults + borrowMarkets.length * 2
@@ -204,14 +209,24 @@ library SDUSDActivationSafeBuilder {
         return index;
     }
 
+    /// @dev The Convex credit line pays its DUSD interest directly to Treasury, including interest accrued before
+    ///      activation, so its recipient changes before the claim. Other mint markets settle to their legacy
+    ///      recipient and then move to the collector.
     function _appendMintMarketFeeSettlementAndRecipientUpdates(
         AltoEthereumMainnetInput memory input,
         SDUSDActivationSafeBatch memory batch,
         uint256 index
     ) private view returns (uint256) {
+        address creditLine = input.contracts.convexCreditLineMarket.market;
+        address treasury = ProtocolFeeCollector(input.contracts.protocolFeeCollector).treasury();
         address[] memory markets = IMarketRegistry(input.contracts.marketRegistry).getMintMarkets();
         for (uint256 i; i < markets.length; ++i) {
             _append(batch, index++, markets[i], abi.encodeCall(IMarketBase.accrueInterest, ()));
+            if (markets[i] == creditLine) {
+                _append(batch, index++, markets[i], abi.encodeCall(IMarketBase.setFeeRecipient, (treasury)));
+                _append(batch, index++, markets[i], abi.encodeCall(IAltoMintMarketFees.claimInterest, (0)));
+                continue;
+            }
             _append(batch, index++, markets[i], abi.encodeCall(IAltoMintMarketFees.claimInterest, (0)));
             _append(
                 batch,

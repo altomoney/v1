@@ -1985,12 +1985,11 @@ library DeployAltoEthereumMainnet {
                 vaultRegistry: input.contracts.vaultRegistry,
                 usmRegistry: input.contracts.usmRegistry,
                 flashMinter: input.contracts.dusdFlashMinter,
-                // Tentative launch destinations; change these centrally before deployment if required.
                 treasury: params.treasuryMultisig,
                 manualSwapReceiver: params.treasuryMultisig,
                 collateralOperators: collateralOperators,
-                rewardsBps: 10_000, // @todo
-                minimumRewardAmount: 100 ether // @todo
+                rewardsBps: 10_000, // 100% of distributed DUSD to sDUSD
+                minimumRewardAmount: 100 ether // 100 DUSD
             })
         );
         ProtocolFeeCollectorBatchReport memory collectorReport = collectorBatch.getReport();
@@ -2005,8 +2004,8 @@ library DeployAltoEthereumMainnet {
                 emergencyController: input.contracts.emergencyController,
                 dusd: input.contracts.dusd,
                 seedShares: 1 ether,
-                depositCap: 115_000 ether, // @todo
-                rewardDuration: 7 days // @todo
+                depositCap: 250_000 ether, // 250,000 DUSD, excluding the seed
+                rewardDuration: 7 days
             })
         );
         SDUSDBatchReport memory vaultReport = vaultBatch.getReport();
