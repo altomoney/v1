@@ -42,7 +42,7 @@ enum DeploymentPhase {
     CONVEX_CREDIT_LINE_MARKET, // Phase 33: Deploy the frxUSD/DUSD Convex credit-line market
     MINT_MARKET_PEG_RESPONSIVE_IRM, // Phase 34: Migrate active mint markets to peg-responsive IRMs
     UPGRADE_ALL_MINT_BORROW_MARKETS, // Phase 35: Upgrade every registered AltoMintMarket and AltoBorrowMarket
-    SDUSD, // Phase 36: Deploy ProtocolFeeCollector and sDUSD; deployer seeds the vault manually after this phase
+    SDUSD, // Phase 36: Deploy ProtocolFeeCollector and sDUSD, then seed sDUSD with 1 DUSD from the deployer
     SDUSD_ACTIVATION // Phase 37: Generate the timelock Safe batch that wires and activates all fee sources
 }
 

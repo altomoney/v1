@@ -1526,6 +1526,7 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         super.setUp();
         vm.createSelectFork(vm.rpcUrl("ethereum"), MAINNET_FORK_BLOCK);
         params.freezer = address(EmergencyController(input.contracts.emergencyController).pauserSafe());
+        deal(input.contracts.dusd, address(this), 1 ether);
         _originalControllerConfiguration = _controllerConfigurationHash();
         _originalControllerImplementation = Upgrades.getImplementationAddress(input.contracts.emergencyController);
     }
@@ -1598,11 +1599,10 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
             "sDUSD approved on AltoAdapter before activation"
         );
 
-        deal(input.contracts.dusd, address(this), 1 ether);
-        IDUSD(input.contracts.dusd).approve(address(vault), 1 ether);
-        assertEq(vault.deposit(1 ether, address(1)), 1 ether, "seed must mint one share per DUSD");
+        assertEq(vault.balanceOf(address(1)), 1 ether, "seed must mint one share per DUSD");
         assertEq(vault.totalAssets(), 1 ether);
         assertEq(vault.depositCapUsage(), 0, "seed must not consume deposit-cap headroom");
+        assertEq(IDUSD(input.contracts.dusd).balanceOf(address(this)), 0, "deployer seed DUSD was not spent");
 
         params.phase = DeploymentPhase.SDUSD_ACTIVATION;
         input = DeployAltoEthereumMainnet.deploy(params, input);
@@ -1658,6 +1658,13 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
         SDUSDActivationSafeBatch memory withoutApproval = SDUSDActivationSafeBuilder.buildActivationBatch(input);
         assertEq(_altoAdapterApprovalCalls(withoutApproval), 0, "existing AltoAdapter approval not skipped");
         assertEq(withoutApproval.targets.length + 1, withApproval.targets.length, "unexpected call count");
+    }
+
+    function testFork_DeploymentRejectsUnfundedDeployer() public {
+        params.phase = DeploymentPhase.SDUSD;
+        deal(input.contracts.dusd, address(this), 0);
+        vm.expectRevert("Deployer needs 1 DUSD for the seed");
+        this.deploySdusdExternal();
     }
 
     function testFork_DeploymentRejectsMismatchedPauserSafe() public {
