@@ -25,8 +25,8 @@ struct SDUSDBatchReport {
 
 /// @notice Deploys and configures SDUSD in one transaction.
 /// @dev Upgrade safety must be validated by the calling deployment script before broadcasting. ProtocolFeeCollector is
-///      configured as the rewarder during deployment. After this batch is deployed, the deployer must make the normal
-///      deployment seed deposit by approving the vault and calling `deposit(seedShares, address(1))` before activation.
+///      configured as the rewarder during deployment. The deployment library then makes the seed deposit from the
+///      deployer by approving the vault and calling `deposit(seedShares, address(1))`.
 contract SDUSDBatch {
     SDUSDBatchReport public report;
 

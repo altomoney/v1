@@ -1968,6 +1968,10 @@ library DeployAltoEthereumMainnet {
         require(input.contracts.dusdFlashMinter != address(0), "Invalid flash minter");
         require(input.contracts.protocolFeeCollector == address(0), "ProtocolFeeCollector already deployed");
         require(input.contracts.sdusd == address(0), "SDUSD already deployed");
+        uint256 seedAssets = 1 ether;
+        require(
+            IERC20(input.contracts.dusd).balanceOf(params.deployer) >= seedAssets, "Deployer needs 1 DUSD for the seed"
+        );
 
         EmergencyController controller = EmergencyController(input.contracts.emergencyController);
         require(controller.owner() == input.contracts.timelock, "Unexpected emergency controller owner");
@@ -2003,7 +2007,7 @@ library DeployAltoEthereumMainnet {
                 freezer: params.freezer,
                 emergencyController: input.contracts.emergencyController,
                 dusd: input.contracts.dusd,
-                seedShares: 1 ether,
+                seedShares: seedAssets,
                 depositCap: 250_000 ether, // 250,000 DUSD, excluding the seed
                 rewardDuration: 7 days
             })
@@ -2012,10 +2016,11 @@ library DeployAltoEthereumMainnet {
         input.contracts.sdusd = vaultReport.sdusd;
         input.contracts.sdusdImplementation = vaultReport.sdusdImplementation;
 
-        // REQUIRED MANUAL STEP BEFORE SDUSD_ACTIVATION:
-        // The deployer approves this vault for 1 DUSD and calls deposit(1 ether, address(1)).
-        console.log("MANUAL STEP: seed sDUSD before activation");
-        console.log("Approve and call deposit(1 ether, address(1)) on:", vaultReport.sdusd);
+        // Seed the vault from the deployer in the same run. The first deposit must be exactly seedShares DUSD minted
+        // to address(1), where it stays locked forever.
+        IERC20(input.contracts.dusd).approve(vaultReport.sdusd, seedAssets);
+        SDUSD(vaultReport.sdusd).deposit(seedAssets, address(1));
+        require(SDUSD(vaultReport.sdusd).balanceOf(address(1)) == seedAssets, "SDUSD seed failed");
         return input;
     }
 
