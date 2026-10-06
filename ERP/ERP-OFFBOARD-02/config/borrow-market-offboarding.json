@@ -1,0 +1,80 @@
+{
+  "activationId": "erp-offboard-02-mainnet",
+  "severity": 0,
+  "schedulePhase": 0,
+  "t0": 1787591735,
+  "lastExecutedStep": 0,
+  "lastStepExecutedAt": 0,
+  "lastOperationId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "step": 1,
+  "sourceBlock": 25833639,
+  "deploymentId": 1765364975,
+  "freezerSafe": "0x1c11d2d42929bd17aB7212b79c91862Adfa8bbe4",
+  "timelockSafe": "0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0",
+  "fixedRateIrmVersion": 1,
+  "vaults": [
+    {
+      "vault": "0x6954785783c6EE90400fA715E591fBbA0D0Bd749",
+      "allocator": "0x7db7C14533a4186EcC07950F78835859320835Be",
+      "maxVaultLossAssets": 0,
+      "replacementMarkets": []
+    }
+  ],
+  "markets": [
+    {
+      "market": "0xefd78a5970a43e25b30426C3952065217c55e5E4",
+      "leverage": "0xcC51aCb1D625F06487D7D568e7E8F9620Ec6b082",
+      "fixedRateSpy": 3170979198,
+      "correctionRateSpy": 6341958396,
+      "ltvReduction": 50000000000000000,
+      "maxLiquidationFundingAssets": 0,
+      "maxBadDebtAssets": 0,
+      "maxSupplierLossAssets": 0,
+      "maxProtocolLossAssets": 0
+    },
+    {
+      "market": "0xaE4f2B998783e2041E87E08Da73985e4E0420159",
+      "leverage": "0x93B227F37819d147ad31589C686fbfe654657503",
+      "fixedRateSpy": 3170979198,
+      "correctionRateSpy": 6341958396,
+      "ltvReduction": 40000000000000000,
+      "maxLiquidationFundingAssets": 0,
+      "maxBadDebtAssets": 0,
+      "maxSupplierLossAssets": 0,
+      "maxProtocolLossAssets": 0
+    },
+    {
+      "market": "0x133cf03d2A7a87B9239b1a3a8Dd62f3f27c46788",
+      "leverage": "0xDe5602FAadA45B3D815107079B25Fd39Fd4A14c4",
+      "fixedRateSpy": 3170979198,
+      "correctionRateSpy": 6341958396,
+      "ltvReduction": 30000000000000000,
+      "maxLiquidationFundingAssets": 0,
+      "maxBadDebtAssets": 0,
+      "maxSupplierLossAssets": 0,
+      "maxProtocolLossAssets": 0
+    },
+    {
+      "market": "0x33B24510233281350bF8679A7c427d04db0ed208",
+      "leverage": "0xA30Fbc6847e27F795C33C8e298AaD9136A08DA87",
+      "fixedRateSpy": 3170979198,
+      "correctionRateSpy": 6341958396,
+      "ltvReduction": 20000000000000000,
+      "maxLiquidationFundingAssets": 0,
+      "maxBadDebtAssets": 0,
+      "maxSupplierLossAssets": 0,
+      "maxProtocolLossAssets": 0
+    },
+    {
+      "market": "0x99f538Ec7c840197DcAf30A25B635482ba9e8817",
+      "leverage": "0xE670757B4D1a9ead3af30a225446162A14667Ee3",
+      "fixedRateSpy": 3170979198,
+      "correctionRateSpy": 6341958396,
+      "ltvReduction": 10000000000000000,
+      "maxLiquidationFundingAssets": 0,
+      "maxBadDebtAssets": 0,
+      "maxSupplierLossAssets": 0,
+      "maxProtocolLossAssets": 0
+    }
+  ]
+}

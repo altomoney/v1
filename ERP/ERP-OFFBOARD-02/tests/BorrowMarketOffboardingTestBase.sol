@@ -4,60 +4,83 @@ pragma solidity ^0.8.28;
 import {Test} from "forge-std/Test.sol";
 
 import {BorrowMarketOffboarding} from "../BorrowMarketOffboarding.sol";
+import {ERPOutputWriter} from "../../libraries/ERPOutputWriter.sol";
+import {BorrowerList, BorrowMarketOffboardingIO} from "../libraries/BorrowMarketOffboardingIO.sol";
 import {
+    BorrowMarketOffboardingBorrowerMarket,
     BorrowMarketOffboardingInput,
-    BorrowMarketOffboardingParams,
-    BorrowMarketOffboardingPhase
+    BorrowMarketOffboardingManifest,
+    BorrowMarketOffboardingMarket,
+    BorrowMarketOffboardingPhase,
+    BorrowMarketOffboardingReport,
+    BorrowMarketOffboardingSchedulePhase,
+    BorrowMarketOffboardingSeverity,
+    BorrowMarketOffboardingVault
 } from "../IBorrowMarketOffboarding.sol";
 import {BorrowMarketOffboardingScript} from "../scripts/BorrowMarketOffboarding.s.sol";
 
-import {OwnerFixedRateIrmFactory} from "@alto/deployments/ethereum-mainnet/OwnerFixedRateIrmFactory.sol";
-import {IAltoVault, IAltoVaultBase, IAltoVaultErrors, MarketAllocation} from "@alto/lending/interfaces/IAltoVault.sol";
-import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
+import {BorrowMarketBatch, BorrowMarketBatchParams} from "@alto/deployments/ethereum-mainnet/BorrowMarketBatch.sol";
+import {
+    ALTO_BORROW_MARKET_IMPL,
+    KYBERSWAP_META_AGGREGATION_ROUTER_V2_MAINNET,
+    NORDSTERN_ROUTER_MAINNET,
+    ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET,
+    VELORA_AUGUSTUS_MAINNET,
+    WETH_MAINNET,
+    ZEROX_SWAP_TARGET_MAINNET
+} from "@alto/deployments/ethereum-mainnet/Constants.sol";
+import {MarketContracts} from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
+import {EthereumMainnetLendingOracleAsset} from "@alto/deployments/EthereumMainnetOracleDeployer.sol";
+import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
+import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {IAltoVault, IAltoVaultBase, MarketAllocation} from "@alto/lending/interfaces/IAltoVault.sol";
 import {Balance, IMarket, IMarketBase, Position} from "@alto/lending/interfaces/IMarket.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IAltoLeverageSwapper} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {
-    IDcfDlbPriorityLiquidationEngine,
     IDcfDlbPriorityLiquidationEngineErrors,
     LiquidationConfiguration
 } from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
+import {ILiquidationPeripheryBase} from "@alto/lending/liquidation/interfaces/ILiquidationPeriphery.sol";
 import {AltoBalancesLib} from "@alto/lending/libraries/AltoBalancesLib.sol";
-import {MarketConfig, PendingUint192} from "@alto/lending/libraries/PendingLib.sol";
 import {IOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {AdapterContractApproval} from "@alto/utils/AdapterContractApproval.sol";
-import {AltoTimelockController} from "@alto/utils/AltoTimelockController.sol";
 import {FROZEN_TYPE, PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
-import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract BorrowMarketOffboardingTestHarness is BorrowMarketOffboardingScript {
-    function loadInput() external view returns (BorrowMarketOffboardingInput memory) {
-        return _loadCurrentChainInput();
+    function runPhase(
+        BorrowMarketOffboardingPhase phase,
+        BorrowMarketOffboardingManifest memory manifest,
+        BorrowMarketOffboardingInput memory input
+    ) external returns (BorrowMarketOffboardingInput memory) {
+        return _runPhase(phase, manifest, input);
     }
 
-    function runPhase(BorrowMarketOffboardingPhase phase, BorrowMarketOffboardingInput memory input)
-        external
-        returns (BorrowMarketOffboardingInput memory)
+    function _writeBorrowerList(string memory, BorrowMarketOffboardingManifest memory manifest)
+        internal
+        view
+        override
+        returns (BorrowerList memory)
     {
-        return _runPhase(phase, input);
+        return BorrowMarketOffboardingIO.parseBorrowerList(
+            vm.readFile(BorrowMarketOffboardingIO.borrowerListPath(manifest))
+        );
     }
 }
 
 abstract contract BorrowMarketOffboardingTestBase is Test {
     using AltoBalancesLib for address;
 
-    string internal constant ADDRESSES_FILE =
-        "contracts/deployments/ethereum-mainnet/output/ethereum-mainnet-1-1765364975/addresses.json";
-    string internal constant OUTPUT_DIRECTORY = "ERP/ERP-OFFBOARD-02/output/";
+    uint256 internal constant FORK_BLOCK = 25_833_639;
+    string internal constant MANIFEST_FILE = "ERP/ERP-OFFBOARD-02/config/borrow-market-offboarding.json";
+    string internal constant BORROWER_FIXTURE = "ERP/ERP-OFFBOARD-02/tests/fixtures/borrowers-25833639.json";
     string internal constant FREEZE_FILE = "batch-a-freeze-safe.json";
-    string internal constant CURATOR_FILE = "batch-a-vault-curator-safe.json";
     string internal constant FIXED_IRM_SCHEDULE_FILE = "batch-b-fixed-rate-irm-schedule.json";
     string internal constant FIXED_IRM_EXECUTE_FILE = "batch-b-fixed-rate-irm-execute.json";
     string internal constant REDUCE_LTV_SCHEDULE_FILE = "batch-b-irm-and-ltv-update-schedule.json";
@@ -65,11 +88,7 @@ abstract contract BorrowMarketOffboardingTestBase is Test {
     string internal constant RECOVER_SCHEDULE_FILE = "batch-c-final-removal-schedule.json";
     string internal constant RECOVER_EXECUTE_FILE = "batch-c-final-removal-execute.json";
 
-    address internal constant FREEZER_SAFE = 0x1c11d2d42929bd17aB7212b79c91862Adfa8bbe4;
-    address internal constant TIMELOCK_SAFE = 0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0;
     address internal constant VAULT_ALLOCATOR = 0x7db7C14533a4186EcC07950F78835859320835Be;
-    uint256 internal constant ADDRESS_SNAPSHOT_BLOCK = 25_833_639;
-    uint256 internal constant FIXED_RATE_SPY = 0.1 ether / uint256(365 days);
 
     struct MarketFixture {
         address supplier;
@@ -80,6 +99,7 @@ abstract contract BorrowMarketOffboardingTestBase is Test {
     }
 
     BorrowMarketOffboardingTestHarness internal scriptHarness;
+    BorrowMarketOffboardingManifest internal manifest;
     BorrowMarketOffboardingInput internal input;
     TimelockController internal timelock;
     IAltoVault internal vault;
@@ -91,48 +111,124 @@ abstract contract BorrowMarketOffboardingTestBase is Test {
     address[] internal leverages;
     address[] internal leverageSwappers;
     MarketFixture[] internal fixtures;
-    bool internal marketAlreadyFrozen;
-
-    function _selectFork() internal {
-        vm.createSelectFork(vm.rpcUrl("ethereum"), ADDRESS_SNAPSHOT_BLOCK);
-    }
+    uint256[] internal initialOraclePrices;
+    BorrowMarketOffboardingBorrowerMarket[] internal borrowerFixtureMarkets;
 
     function _setUpManifest() internal {
-        _selectFork();
         scriptHarness = new BorrowMarketOffboardingTestHarness();
-        input = scriptHarness.loadInput();
-        timelock = TimelockController(payable(input.contracts.timelock));
-        vault = IAltoVault(input.contracts.dusdVault);
-        vaultToken = IERC4626(input.contracts.dusdVault);
-        marketRegistry = IMarketRegistry(input.contracts.marketRegistry);
-        altoAdapter = AdapterContractApproval(input.contracts.altoAdapter);
-        liquidationPeriphery = input.contracts.liquidationPeriphery;
-        _loadManifestArrays();
+        BorrowMarketOffboardingManifest memory loadedManifest =
+            BorrowMarketOffboardingIO.loadActivationManifest(MANIFEST_FILE);
+        _storeManifest(loadedManifest);
+        assertEq(manifest.sourceBlock, FORK_BLOCK, "manifest fork block changed");
+        vm.createSelectFork(vm.rpcUrl("ethereum"), FORK_BLOCK);
+        input = BorrowMarketOffboardingIO.loadCurrentChainInput(manifest.deploymentId);
+        if (input.contracts.ownerFixedRateIrmFactory.code.length == 0) {
+            input.contracts.ownerFixedRateIrmFactory = address(0);
+        }
+        _bindManifestState();
+        _loadBorrowerFixture();
+    }
 
-        for (uint256 i; i < borrowMarkets.length; ++i) {
-            if (IMarketBase(borrowMarkets[i]).paused(FROZEN_TYPE)) {
-                marketAlreadyFrozen = true;
-                return;
+    function _loadBorrowerFixture() private {
+        string memory json = vm.readFile(BORROWER_FIXTURE);
+        assertEq(vm.parseJsonUint(json, ".chainId"), block.chainid, "borrower fixture chain mismatch");
+        assertEq(vm.parseJsonUint(json, ".sourceBlock"), FORK_BLOCK, "borrower fixture block mismatch");
+
+        BorrowerList memory borrowerList = BorrowMarketOffboardingIO.parseBorrowerList(json);
+        delete borrowerFixtureMarkets;
+        for (uint256 i; i < borrowerList.markets.length; ++i) {
+            borrowerFixtureMarkets.push();
+            BorrowMarketOffboardingBorrowerMarket storage stored = borrowerFixtureMarkets[i];
+            stored.market = borrowerList.markets[i].market;
+            for (uint256 j; j < borrowerList.markets[i].borrowers.length; ++j) {
+                stored.borrowers.push(borrowerList.markets[i].borrowers[j]);
             }
         }
     }
 
-    function _loadManifestArrays() private {
-        borrowMarkets.push(input.contracts.wbtcBorrowMarket);
-        borrowMarkets.push(input.contracts.cbbtcBorrowMarket);
-        borrowMarkets.push(input.contracts.susdeBorrowMarket);
-        borrowMarkets.push(input.contracts.syrupUsdcBorrowMarket);
-        borrowMarkets.push(input.contracts.paxgBorrowMarket);
+    function _bindManifestState() internal {
+        timelock = TimelockController(payable(input.contracts.timelock));
+        vault = IAltoVault(manifest.vaults[0].vault);
+        vaultToken = IERC4626(manifest.vaults[0].vault);
+        marketRegistry = IMarketRegistry(input.contracts.marketRegistry);
+        altoAdapter = AdapterContractApproval(input.contracts.altoAdapter);
+        liquidationPeriphery = input.contracts.liquidationPeriphery;
 
-        leverages.push(input.contracts.wbtcBorrowLeverage);
-        leverages.push(input.contracts.cbbtcBorrowLeverage);
-        leverages.push(input.contracts.susdeBorrowLeverage);
-        leverages.push(input.contracts.syrupUsdcBorrowLeverage);
-        leverages.push(input.contracts.paxgBorrowLeverage);
-
-        for (uint256 i; i < leverages.length; ++i) {
-            leverageSwappers.push(address(AltoLeverage(leverages[i]).swapper()));
+        delete borrowMarkets;
+        delete leverages;
+        delete leverageSwappers;
+        delete initialOraclePrices;
+        for (uint256 i; i < manifest.markets.length; ++i) {
+            address leverage = manifest.markets[i].leverage;
+            borrowMarkets.push(manifest.markets[i].market);
+            leverages.push(leverage);
+            leverageSwappers.push(address(AltoLeverage(leverage).swapper()));
+            initialOraclePrices.push(IOracle(IMarket(manifest.markets[i].market).oracle()).getPrice());
         }
+    }
+
+    function _storeManifest(BorrowMarketOffboardingManifest memory source) private {
+        manifest.activationId = source.activationId;
+        manifest.severity = source.severity;
+        manifest.schedulePhase = source.schedulePhase;
+        manifest.t0 = source.t0;
+        manifest.step = source.step;
+        manifest.lastExecutedStep = source.lastExecutedStep;
+        manifest.lastStepExecutedAt = source.lastStepExecutedAt;
+        manifest.lastOperationId = source.lastOperationId;
+        manifest.sourceBlock = source.sourceBlock;
+        manifest.deploymentId = source.deploymentId;
+        manifest.freezerSafe = source.freezerSafe;
+        manifest.timelockSafe = source.timelockSafe;
+        manifest.fixedRateIrmVersion = source.fixedRateIrmVersion;
+
+        delete manifest.vaults;
+        for (uint256 i; i < source.vaults.length; ++i) {
+            _pushManifestVault(source.vaults[i]);
+        }
+
+        delete manifest.markets;
+        for (uint256 i; i < source.markets.length; ++i) {
+            _pushManifestMarket(source.markets[i]);
+        }
+    }
+
+    function _pushManifestVault(BorrowMarketOffboardingVault memory source) internal {
+        manifest.vaults.push();
+        BorrowMarketOffboardingVault storage stored = manifest.vaults[manifest.vaults.length - 1];
+        stored.allocator = source.allocator;
+        stored.maxVaultLossAssets = source.maxVaultLossAssets;
+        stored.vault = source.vault;
+        for (uint256 i; i < source.replacementMarkets.length; ++i) {
+            stored.replacementMarkets.push(source.replacementMarkets[i]);
+        }
+    }
+
+    function _pushManifestMarket(BorrowMarketOffboardingMarket memory source) internal {
+        manifest.markets.push();
+        BorrowMarketOffboardingMarket storage stored = manifest.markets[manifest.markets.length - 1];
+        stored.correctionRateSpy = source.correctionRateSpy;
+        stored.fixedRateSpy = source.fixedRateSpy;
+        stored.leverage = source.leverage;
+        stored.ltvReduction = source.ltvReduction;
+        stored.market = source.market;
+        stored.maxBadDebtAssets = source.maxBadDebtAssets;
+        stored.maxLiquidationFundingAssets = source.maxLiquidationFundingAssets;
+        stored.maxProtocolLossAssets = source.maxProtocolLossAssets;
+        stored.maxSupplierLossAssets = source.maxSupplierLossAssets;
+    }
+
+    function _selectManifestMarkets(uint256[] memory indexes) internal {
+        BorrowMarketOffboardingMarket[] memory selected = new BorrowMarketOffboardingMarket[](indexes.length);
+        for (uint256 i; i < indexes.length; ++i) {
+            require(indexes[i] < manifest.markets.length, "invalid manifest market index");
+            selected[i] = manifest.markets[indexes[i]];
+        }
+        delete manifest.markets;
+        for (uint256 i; i < selected.length; ++i) {
+            _pushManifestMarket(selected[i]);
+        }
+        _bindManifestState();
     }
 
     function _seedStandardPositions() internal {
@@ -158,10 +254,11 @@ abstract contract BorrowMarketOffboardingTestBase is Test {
         uint256 collateralValue = Math.mulDiv(collateralAssets, fixture.livePrice, LENDING_ORACLE_PRICE_PRECISION);
         uint256 maximumBorrow = Math.mulDiv(collateralValue, market.maxLtv(), 1 ether);
 
-        deal(address(borrowToken), fixture.supplier, 1 ether);
+        uint256 directSupplyAssets = 1e12;
+        deal(address(borrowToken), fixture.supplier, directSupplyAssets);
         vm.startPrank(fixture.supplier);
-        borrowToken.approve(address(market), 1 ether);
-        market.addSupply(1 ether, 0, fixture.supplier);
+        borrowToken.approve(address(market), directSupplyAssets);
+        market.addSupply(directSupplyAssets, 0, fixture.supplier);
         vm.stopPrank();
 
         _openBorrowPosition(market, fixture.exitBorrower, collateralAssets, maximumBorrow / 10);
@@ -196,15 +293,6 @@ abstract contract BorrowMarketOffboardingTestBase is Test {
         market.removeCollateral(exitPosition.collateralAssets, fixture.exitBorrower, fixture.exitBorrower, "");
         vm.stopPrank();
 
-        vm.prank(fixture.supplier);
-        (uint256 withdrawnAssets,) =
-            market.removeSupply(0, supplyPosition.supplyShares, fixture.supplier, fixture.supplier);
-
-        assertGt(withdrawnAssets, 0, "removeSupply returned no assets");
-        assertEq(market.position(fixture.supplier).supplyShares, 0, "removeSupply failed");
-        assertEq(market.position(fixture.exitBorrower).borrowShares, 0, "repay failed");
-        assertEq(market.position(fixture.exitBorrower).collateralAssets, 0, "removeCollateral failed");
-
         vm.mockCall(market.oracle(), abi.encodeCall(IOracle.getPrice, ()), abi.encode(fixture.livePrice / 4));
         Position memory liquidationPosition = market.position(fixture.liquidationBorrower);
         deal(address(borrowToken), fixture.liquidator, 1_000_000 ether);
@@ -219,21 +307,58 @@ abstract contract BorrowMarketOffboardingTestBase is Test {
         assertGt(repaidBorrow, 0, "liquidation repaid no debt");
         assertLt(positionAfter.borrowShares, liquidationPosition.borrowShares, "liquidation did not reduce debt");
         assertLt(positionAfter.collateralAssets, liquidationPosition.collateralAssets, "liquidation seized no position");
+
+        vm.prank(fixture.supplier);
+        (uint256 withdrawnAssets,) =
+            market.removeSupply(0, supplyPosition.supplyShares, fixture.supplier, fixture.supplier);
+
+        assertGt(withdrawnAssets, 0, "removeSupply returned no assets");
+        assertEq(market.position(fixture.supplier).supplyShares, 0, "removeSupply failed");
+        assertEq(market.position(fixture.exitBorrower).borrowShares, 0, "repay failed");
+        assertEq(market.position(fixture.exitBorrower).collateralAssets, 0, "removeCollateral failed");
     }
 
-    function _ensureFactory() internal returns (OwnerFixedRateIrmFactory factory) {
-        factory = OwnerFixedRateIrmFactory(input.contracts.ownerFixedRateIrmFactory);
-        if (address(factory) == address(0)) {
-            input = scriptHarness.runPhase(BorrowMarketOffboardingPhase.DEPLOY_OWNER_FIXED_RATE_IRM_FACTORY, input);
-            factory = OwnerFixedRateIrmFactory(input.contracts.ownerFixedRateIrmFactory);
+    function _executeBatchBFixedRate() internal {
+        _executeBatchA();
+        _executeFixedRatePhase();
+    }
+
+    function _executeFixedRatePhase() internal {
+        _assertAllFrozenAndUnpaused();
+        _executeTimelockPhase(
+            BorrowMarketOffboardingPhase.BATCH_B_SET_FIXED_RATE_IRM, FIXED_IRM_SCHEDULE_FILE, FIXED_IRM_EXECUTE_FILE
+        );
+    }
+
+    function _expectPhaseRevert(BorrowMarketOffboardingPhase phase, string memory reason) internal {
+        vm.expectRevert(bytes(reason));
+        scriptHarness.runPhase(phase, manifest, input);
+        vm.stopBroadcast();
+    }
+
+    function _executeBatchA() internal {
+        _prepareBatchAReplacementMarkets();
+        _executeConfiguredBatchA();
+    }
+
+    function _executeConfiguredBatchA() internal {
+        BorrowMarketOffboardingPhase phase = BorrowMarketOffboardingPhase.BATCH_A_CONTAIN;
+        input = scriptHarness.runPhase(phase, manifest, input);
+        if (vm.exists(_artifactPath(phase, FREEZE_FILE))) {
+            _executeSafeBatch(phase, FREEZE_FILE, manifest.freezerSafe);
         }
-        assertEq(factory.owner(), address(timelock), "Timelock does not own factory");
-    }
-
-    function _executeContainmentPrerequisite() internal {
-        input = scriptHarness.runPhase(BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, input);
-        _executeSafeBatch(FREEZE_FILE, FREEZER_SAFE);
-        _executeSafeBatch(CURATOR_FILE, vault.curator());
+        for (uint256 i; i < manifest.vaults.length; ++i) {
+            address affectedVault = manifest.vaults[i].vault;
+            string memory curatorFile = BorrowMarketOffboarding.vaultCuratorFileName(affectedVault);
+            if (vm.exists(_artifactPath(phase, curatorFile))) {
+                _executeSafeBatch(phase, curatorFile, IAltoVault(affectedVault).curator());
+            }
+            string memory allocatorFile = BorrowMarketOffboarding.vaultAllocatorFileName(phase, affectedVault);
+            if (vm.exists(_artifactPath(phase, allocatorFile))) {
+                _executeAllocatorPlan(phase, allocatorFile, manifest.vaults[i].allocator, affectedVault);
+            }
+        }
+        _advanceSourceBlock();
     }
 
     function _executeTimelockPhase(
@@ -241,14 +366,105 @@ abstract contract BorrowMarketOffboardingTestBase is Test {
         string memory scheduleFile,
         string memory executeFile
     ) internal {
-        input = scriptHarness.runPhase(phase, input);
-        _executeSafeBatch(scheduleFile, TIMELOCK_SAFE);
-        vm.warp(block.timestamp + timelock.getMinDelay());
-        _executeSafeBatch(executeFile, TIMELOCK_SAFE);
+        input = scriptHarness.runPhase(phase, manifest, input);
+        _executeTimelockArtifacts(phase, scheduleFile, executeFile);
     }
 
-    function _executeSafeBatch(string memory fileName, address safe) internal {
-        string memory json = vm.readFile(string.concat(OUTPUT_DIRECTORY, fileName));
+    function _executeTimelockArtifacts(
+        BorrowMarketOffboardingPhase phase,
+        string memory scheduleFile,
+        string memory executeFile
+    ) internal {
+        _executeSafeBatch(phase, scheduleFile, manifest.timelockSafe);
+        vm.warp(block.timestamp + timelock.getMinDelay());
+        vm.roll(block.number + 1);
+        _executeSafeBatch(phase, executeFile, manifest.timelockSafe);
+        manifest.sourceBlock = block.number;
+    }
+
+    function _executeAndRecordCorrection() internal {
+        bytes32 operationId = _correctionOperationId();
+        _executeTimelockPhase(
+            BorrowMarketOffboardingPhase.BATCH_B_REDUCE_LTV, REDUCE_LTV_SCHEDULE_FILE, REDUCE_LTV_EXECUTE_FILE
+        );
+        manifest.lastExecutedStep = manifest.step;
+        manifest.lastStepExecutedAt = block.timestamp;
+        manifest.lastOperationId = operationId;
+    }
+
+    function _correctionOperationId() internal view returns (bytes32 operationId) {
+        BorrowMarketOffboardingReport memory report =
+            BorrowMarketOffboarding.prepareRateAndLtvReduction(manifest, input);
+        (,, operationId) = ERPOutputWriter.timelockCalldata(
+            input.contracts.timelock, report.timelockBatch, report.timelockDelay, report.predecessor
+        );
+    }
+
+    function _setCorrectionInputs(uint256 rateSpy, uint256 ltvReduction) internal {
+        for (uint256 i; i < manifest.markets.length; ++i) {
+            manifest.markets[i].correctionRateSpy = rateSpy;
+            manifest.markets[i].ltvReduction = ltvReduction;
+        }
+    }
+
+    function _advanceTo(uint256 timestamp) internal {
+        if (block.timestamp < timestamp) vm.warp(timestamp);
+        _advanceSourceBlock();
+    }
+
+    function _advanceSourceBlock() internal {
+        vm.roll(block.number + 1);
+        manifest.sourceBlock = block.number;
+    }
+
+    function _executeBatchBToZeroDebt() internal {
+        _executeBatchBFixedRate();
+        manifest.t0 = block.timestamp;
+        _executeMediumCorrectionsToZero(manifest.t0, manifest.activationId);
+    }
+
+    function _executeMediumCorrectionsToZero(uint256 t0, string memory activationId) internal {
+        manifest.activationId = activationId;
+        manifest.severity = BorrowMarketOffboardingSeverity.MEDIUM;
+        manifest.schedulePhase = BorrowMarketOffboardingSchedulePhase.SCHEDULED;
+        manifest.t0 = t0;
+        manifest.lastExecutedStep = 0;
+        manifest.lastStepExecutedAt = 0;
+        manifest.lastOperationId = bytes32(0);
+
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            IMarket market = IMarket(borrowMarkets[i]);
+            vm.mockCall(market.oracle(), abi.encodeCall(IOracle.getPrice, ()), abi.encode(initialOraclePrices[i]));
+        }
+
+        uint256[4] memory offsets = [uint256(1 days), 7 days, 14 days, 21 days];
+        uint256[4] memory aprs = [uint256(0.1 ether), 0.2 ether, 0.4 ether, 0.8 ether];
+        for (uint256 i; i < offsets.length && !_allDebtCleared(); ++i) {
+            _advanceTo(manifest.t0 + offsets[i]);
+            manifest.step = i + 1;
+            _setCorrectionInputs(aprs[i] / uint256(365 days), 0.05 ether);
+            _executeAndRecordCorrection();
+            _liquidateManifestBorrowers(makeAddr("batch-c-terminal-liquidator"));
+        }
+        if (_allDebtCleared()) return;
+
+        manifest.schedulePhase = BorrowMarketOffboardingSchedulePhase.TERMINAL;
+        _advanceTo(manifest.t0 + 28 days);
+        _liquidateManifestBorrowers(makeAddr("batch-c-terminal-liquidator"));
+
+        uint256 terminalSteps;
+        while (!_allDebtCleared()) {
+            require(terminalSteps++ < 24, "Batch C prerequisite exceeded terminal step bound");
+            _advanceTo(manifest.lastStepExecutedAt + 1 hours);
+            manifest.step = manifest.lastExecutedStep + 1;
+            _setCorrectionInputs(0.8 ether / uint256(365 days), 0.05 ether);
+            _executeAndRecordCorrection();
+            _liquidateManifestBorrowers(makeAddr("batch-c-terminal-liquidator"));
+        }
+    }
+
+    function _executeSafeBatch(BorrowMarketOffboardingPhase phase, string memory fileName, address safe) internal {
+        string memory json = vm.readFile(_artifactPath(phase, fileName));
         assertEq(vm.parseJsonAddress(json, ".meta.createdFromSafeAddress"), safe, "wrong transaction Safe");
 
         uint256 transactionIndex;
@@ -258,6 +474,66 @@ abstract contract BorrowMarketOffboardingTestBase is Test {
             ++transactionIndex;
         }
         assertGt(transactionIndex, 0, "empty Safe batch");
+    }
+
+    function _executeAllocatorPlan(
+        BorrowMarketOffboardingPhase phase,
+        string memory fileName,
+        address allocator,
+        address affectedVault
+    ) internal {
+        string memory json = vm.readFile(_artifactPath(phase, fileName));
+        assertEq(vm.parseJsonAddress(json, ".caller"), allocator, "wrong allocator caller");
+        assertEq(vm.parseJsonAddress(json, ".vault"), affectedVault, "wrong allocator Vault");
+
+        if (phase == BorrowMarketOffboardingPhase.BATCH_A_CONTAIN) {
+            uint256 transactionIndex;
+            while (_jsonTransactionExists(json, transactionIndex)) {
+                (address target, bytes memory callData) = _jsonTransaction(json, transactionIndex);
+                assertEq(target, affectedVault, "wrong allocator target");
+                _callFrom(allocator, target, callData);
+                ++transactionIndex;
+            }
+            assertGt(transactionIndex, 0, "empty Batch A allocator plan");
+            return;
+        }
+
+        assertEq(vm.parseJsonAddress(json, ".transaction.to"), affectedVault, "wrong allocator target");
+        assertEq(vm.parseJsonString(json, ".transaction.value"), "0", "non-zero allocator value");
+        bytes memory data = vm.parseJsonBytes(json, ".transaction.data");
+        uint256[] memory indexes =
+            abi.decode(vm.parseJson(json, ".transaction.arguments.remainingIndexes"), (uint256[]));
+        assertEq(vm.parseJsonString(json, ".transaction.function"), "updateWithdrawQueue(uint256[])");
+        assertEq(
+            data, abi.encodeCall(IAltoVaultBase.updateWithdrawQueue, (indexes)), "wrong Batch C allocator calldata"
+        );
+        _callFrom(allocator, affectedVault, data);
+    }
+
+    function _executeRecoveryAllocatorPlans() internal {
+        BorrowMarketOffboardingPhase phase = BorrowMarketOffboardingPhase.BATCH_C_RECOVER;
+        input = scriptHarness.runPhase(phase, manifest, input);
+        assertFalse(vm.exists(_artifactPath(phase, RECOVER_SCHEDULE_FILE)), "unexpected recovery schedule");
+        assertFalse(vm.exists(_artifactPath(phase, RECOVER_EXECUTE_FILE)), "unexpected recovery execution");
+
+        bool executedPlan;
+        for (uint256 i; i < manifest.vaults.length; ++i) {
+            address affectedVault = manifest.vaults[i].vault;
+            string memory fileName = BorrowMarketOffboarding.vaultAllocatorFileName(phase, affectedVault);
+            if (!vm.exists(_artifactPath(phase, fileName))) continue;
+            executedPlan = true;
+            _executeAllocatorPlan(phase, fileName, manifest.vaults[i].allocator, affectedVault);
+        }
+        assertTrue(executedPlan, "missing Batch C allocator plan");
+        _advanceSourceBlock();
+    }
+
+    function _artifactPath(BorrowMarketOffboardingPhase phase, string memory fileName)
+        internal
+        view
+        returns (string memory)
+    {
+        return string.concat(BorrowMarketOffboarding.artifactDirectory(phase, manifest), "/", fileName);
     }
 
     function _jsonTransaction(string memory json, uint256 index)
@@ -279,6 +555,149 @@ abstract contract BorrowMarketOffboardingTestBase is Test {
         vm.prank(caller);
         (bool success, bytes memory returnData) = target.call(data);
         assertTrue(success, string(returnData));
+    }
+
+    function _affectedVaultSupplyAssets() internal view returns (uint256 assets) {
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            assets += borrowMarkets[i].expectedSupplyAssets(address(vault));
+        }
+    }
+
+    function _targetExitAllocations(uint256 extraLength) internal view returns (MarketAllocation[] memory allocations) {
+        allocations = new MarketAllocation[](borrowMarkets.length + extraLength);
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            allocations[i] = MarketAllocation({market: borrowMarkets[i], assets: 0});
+        }
+    }
+
+    function _prepareBatchAReplacementMarkets() internal {
+        bool replacementRequired;
+        for (uint256 i; i < manifest.vaults.length; ++i) {
+            if (manifest.vaults[i].replacementMarkets.length == 0) replacementRequired = true;
+        }
+        if (!replacementRequired) return;
+
+        uint256[] memory oraclePrices = new uint256[](borrowMarkets.length);
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            oraclePrices[i] = initialOraclePrices[i];
+        }
+
+        address replacement = _deployAndEnableReplacementBorrowMarket(type(uint128).max);
+        for (uint256 i; i < manifest.vaults.length; ++i) {
+            if (manifest.vaults[i].replacementMarkets.length != 0) continue;
+            IAltoVault affectedVault = IAltoVault(manifest.vaults[i].vault);
+            if (address(affectedVault) != address(vault)) {
+                _enableReplacementForVault(affectedVault, replacement, type(uint128).max);
+            }
+            manifest.vaults[i].replacementMarkets.push(replacement);
+        }
+
+        // Cap acceptance advances historical forks beyond the oracle heartbeat. Preserve the source-block prices so
+        // containment tests continue to exercise exits against the pinned fork state.
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            vm.mockCall(
+                IMarket(borrowMarkets[i]).oracle(), abi.encodeCall(IOracle.getPrice, ()), abi.encode(oraclePrices[i])
+            );
+        }
+    }
+
+    function _deployAndApproveReplacementBorrowMarket(uint256 supplyCap) internal returns (address replacement) {
+        replacement = _deployAndEnableReplacementBorrowMarket(supplyCap);
+        address[] memory supplyQueue = new address[](1);
+        supplyQueue[0] = replacement;
+        vm.prank(manifest.vaults[0].allocator);
+        vault.setSupplyQueue(supplyQueue);
+    }
+
+    function _deployAndEnableReplacementBorrowMarket(uint256 supplyCap) internal returns (address replacement) {
+        replacement = _deployRegisteredReplacementBorrowMarket();
+        _enableReplacementForVault(vault, replacement, supplyCap);
+    }
+
+    function _deployRegisteredReplacementBorrowMarket() internal returns (address replacement) {
+        _ensureBorrowMarketImplementation();
+        MarketContracts memory deployed = BorrowMarketBatch.deploy(_replacementMarketParams());
+        replacement = deployed.market;
+
+        assertEq(IMarket(replacement).borrowToken(), vaultToken.asset(), "replacement has wrong borrow token");
+        assertEq(IMarket(replacement).collateralToken(), WETH_MAINNET, "replacement has wrong collateral token");
+
+        vm.startPrank(address(timelock));
+        marketRegistry.addBorrowMarket(replacement);
+        altoAdapter.approveContract(replacement);
+        ILiquidationPeripheryBase(liquidationPeriphery).setSupportedMarket(replacement, true);
+        IMarket(replacement).setAuthorizedLiquidationPeriphery(liquidationPeriphery, true);
+        vm.stopPrank();
+    }
+
+    function _enableReplacementForVault(IAltoVault affectedVault, address replacement, uint256 supplyCap) internal {
+        vm.prank(affectedVault.curator());
+        affectedVault.submitCap(replacement, supplyCap);
+        uint256 validAt = affectedVault.pendingCap(replacement).validAt;
+        if (block.timestamp < validAt) vm.warp(validAt);
+        affectedVault.acceptCap(replacement);
+    }
+
+    function _reallocateVaultToReplacement(address replacement) internal {
+        MarketAllocation[] memory allocations = _targetExitAllocations(1);
+        allocations[borrowMarkets.length] = MarketAllocation({market: replacement, assets: type(uint256).max});
+
+        vm.prank(manifest.vaults[0].allocator);
+        vault.reallocate(allocations);
+    }
+
+    function _ensureBorrowMarketImplementation() private {
+        if (ALTO_BORROW_MARKET_IMPL.code.length != 0) return;
+
+        // The deployment helper's implementation address postdates some historical forks.
+        AltoBorrowMarket implementation = new AltoBorrowMarket();
+        vm.etch(ALTO_BORROW_MARKET_IMPL, address(implementation).code);
+    }
+
+    function _replacementMarketParams() private view returns (BorrowMarketBatchParams memory params) {
+        params.owner = address(timelock);
+        params.deployer = address(this);
+        params.dusd = vaultToken.asset();
+        params.altoAdapter = address(altoAdapter);
+        params.feeRecipient = IMarket(borrowMarkets[0]).feeRecipient();
+        params.collateralToken = WETH_MAINNET;
+        params.oracleAsset = EthereumMainnetLendingOracleAsset.WETH;
+        params.irmConfig = AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
+            curveSteepness: 4 ether,
+            adjustmentSpeed: 50 ether / int256(365 days),
+            targetUtilization: 0.9 ether,
+            initialRateAtTarget: 0.1 ether / int256(365 days),
+            minRateAtTarget: 0.001 ether / int256(365 days),
+            maxRateAtTarget: 2 ether / int256(365 days)
+        });
+        params.maxLtv = 0.8 ether;
+        params.initialBorrowOpeningFee = 0.0005 ether;
+        params.supplyCapAssets = 0;
+        params.liquidationConfig = LiquidationConfiguration({
+            maxLiquidationLtv: 0.85 ether,
+            dynamicBonusFeeStart: 0.02 ether,
+            ltvForCompleteLiquidation: 0.93 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.005 ether,
+            protocolFeePercentage: 0.07 ether,
+            isEnabledPriorityLiquidation: false,
+            disablePriorityLiquidationAbovePositionLtv: 0,
+            priorityLiquidationGracePeriod: 0,
+            taggerLiquidationGracePeriod: 0,
+            liquidationWindowTag: 0
+        });
+        params.validSwapTargets = _validSwapTargets();
+        params.freezer = manifest.freezerSafe;
+    }
+
+    function _validSwapTargets() private pure returns (address[] memory targets) {
+        targets = new address[](5);
+        targets[0] = ZEROX_SWAP_TARGET_MAINNET;
+        targets[1] = ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET;
+        targets[2] = KYBERSWAP_META_AGGREGATION_ROUTER_V2_MAINNET;
+        targets[3] = VELORA_AUGUSTUS_MAINNET;
+        targets[4] = NORDSTERN_ROUTER_MAINNET;
     }
 
     function _assertFrozenAndUnpaused(IMarketBase market) internal view {
@@ -305,9 +724,36 @@ abstract contract BorrowMarketOffboardingTestBase is Test {
             "leverage swapper permission removed"
         );
         assertTrue(
+            ILiquidationPeripheryBase(liquidationPeriphery).supportedMarkets(market),
+            "liquidation periphery market support removed"
+        );
+        assertTrue(
             IMarket(market).authorizedLiquidationPeriphery(liquidationPeriphery),
             "liquidation periphery permission removed"
         );
+    }
+
+    function _assertRecoveryRoutesRemoved(uint256 marketIndex) internal view {
+        address market = borrowMarkets[marketIndex];
+        address leverage = leverages[marketIndex];
+
+        assertFalse(marketRegistry.isBorrowMarket(market), "market remains registered");
+        assertTrue(altoAdapter.isApprovedContract(market), "market removed from adapter withdrawal route");
+        assertFalse(AltoLeverage(leverage).supportedMarkets(market), "leverage support remains");
+        assertFalse(IMarket(market).authorizedCallbacks(leverage), "leverage callback remains");
+        assertFalse(
+            IAltoLeverageSwapper(leverageSwappers[marketIndex]).isWhitelisted(leverage),
+            "leverage swapper permission remains"
+        );
+        assertFalse(
+            ILiquidationPeripheryBase(liquidationPeriphery).supportedMarkets(market),
+            "liquidation periphery support remains"
+        );
+        assertFalse(
+            IMarket(market).authorizedLiquidationPeriphery(liquidationPeriphery),
+            "liquidation periphery remains authorized"
+        );
+        _assertFrozenAndUnpaused(IMarketBase(market));
     }
 
     function _assertAllRequiredExitIntegrationsActive() internal view {
@@ -337,9 +783,9 @@ abstract contract BorrowMarketOffboardingTestBase is Test {
         return false;
     }
 
-    function _assertBorrowerInventoryComplete(uint256 marketIndex) internal view {
+    function _assertBorrowerListComplete(uint256 marketIndex) internal view {
         IMarket market = IMarket(borrowMarkets[marketIndex]);
-        address[] memory borrowers = _borrowers(marketIndex);
+        address[] memory borrowers = _forkBorrowers(marketIndex);
         uint256 listedBorrowShares;
         for (uint256 i; i < borrowers.length; ++i) {
             listedBorrowShares += market.position(borrowers[i]).borrowShares;
@@ -351,150 +797,69 @@ abstract contract BorrowMarketOffboardingTestBase is Test {
         );
     }
 
-    function _repayAllBorrowersForMarket(uint256 marketIndex) internal {
-        IMarket market = IMarket(borrowMarkets[marketIndex]);
-        address[] memory borrowers = _borrowers(marketIndex);
+    function _liquidateBorrowerList(IMarket market, address[] memory borrowers, address liquidator)
+        internal
+        returns (uint256 liquidationCount)
+    {
         IERC20 borrowToken = IERC20(market.borrowToken());
-        uint256 marketDebtAssets = market.totalBorrowed().assets;
-
+        deal(address(borrowToken), liquidator, type(uint128).max);
+        vm.startPrank(liquidator);
+        borrowToken.approve(address(market), type(uint256).max);
         for (uint256 i; i < borrowers.length; ++i) {
-            address borrower = borrowers[i];
-            uint256 borrowShares = market.position(borrower).borrowShares;
-            assertGt(borrowShares, 0, "listed borrower has no debt");
+            if (_attemptOrdinaryLiquidation(market, borrowers[i])) ++liquidationCount;
+        }
+        vm.stopPrank();
+    }
 
-            deal(address(borrowToken), borrower, marketDebtAssets + 1);
-            vm.startPrank(borrower);
-            borrowToken.approve(address(market), type(uint256).max);
-            market.repay(0, borrowShares, borrower);
-            vm.stopPrank();
-            assertEq(market.position(borrower).borrowShares, 0, "borrower debt remains");
+    function _liquidateManifestBorrowers(address liquidator) internal returns (uint256 liquidationCount) {
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            liquidationCount += _liquidateBorrowerList(IMarket(borrowMarkets[i]), _forkBorrowers(i), liquidator);
+        }
+    }
+
+    function _attemptOrdinaryLiquidation(IMarket market, address borrower) internal returns (bool liquidated) {
+        uint256 borrowSharesBefore = market.position(borrower).borrowShares;
+        if (borrowSharesBefore == 0) return false;
+
+        (bool success, bytes memory returnData) =
+            address(market).call(abi.encodeCall(IMarketBase.liquidate, (borrower, bytes(""), bytes(""))));
+        if (!success) {
+            if (
+                _selector(returnData)
+                    == IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidatingSolventPosition
+                    .selector
+            ) return false;
+            assembly ("memory-safe") {
+                revert(add(returnData, 0x20), mload(returnData))
+            }
         }
 
-        Balance memory debtAfter = market.totalBorrowed();
-        assertEq(debtAfter.assets, 0, "market borrowed assets remain");
-        assertEq(debtAfter.shares, 0, "market borrowed shares remain");
-    }
-    /// @dev Current non-zero borrowers, sourced from Borrow events and verified at ADDRESS_SNAPSHOT_BLOCK.
-
-    function _borrowers(uint256 marketIndex) internal pure returns (address[] memory borrowers) {
-        if (marketIndex == 0) return _wbtcBorrowers();
-        if (marketIndex == 1) return _cbbtcBorrowers();
-        if (marketIndex == 2) return _susdeBorrowers();
-        if (marketIndex == 3) return _syrupUsdcBorrowers();
-        if (marketIndex == 4) return _paxgBorrowers();
-        revert("invalid market index");
+        assertLt(market.position(borrower).borrowShares, borrowSharesBefore, "ordinary liquidation made no progress");
+        return true;
     }
 
-    function _wbtcBorrowers() internal pure returns (address[] memory borrowers) {
-        borrowers = new address[](12);
-        borrowers[0] = 0x023c1dE9cdeB3BF789F1B9594b80a6E6F7e03aE0;
-        borrowers[1] = 0x43E47A90990B0357c5988fF416E77C253F618274;
-        borrowers[2] = 0x4e90Da1dDCD5B0Fb295b6A69251b5D04D5bCCA7a;
-        borrowers[3] = 0x5451C3C1e156B7e8e3004727577485d4ff1152e0;
-        borrowers[4] = 0x6644394eec6782a2f4D146Bb1f8896C50d7f2990;
-        borrowers[5] = 0x6ACe206b3d969C8D17070f835518333f8A454Fb4;
-        borrowers[6] = 0x71f0F9669ACa235Cd39307Aa931e1179A0C0DD48;
-        borrowers[7] = 0x862d949F1A9617DBd18CC7B832E8f9E98bE2D535;
-        borrowers[8] = 0x93FC1F35f53a9553534979233caF273214C51Fd7;
-        borrowers[9] = 0xAb56934ec90B1C2fC76eF2B03c1dE282A66799BF;
-        borrowers[10] = 0xC52dDBF8B6d3A5b68bf4cEbbc7240834A3CBA73B;
-        borrowers[11] = 0xEa1b93cdB67a92Fd961FFE82d15eFE414AD08F92;
+    function _allDebtCleared() internal view returns (bool) {
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            Balance memory debt = IMarket(borrowMarkets[i]).totalBorrowed();
+            if (debt.assets != 0 || debt.shares != 0) return false;
+        }
+        return true;
     }
 
-    function _cbbtcBorrowers() internal pure returns (address[] memory borrowers) {
-        borrowers = new address[](9);
-        borrowers[0] = 0x06216ab9D28d989d31320D24A7C382aBE63FbA47;
-        borrowers[1] = 0x1b35fcb58F5E1e2a42fF8E66ddf5646966aBf08C;
-        borrowers[2] = 0x2A3641aFd2bB54cE729198295b80FEfFaa8b14C5;
-        borrowers[3] = 0x3482e460D7E8108ef7d24a5d7C60133dc5697597;
-        borrowers[4] = 0x68d3431bd22779b08113B50B3CF6a0ba265fc9E0;
-        borrowers[5] = 0xbcb4c8386c097589e7825aAeb9E7C6295835F1d6;
-        borrowers[6] = 0xC3453f9ba9974D956f686Ba7F236BbFF5DE6aFF6;
-        borrowers[7] = 0xd65370c5565F2bEa121F3C22823233F98A4Be793;
-        borrowers[8] = 0xD6E8222b207EbDB33dfDd0a6299b9424F2BDf35a;
+    function _selector(bytes memory data) internal pure returns (bytes4 selector) {
+        if (data.length < 4) return bytes4(0);
+        assembly ("memory-safe") {
+            selector := mload(add(data, 0x20))
+        }
     }
 
-    function _susdeBorrowers() internal pure returns (address[] memory borrowers) {
-        borrowers = new address[](30);
-        borrowers[0] = 0x023c1dE9cdeB3BF789F1B9594b80a6E6F7e03aE0;
-        borrowers[1] = 0x04FAD3020d3fcFedAA2B548143bFb6127E8Ea581;
-        borrowers[2] = 0x0ba164C161a8bDfCE9a295e6b1e3067498fc5D97;
-        borrowers[3] = 0x0cd7E1660D63a6aEbDA782a2Eb7f2875716aC3E8;
-        borrowers[4] = 0x1b35fcb58F5E1e2a42fF8E66ddf5646966aBf08C;
-        borrowers[5] = 0x2A3641aFd2bB54cE729198295b80FEfFaa8b14C5;
-        borrowers[6] = 0x3E88681De2E12d1AC4116a7A6fb964A2C4C102AE;
-        borrowers[7] = 0x4096D69deE9EBDbE23C939a241660F7861e0A223;
-        borrowers[8] = 0x513AeDacE44cc9a0724CA276a8CeeeE950903576;
-        borrowers[9] = 0x5D50cA0a21F434E9F3f8110e1980005111D1B93b;
-        borrowers[10] = 0x6e3880c88695CeBdE3e7baa95662050F7126795b;
-        borrowers[11] = 0x7F8ddA85d44A6F225257375546fec2f96C3b95EE;
-        borrowers[12] = 0x817758aaA3c3430F764De6630EAbE218e1282BF0;
-        borrowers[13] = 0x82F5604D78ea962A018049732f81Bf74851A77ad;
-        borrowers[14] = 0x862d949F1A9617DBd18CC7B832E8f9E98bE2D535;
-        borrowers[15] = 0x88de30CDB91DE2B66b801512bB8073169035bdFB;
-        borrowers[16] = 0x8B16e97ae8A322d56d619022443492dF4aeAa7Cd;
-        borrowers[17] = 0x8ce4fe19ac5ea0df14200FADd5450c3cF40CF0D0;
-        borrowers[18] = 0x91FC012D62AF22390B55B0B3d489ca26473612BB;
-        borrowers[19] = 0x9E1b45A473B8B004A40ddC6Ea2730b36d16a1796;
-        borrowers[20] = 0xA5acf1B71B653662FCf881EDbf8c92460b1C387D;
-        borrowers[21] = 0xAaF92Ac96A7cfc79Cc539155FFA068e061D9adda;
-        borrowers[22] = 0xb0FabE3bCAC50F065DBF68C0B271118DDC005402;
-        borrowers[23] = 0xbcb4c8386c097589e7825aAeb9E7C6295835F1d6;
-        borrowers[24] = 0xCc58AccACd0db8010e4c8A20BA49D2DC9d4D7f59;
-        borrowers[25] = 0xd65370c5565F2bEa121F3C22823233F98A4Be793;
-        borrowers[26] = 0xe12f8e5309682cDEa4A3F7160fbB25D0d111d9b7;
-        borrowers[27] = 0xEa1b93cdB67a92Fd961FFE82d15eFE414AD08F92;
-        borrowers[28] = 0xF9245808dAc44f7365189d30bD981a3B8dc83Bef;
-        borrowers[29] = 0xfe8D5Dea7987d101247243D5BbAF7804a1Ff187a;
-    }
-
-    function _syrupUsdcBorrowers() internal pure returns (address[] memory borrowers) {
-        borrowers = new address[](14);
-        borrowers[0] = 0x04FAD3020d3fcFedAA2B548143bFb6127E8Ea581;
-        borrowers[1] = 0x0cd7E1660D63a6aEbDA782a2Eb7f2875716aC3E8;
-        borrowers[2] = 0x0fD90B9D61af052C4328BC2Fa9A1529627af0a7d;
-        borrowers[3] = 0x4096D69deE9EBDbE23C939a241660F7861e0A223;
-        borrowers[4] = 0x4e90Da1dDCD5B0Fb295b6A69251b5D04D5bCCA7a;
-        borrowers[5] = 0x513AeDacE44cc9a0724CA276a8CeeeE950903576;
-        borrowers[6] = 0x82F5604D78ea962A018049732f81Bf74851A77ad;
-        borrowers[7] = 0x91FC012D62AF22390B55B0B3d489ca26473612BB;
-        borrowers[8] = 0x9E1b45A473B8B004A40ddC6Ea2730b36d16a1796;
-        borrowers[9] = 0xA5acf1B71B653662FCf881EDbf8c92460b1C387D;
-        borrowers[10] = 0xb401300129437757A22d8ca3AaCeD4fBe6C4BB82;
-        borrowers[11] = 0xb82bE987cF6f25d0F040Ca4567e3dacb4b92Aa91;
-        borrowers[12] = 0xBB5311aF8D1982D690050F05AecAc08F0Ac65f19;
-        borrowers[13] = 0xD6E8222b207EbDB33dfDd0a6299b9424F2BDf35a;
-    }
-
-    function _paxgBorrowers() internal pure returns (address[] memory borrowers) {
-        borrowers = new address[](11);
-        borrowers[0] = 0x04FAD3020d3fcFedAA2B548143bFb6127E8Ea581;
-        borrowers[1] = 0x1DCb82280f423f475F7DC3A76Ed53f3C38578fA7;
-        borrowers[2] = 0x22076fba2ea9650a028Aa499d0444c4Aa9aF1Bf8;
-        borrowers[3] = 0x4096D69deE9EBDbE23C939a241660F7861e0A223;
-        borrowers[4] = 0x43E47A90990B0357c5988fF416E77C253F618274;
-        borrowers[5] = 0x5275817b74021E97c980E95EdE6bbAc0D0d6f3a2;
-        borrowers[6] = 0x5451C3C1e156B7e8e3004727577485d4ff1152e0;
-        borrowers[7] = 0x5EeDe1C45E4401d7D95E55446dAd71B511328534;
-        borrowers[8] = 0x862d949F1A9617DBd18CC7B832E8f9E98bE2D535;
-        borrowers[9] = 0xb401300129437757A22d8ca3AaCeD4fBe6C4BB82;
-        borrowers[10] = 0xBB5311aF8D1982D690050F05AecAc08F0Ac65f19;
-    }
-
-    /// @dev Current non-zero DUSD Vault holders, sourced from Transfer events at ADDRESS_SNAPSHOT_BLOCK.
-    function _vaultHolders() internal pure returns (address[] memory holders) {
-        holders = new address[](10);
-        holders[0] = 0x04FAD3020d3fcFedAA2B548143bFb6127E8Ea581;
-        holders[1] = 0x5451C3C1e156B7e8e3004727577485d4ff1152e0;
-        holders[2] = 0x68d3431bd22779b08113B50B3CF6a0ba265fc9E0;
-        holders[3] = 0x862d949F1A9617DBd18CC7B832E8f9E98bE2D535;
-        holders[4] = 0x8E599E2F24eF8E3eef45Eb91210B70bc96eEb08C;
-        holders[5] = 0x94FfD866Ad6514a478641D955667c70cb5a08E90;
-        holders[6] = 0xA1148A1b94262540994Cf9Aa431A13ad39764228;
-        holders[7] = 0xA5acf1B71B653662FCf881EDbf8c92460b1C387D;
-        holders[8] = 0xb0FabE3bCAC50F065DBF68C0B271118DDC005402;
-        holders[9] = 0xd65370c5565F2bEa121F3C22823233F98A4Be793;
+    /// @dev Returns the cached deterministic borrower list captured at the initial fork block.
+    function _forkBorrowers(uint256 marketIndex) internal view returns (address[] memory borrowers) {
+        require(marketIndex < borrowMarkets.length, "invalid market index");
+        address market = borrowMarkets[marketIndex];
+        for (uint256 i; i < borrowerFixtureMarkets.length; ++i) {
+            if (borrowerFixtureMarkets[i].market == market) return borrowerFixtureMarkets[i].borrowers;
+        }
+        revert("borrower fixture market mismatch");
     }
 }
-// -----------------------------------------------------------------------------
-// OwnerFixedRateIrmFactory deployment phase
