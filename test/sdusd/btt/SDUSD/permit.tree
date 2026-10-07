@@ -1,0 +1,19 @@
+permit
+├── Given a freshly initialized proxy
+│   └── It uses Staked DUSD, version 1, the chain ID and the proxy address as its domain
+├── When a relayer submits a valid signed approval
+│   └── It permits the spender to redeem the holder's shares
+├── When the spender transfers permitted shares
+│   └── It consumes the allowance and rejects signature replay
+├── When the signature has expired
+│   └── It reverts without consuming the nonce
+├── When the timestamp equals the deadline
+│   └── It accepts the signature
+├── When another account signs the approval
+│   └── It reverts without consuming the nonce
+├── When the approval amount is changed
+│   └── It reverts without consuming the nonce
+├── When the signature is submitted to another proxy
+│   └── It reverts without consuming the nonce
+└── When the chain ID changes
+    └── It updates the domain and rejects signatures from the previous chain
