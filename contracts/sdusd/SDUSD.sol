@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -6,6 +6,10 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {
+    ERC20PermitUpgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
 
 import {AltoOwnable2StepUpgradeable} from "@alto/utils/AltoOwnable2StepUpgradeable.sol";
@@ -31,6 +35,7 @@ import {ISDUSDVaultStaticTypes, ISDUSDVaultBase, SDUSDInitParams} from "./interf
 contract SDUSD is
     Initializable,
     ERC4626Upgradeable,
+    ERC20PermitUpgradeable,
     AltoOwnable2StepUpgradeable,
     UUPSUpgradeable,
     Pausable,
@@ -96,6 +101,7 @@ contract SDUSD is
 
         __ERC20_init("Staked DUSD", "sDUSD");
         __ERC4626_init(IERC20(params.dusd));
+        __ERC20Permit_init("Staked DUSD");
         __Ownable_init(params.admin);
         __Ownable2Step_init();
         __UUPSUpgradeable_init();
@@ -115,6 +121,11 @@ contract SDUSD is
 
         rewardDuration = params.rewardDuration;
         emit RewardDurationUpdated(0, params.rewardDuration);
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    function decimals() public view override(ERC20Upgradeable, ERC4626Upgradeable) returns (uint8) {
+        return ERC4626Upgradeable.decimals();
     }
 
     /// @inheritdoc ERC4626Upgradeable
