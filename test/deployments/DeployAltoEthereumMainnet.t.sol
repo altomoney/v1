@@ -1537,6 +1537,11 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
     function setUp() public override {
         super.setUp();
         vm.createSelectFork(vm.rpcUrl("ethereum"), MAINNET_FORK_BLOCK);
+        // This fork predates the deployment now recorded in the active address book.
+        input.contracts.protocolFeeCollector = address(0);
+        input.contracts.protocolFeeCollectorImplementation = address(0);
+        input.contracts.sdusd = address(0);
+        input.contracts.sdusdImplementation = address(0);
         params.freezer = address(EmergencyController(input.contracts.emergencyController).pauserSafe());
         deal(input.contracts.dusd, address(this), 1 ether);
         _originalControllerConfiguration = _controllerConfigurationHash();
