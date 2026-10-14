@@ -275,7 +275,11 @@ library BorrowMarketOffboarding {
             assert(callIndex == curatorCallCount);
             report.vaultCuratorBatches[vaultIndex] = curatorBatch;
             report.vaultAllocatorPlans[vaultIndex] = ERPVaultQueue.setSupplyQueuePlan(
-                vault, configuredVault.allocator, affectedMarkets, configuredVault.replacementMarkets
+                vault,
+                configuredVault.allocator,
+                affectedMarkets,
+                configuredVault.replacementMarkets,
+                configuredVault.reallocationBufferAssets
             );
         }
     }

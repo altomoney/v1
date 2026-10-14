@@ -17,6 +17,17 @@ import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract BatchAContainTest is BorrowMarketOffboardingTestBase {
+    struct ReallocationBufferState {
+        address replacement;
+        uint256 replacementBefore;
+        uint256 replacementCap;
+        uint256 sourceBefore;
+        uint256 sourceTokenLiquidity;
+        uint256 sourceWithdrawable;
+        uint256 sourceTarget;
+        uint256 replacementPrice;
+    }
+
     using AltoBalancesLib for address;
 
     function setUp() public {
@@ -44,19 +55,11 @@ contract BatchAContainTest is BorrowMarketOffboardingTestBase {
         );
         _executeBatchA();
 
-        // A rerun retains a source-position plan while illiquid affected shares remain. Executing it is idempotent.
+        // A rerun removes the stale allocator plan when no more affected assets are currently withdrawable.
         uint256 remainingAssets = _affectedVaultSupplyAssets();
-        string memory allocatorFile = BorrowMarketOffboarding.vaultAllocatorFileName(
-            BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, address(vault)
-        );
+        string memory allocatorPath = _writeStaleBatchAAllocatorPlan(address(vault));
         input = scriptHarness.runPhase(BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, manifest, input);
-        assertTrue(
-            vm.exists(_artifactPath(BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, allocatorFile)),
-            "outstanding exposure plan missing"
-        );
-        _executeAllocatorPlan(
-            BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, allocatorFile, manifest.vaults[0].allocator, address(vault)
-        );
+        assertFalse(vm.exists(allocatorPath), "stale allocator plan");
         assertEq(_affectedVaultSupplyAssets(), remainingAssets, "zero-liquidity rerun changed exposure");
 
         assertGt(remainingAssets, 0, "illiquid Vault exposure was not retained");
@@ -111,18 +114,9 @@ contract BatchAContainTest is BorrowMarketOffboardingTestBase {
         assertGe(vaultToken.totalAssets() + 10, vaultAssetsBefore, "Vault lost assets during reallocation");
 
         // With no affected supply shares and no remaining queue update, rerunning removes the optional stale plan.
+        string memory allocatorPath = _writeStaleBatchAAllocatorPlan(address(vault));
         input = scriptHarness.runPhase(BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, manifest, input);
-        assertFalse(
-            vm.exists(
-                _artifactPath(
-                    BorrowMarketOffboardingPhase.BATCH_A_CONTAIN,
-                    BorrowMarketOffboarding.vaultAllocatorFileName(
-                        BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, address(vault)
-                    )
-                )
-            ),
-            "stale Batch A allocator plan remains"
-        );
+        assertFalse(vm.exists(allocatorPath), "stale Batch A allocator plan remains");
 
         _depositAndAssertReplacementOnly(replacement);
     }
@@ -215,6 +209,7 @@ contract BatchAContainTest is BorrowMarketOffboardingTestBase {
             BorrowMarketOffboardingVault({
                 allocator: VAULT_ALLOCATOR,
                 maxVaultLossAssets: 0,
+                reallocationBufferAssets: 1 ether,
                 replacementMarkets: new address[](0),
                 vault: address(vault)
             })
@@ -223,6 +218,7 @@ contract BatchAContainTest is BorrowMarketOffboardingTestBase {
             BorrowMarketOffboardingVault({
                 allocator: secondAllocator,
                 maxVaultLossAssets: 0,
+                reallocationBufferAssets: 1 ether,
                 replacementMarkets: new address[](0),
                 vault: address(secondVault)
             })
@@ -238,7 +234,7 @@ contract BatchAContainTest is BorrowMarketOffboardingTestBase {
         assertEq(secondVault.supplyQueueLength(), 0, "second Vault supply queue not cleared");
     }
 
-    /// @dev Uses two enabled real destination markets. The first has limited room and must fill to its cap; the second
+    /// @dev Uses two enabled real destination markets. The first has limited room and must fill to its cap minus the 1 DUSD execution buffer; the second
     /// receives the exact remainder through the terminal max allocation in the generated ordered plan.
     function testBatchAUsesReplacementMarketsInManifestOrder() public {
         manifest.activationId = "batch-a-ordered-replacements";
@@ -255,58 +251,216 @@ contract BatchAContainTest is BorrowMarketOffboardingTestBase {
         _executeConfiguredBatchA();
 
         assertApproxEqAbs(
-            firstReplacement.expectedSupplyAssets(address(vault)), firstCap, 2, "first replacement did not fill"
+            firstReplacement.expectedSupplyAssets(address(vault)),
+            firstCap - 1 ether,
+            2,
+            "first replacement target is wrong"
         );
         assertGt(secondReplacement.expectedSupplyAssets(address(vault)), 0, "second replacement received no assets");
         assertEq(_affectedVaultSupplyAssets(), 0, "affected Vault exposure remains");
     }
 
-    /// @dev Leaves replacementMarkets empty while the production Vault has withdrawable affected exposure. Generation
-    /// must stop because an allocator plan may never withdraw assets without enough destination cap room.
-    function testBatchARejectsInsufficientReplacementCapacity() public {
-        manifest.activationId = "batch-a-insufficient-replacement-capacity";
-        _expectPhaseRevert(BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, "Batch A: insufficient replacement capacity");
+    /// @dev Gives one replacement less capacity than the first affected market can withdraw. Batch A drains only that
+    /// capacity from the first manifest market, reports all remaining exposure, and still completes containment.
+    function testBatchAReallocatesOnlyWithinReplacementCapacity() public {
+        manifest.activationId = "batch-a-partial-replacement-capacity";
+        address replacement = _deployAndEnableReplacementBorrowMarket(type(uint128).max);
+        uint256 firstWithdrawable = _withdrawableVaultAssets(borrowMarkets[0]);
+        assertGt(firstWithdrawable, 2, "first affected market has no partial-withdrawal fixture");
+        uint256 replacementCap = firstWithdrawable / 2;
+        vm.prank(vault.curator());
+        vault.submitCap(replacement, replacementCap);
+        manifest.vaults[0].replacementMarkets.push(replacement);
+
+        uint256 affectedBefore = _affectedVaultSupplyAssets();
+        uint256[] memory suppliedBefore = new uint256[](borrowMarkets.length);
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            suppliedBefore[i] = borrowMarkets[i].expectedSupplyAssets(address(vault));
+        }
+        string memory planPath = _batchAAllocatorPlanPath(address(vault));
+
+        _executeConfiguredBatchA();
+
+        uint256 replacementAssets = replacement.expectedSupplyAssets(address(vault));
+        uint256 affectedAfter = _affectedVaultSupplyAssets();
+        assertApproxEqAbs(replacementAssets, replacementCap - 2 ether, 2, "replacement buffers are wrong");
+        assertApproxEqAbs(
+            affectedBefore - affectedAfter, replacementAssets, 2, "withdrawal exceeded replacement capacity"
+        );
+        assertApproxEqAbs(
+            affectedAfter, _reportedRemainingAssets(planPath), 2, "reported affected remainder is incorrect"
+        );
+        assertLt(
+            borrowMarkets[0].expectedSupplyAssets(address(vault)),
+            suppliedBefore[0],
+            "first manifest market was not reduced"
+        );
+        for (uint256 i = 1; i < borrowMarkets.length; ++i) {
+            assertEq(
+                borrowMarkets[i].expectedSupplyAssets(address(vault)),
+                suppliedBefore[i],
+                "later manifest market was reduced"
+            );
+        }
+        _assertAllFrozenAndUnpaused();
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            _assertVaultPendingWorkCleared(vault, borrowMarkets[i]);
+            if (IMarket(borrowMarkets[i]).position(address(vault)).supplyShares != 0) {
+                assertTrue(_isInWithdrawQueue(borrowMarkets[i]), "remaining exposure lost its withdrawal route");
+            }
+        }
     }
 
-    /// @dev Supplies invalid replacement lists to the production Vault and verifies the manifest rejects zero, duplicate,
-    /// affected, unregistered, disabled, zero-cap, frozen, and paused destination markets.
-    function testBatchARejectsInvalidReplacementMarkets() public {
-        manifest.activationId = "batch-a-invalid-replacements";
+    /// @dev Generates a source-liquidity-limited allocator plan, then lets both the partially liquid affected source and
+    /// an already-funded replacement accrue for two hours. The source target and replacement cap buffers keep the
+    /// recorded calldata executable while the terminal max allocation supplies exactly what was withdrawn.
+    function testBatchAReallocationBuffersInterestUntilExecution() public {
+        ReallocationBufferState memory state;
+        manifest.activationId = "batch-a-reallocation-interest-buffer";
+        state.replacement = _deployRegisteredReplacementBorrowMarket();
+        state.replacementPrice = IOracle(IMarket(state.replacement).oracle()).getPrice();
+        _enableReplacementForVault(vault, state.replacement, type(uint128).max);
+        address[] memory supplyQueue = new address[](1);
+        supplyQueue[0] = state.replacement;
+        vm.prank(manifest.vaults[0].allocator);
+        vault.setSupplyQueue(supplyQueue);
+        vm.mockCall(
+            IMarket(state.replacement).oracle(),
+            abi.encodeCall(IOracle.getPrice, ()),
+            abi.encode(state.replacementPrice)
+        );
+        manifest.vaults[0].replacementMarkets.push(state.replacement);
 
-        _setOnlyReplacement(address(0));
-        _expectPhaseRevert(BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, "Batch A: zero replacement market");
+        {
+            address depositor = makeAddr("buffer-replacement-depositor");
+            IERC20 asset = IERC20(vaultToken.asset());
+            deal(address(asset), depositor, 10 ether);
+            vm.startPrank(depositor);
+            asset.approve(address(vaultToken), 10 ether);
+            vaultToken.deposit(10 ether, depositor);
+            vm.stopPrank();
+        }
+        _openBorrowPosition(IMarket(state.replacement), makeAddr("buffer-replacement-borrower"), 1 ether, 5 ether);
 
-        _setOnlyReplacement(borrowMarkets[0]);
-        _expectPhaseRevert(BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, "Batch A: affected market is replacement");
+        state.replacementBefore = state.replacement.expectedSupplyAssets(address(vault));
+        state.sourceBefore = borrowMarkets[0].expectedSupplyAssets(address(vault));
+        state.sourceWithdrawable = _withdrawableVaultAssets(borrowMarkets[0]);
+        state.sourceTokenLiquidity = IERC20(IMarket(borrowMarkets[0]).borrowToken()).balanceOf(borrowMarkets[0]);
+        assertGt(state.sourceWithdrawable, 4 ether, "first affected market has no buffered-withdrawal fixture");
+        assertLt(state.sourceWithdrawable, state.sourceBefore, "affected source is not partially liquid");
 
-        _setOnlyReplacement(makeAddr("unregistered-replacement"));
-        _expectPhaseRevert(BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, "Batch A: replacement market not registered");
-
-        address disabled = _deployRegisteredReplacementBorrowMarket();
-        _setOnlyReplacement(disabled);
-        _expectPhaseRevert(BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, "Batch A: replacement market not enabled");
-
-        address duplicate = _deployAndEnableReplacementBorrowMarket(type(uint128).max);
-        _setOnlyReplacement(duplicate);
-        manifest.vaults[0].replacementMarkets.push(duplicate);
-        _expectPhaseRevert(BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, "Batch A: duplicate replacement market");
-
+        // Give the replacement enough capacity for all currently available source liquidity.
+        // The 1 DUSD source and destination buffers protect against interest accrued before execution.
+        state.replacementCap = state.replacementBefore + state.sourceWithdrawable + 1 ether;
         vm.prank(vault.curator());
-        vault.submitCap(duplicate, 0);
-        _setOnlyReplacement(duplicate);
-        _expectPhaseRevert(BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, "Batch A: replacement market has zero cap");
+        vault.submitCap(state.replacement, state.replacementCap);
 
+        BorrowMarketOffboardingPhase phase = BorrowMarketOffboardingPhase.BATCH_A_CONTAIN;
+        input = scriptHarness.runPhase(phase, manifest, input);
+        if (vm.exists(_artifactPath(phase, FREEZE_FILE))) {
+            _executeSafeBatch(phase, FREEZE_FILE, manifest.freezerSafe);
+        }
+        string memory curatorFile = BorrowMarketOffboarding.vaultCuratorFileName(address(vault));
+        if (vm.exists(_artifactPath(phase, curatorFile))) {
+            _executeSafeBatch(phase, curatorFile, vault.curator());
+        }
+
+        string memory allocatorFile = BorrowMarketOffboarding.vaultAllocatorFileName(phase, address(vault));
+        string memory plan = vm.readFile(_artifactPath(phase, allocatorFile));
+        state.sourceTarget = vm.parseUint(vm.parseJsonString(plan, ".postconditions.expectedAllocations[0].assets"));
+        assertEq(
+            state.sourceTarget,
+            state.sourceBefore - (state.sourceWithdrawable - 1 ether),
+            "source target omitted a buffer"
+        );
+
+        vm.warp(block.timestamp + 2 hours);
+        vm.roll(block.number + 10);
+        uint256 sourceBeforeExecution = borrowMarkets[0].expectedSupplyAssets(address(vault));
+        uint256 replacementBeforeExecution = state.replacement.expectedSupplyAssets(address(vault));
+        assertGt(sourceBeforeExecution, state.sourceBefore, "affected source did not accrue interest");
+        assertGt(replacementBeforeExecution, state.replacementBefore, "replacement did not accrue interest");
+        assertLt(
+            sourceBeforeExecution - state.sourceBefore + replacementBeforeExecution - state.replacementBefore,
+            1 ether,
+            "two-hour interest exceeds the execution buffer"
+        );
+        assertEq(
+            IERC20(IMarket(borrowMarkets[0]).borrowToken()).balanceOf(borrowMarkets[0]),
+            state.sourceTokenLiquidity,
+            "source token liquidity changed before execution"
+        );
+        _executeAllocatorPlan(phase, allocatorFile, manifest.vaults[0].allocator, address(vault));
+
+        uint256 replacementAfter = state.replacement.expectedSupplyAssets(address(vault));
+        assertApproxEqAbs(
+            borrowMarkets[0].expectedSupplyAssets(address(vault)),
+            state.sourceTarget,
+            2,
+            "buffered source target not reached"
+        );
+        assertGt(replacementAfter, state.replacementBefore, "replacement received no withdrawn assets");
+        assertLe(replacementAfter, state.replacementCap - 1 ether, "replacement consumed its cap buffer");
+    }
+
+    /// @dev Mixes unusable replacement entries with one valid final destination. Phase 0 skips the invalid entries,
+    /// executes containment, and sends withdrawn assets only to the valid replacement.
+    function testBatchASkipsInvalidReplacementMarkets() public {
+        manifest.activationId = "batch-a-invalid-replacements";
+        address disabled = _deployRegisteredReplacementBorrowMarket();
+        address zeroCap = _deployAndEnableReplacementBorrowMarket(type(uint128).max);
+        vm.prank(vault.curator());
+        vault.submitCap(zeroCap, 0);
         address frozen = _deployAndEnableReplacementBorrowMarket(type(uint128).max);
         vm.prank(manifest.freezerSafe);
         IPausable(frozen).pause(FROZEN_TYPE, true);
-        _setOnlyReplacement(frozen);
-        _expectPhaseRevert(BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, "Batch A: replacement market frozen");
-
         address paused = _deployAndEnableReplacementBorrowMarket(type(uint128).max);
         vm.prank(manifest.freezerSafe);
         IPausable(paused).pause(PAUSE_TYPE, true);
-        _setOnlyReplacement(paused);
-        _expectPhaseRevert(BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, "Batch A: replacement market paused");
+        address valid = _deployAndEnableReplacementBorrowMarket(type(uint128).max);
+
+        address[] storage replacements = manifest.vaults[0].replacementMarkets;
+        replacements.push(address(0));
+        replacements.push(borrowMarkets[0]);
+        replacements.push(makeAddr("unregistered-replacement"));
+        replacements.push(disabled);
+        replacements.push(zeroCap);
+        replacements.push(frozen);
+        replacements.push(paused);
+        replacements.push(valid);
+        replacements.push(valid);
+        _provideAffectedMarketExitLiquidity();
+
+        _executeConfiguredBatchA();
+
+        assertEq(_affectedVaultSupplyAssets(), 0, "valid replacement did not receive all available assets");
+        assertGt(valid.expectedSupplyAssets(address(vault)), 0, "valid replacement received no assets");
+        assertEq(disabled.expectedSupplyAssets(address(vault)), 0, "disabled replacement received assets");
+        assertEq(zeroCap.expectedSupplyAssets(address(vault)), 0, "zero-cap replacement received assets");
+        assertEq(frozen.expectedSupplyAssets(address(vault)), 0, "frozen replacement received assets");
+        assertEq(paused.expectedSupplyAssets(address(vault)), 0, "paused replacement received assets");
+    }
+
+    /// @dev Leaves replacementMarkets empty despite affected Vault exposure. Batch A still writes and executes the
+    /// freeze, curator, and supply-queue calls while reporting all exposure as remaining in the withdraw queue.
+    function testBatchAAllowsEmptyReplacementsWithAffectedExposure() public {
+        manifest.activationId = "batch-a-empty-replacements-with-exposure";
+        uint256 affectedBefore = _affectedVaultSupplyAssets();
+        string memory planPath = _batchAAllocatorPlanPath(address(vault));
+
+        _executeConfiguredBatchA();
+
+        assertEq(_affectedVaultSupplyAssets(), affectedBefore, "empty replacement list changed affected exposure");
+        assertEq(_reportedRemainingAssets(planPath), affectedBefore, "remaining exposure was not reported");
+        string memory plan = vm.readFile(planPath);
+        assertTrue(_jsonTransactionExists(plan, 0), "missing setSupplyQueue transaction");
+        assertFalse(_jsonTransactionExists(plan, 1), "unexpected reallocate transaction");
+        _assertAllFrozenAndUnpaused();
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            _assertVaultPendingWorkCleared(vault, borrowMarkets[i]);
+            assertFalse(_isInSupplyQueue(borrowMarkets[i]), "affected market remains in supply queue");
+            assertTrue(_isInWithdrawQueue(borrowMarkets[i]), "affected market left withdraw queue");
+        }
     }
 
     /// @dev Uses a real empty AltoVault whose supply queue contains the affected markets. With no affected supply shares,
@@ -322,6 +476,7 @@ contract BatchAContainTest is BorrowMarketOffboardingTestBase {
             BorrowMarketOffboardingVault({
                 allocator: allocator,
                 maxVaultLossAssets: 0,
+                reallocationBufferAssets: 1 ether,
                 replacementMarkets: new address[](0),
                 vault: address(emptyVault)
             })
@@ -341,9 +496,34 @@ contract BatchAContainTest is BorrowMarketOffboardingTestBase {
         assertFalse(_jsonTransactionExists(plan, 1), "unexpected reallocate transaction");
     }
 
-    function _setOnlyReplacement(address replacement) private {
-        delete manifest.vaults[0].replacementMarkets;
-        manifest.vaults[0].replacementMarkets.push(replacement);
+    function _batchAAllocatorPlanPath(address affectedVault) private view returns (string memory) {
+        return _artifactPath(
+            BorrowMarketOffboardingPhase.BATCH_A_CONTAIN,
+            BorrowMarketOffboarding.vaultAllocatorFileName(BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, affectedVault)
+        );
+    }
+
+    function _writeStaleBatchAAllocatorPlan(address affectedVault) private returns (string memory path) {
+        BorrowMarketOffboardingPhase phase = BorrowMarketOffboardingPhase.BATCH_A_CONTAIN;
+        string memory outputDirectory = BorrowMarketOffboarding.artifactDirectory(phase, manifest);
+        vm.createDir(outputDirectory, true);
+        path = string.concat(outputDirectory, "/", BorrowMarketOffboarding.vaultAllocatorFileName(phase, affectedVault));
+        vm.writeFile(path, "{}");
+        assertTrue(vm.exists(path), "stale allocator fixture missing");
+    }
+
+    function _reportedRemainingAssets(string memory planPath) private view returns (uint256) {
+        return
+            vm.parseUint(vm.parseJsonString(vm.readFile(planPath), ".postconditions.expectedRemainingAffectedAssets"));
+    }
+
+    function _withdrawableVaultAssets(address market) private view returns (uint256) {
+        uint256 supplied = market.expectedSupplyAssets(address(vault));
+        (uint256 totalSupplyAssets,, uint256 totalBorrowAssets,) = market.expectedMarketBalances();
+        uint256 liquidity = totalSupplyAssets > totalBorrowAssets ? totalSupplyAssets - totalBorrowAssets : 0;
+        uint256 tokenBalance = IERC20(IMarket(market).borrowToken()).balanceOf(market);
+        if (tokenBalance < liquidity) liquidity = tokenBalance;
+        return supplied < liquidity ? supplied : liquidity;
     }
 
     function _deploySecondVaultWithPendingWork(address secondCurator, address secondAllocator)

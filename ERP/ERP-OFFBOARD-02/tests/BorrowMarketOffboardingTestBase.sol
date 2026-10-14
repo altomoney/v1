@@ -198,6 +198,7 @@ abstract contract BorrowMarketOffboardingTestBase is Test {
         BorrowMarketOffboardingVault storage stored = manifest.vaults[manifest.vaults.length - 1];
         stored.allocator = source.allocator;
         stored.maxVaultLossAssets = source.maxVaultLossAssets;
+        stored.reallocationBufferAssets = source.reallocationBufferAssets;
         stored.vault = source.vault;
         for (uint256 i; i < source.replacementMarkets.length; ++i) {
             stored.replacementMarkets.push(source.replacementMarkets[i]);

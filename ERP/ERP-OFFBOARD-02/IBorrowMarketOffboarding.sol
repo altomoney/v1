@@ -38,10 +38,11 @@ struct BorrowMarketOffboardingMarket {
     uint256 maxSupplierLossAssets;
 }
 
-/// @notice One affected Vault and its governance-approved simulation loss limit.
+/// @notice One affected Vault, its raw Batch A reallocation buffer and simulation loss limit.
 struct BorrowMarketOffboardingVault {
     address allocator;
     uint256 maxVaultLossAssets;
+    uint256 reallocationBufferAssets;
     address[] replacementMarkets;
     address vault;
 }

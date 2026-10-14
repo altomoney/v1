@@ -45,7 +45,8 @@ library ERPVaultQueue {
         address vaultAddress,
         address allocator,
         address[] memory removedMarkets,
-        address[] memory replacementMarkets
+        address[] memory replacementMarkets,
+        uint256 bufferAssets
     ) internal view returns (ERPVaultQueuePlan memory plan) {
         IAltoVault vault = IAltoVault(vaultAddress);
         address[] memory currentQueue = supplyQueue(vault);
@@ -59,7 +60,7 @@ library ERPVaultQueue {
         }
 
         (plan.allocations, plan.expectedWithdrawnAssets, plan.expectedRemainingAffectedAssets) =
-            _reallocationPlan(vault, removedMarkets, replacementMarkets);
+            _reallocationPlan(vault, removedMarkets, replacementMarkets, bufferAssets);
         if (plan.allocations.length != 0) {
             plan.reallocateData = abi.encodeCall(IAltoVaultBase.reallocate, (plan.allocations));
         }
@@ -207,13 +208,20 @@ library ERPVaultQueue {
         return false;
     }
 
-    function _reallocationPlan(IAltoVault vault, address[] memory removedMarkets, address[] memory replacementMarkets)
+    function _reallocationPlan(
+        IAltoVault vault,
+        address[] memory removedMarkets,
+        address[] memory replacementMarkets,
+        uint256 bufferAssets
+    )
         private
         view
         returns (MarketAllocation[] memory allocations, uint256 expectedWithdrawn, uint256 expectedRemaining)
     {
         MarketAllocation[] memory planned = new MarketAllocation[](removedMarkets.length + replacementMarkets.length);
         uint256 allocationCount;
+        uint256 remainingWithdrawalBudget =
+            _totalReplacementCapacity(vault, replacementMarkets, removedMarkets, bufferAssets);
 
         for (uint256 i; i < removedMarkets.length; ++i) {
             address market = removedMarkets[i];
@@ -221,28 +229,41 @@ library ERPVaultQueue {
             if (supplyShares == 0) continue;
             require(vault.config(market).enabled, "Batch A: Vault market not enabled");
 
-            (uint256 supplyAssets, uint256 withdrawable) = _supplyAndWithdrawable(market, supplyShares);
-            uint256 targetAssets = withdrawable == supplyAssets ? 0 : supplyAssets - withdrawable;
-            planned[allocationCount++] = MarketAllocation({market: market, assets: targetAssets});
-            expectedWithdrawn += withdrawable;
+            (uint256 suppliedAssets, uint256 availableLiquidity) = _supplyAndLiquidity(market, supplyShares);
+            uint256 plannedWithdrawal = _min(_min(suppliedAssets, availableLiquidity), remainingWithdrawalBudget);
+            bool hasFullExitBuffer =
+                availableLiquidity >= suppliedAssets && availableLiquidity - suppliedAssets >= bufferAssets;
+            if (plannedWithdrawal != suppliedAssets || !hasFullExitBuffer) {
+                plannedWithdrawal = plannedWithdrawal > bufferAssets ? plannedWithdrawal - bufferAssets : 0;
+            }
+            uint256 targetAssets = suppliedAssets - plannedWithdrawal;
+            if (suppliedAssets == 0 || plannedWithdrawal != 0) {
+                planned[allocationCount++] = MarketAllocation({market: market, assets: targetAssets});
+            }
+            expectedWithdrawn += plannedWithdrawal;
             expectedRemaining += targetAssets;
+            remainingWithdrawalBudget -= plannedWithdrawal;
         }
 
         uint256 remainingToSupply = expectedWithdrawn;
         for (uint256 i; i < replacementMarkets.length; ++i) {
             address replacement = replacementMarkets[i];
-            (uint256 cap, uint256 capRoom) = _validateReplacement(vault, replacementMarkets, i, removedMarkets);
+            if (_isDuplicate(replacementMarkets, i) || !_isUsableReplacement(vault, replacement, removedMarkets)) {
+                continue;
+            }
+            (uint256 cap, uint256 capRoom) = _replacementCapacity(vault, replacement, bufferAssets);
             if (remainingToSupply == 0 || capRoom == 0) continue;
 
             if (remainingToSupply <= capRoom) {
-                planned[allocationCount++] = MarketAllocation({market: replacement, assets: type(uint256).max});
+                planned[allocationCount++] =
+                    MarketAllocation({market: replacementMarkets[i], assets: type(uint256).max});
                 remainingToSupply = 0;
             } else {
                 planned[allocationCount++] = MarketAllocation({market: replacement, assets: cap});
                 remainingToSupply -= capRoom;
             }
         }
-        require(remainingToSupply == 0, "Batch A: insufficient replacement capacity");
+        assert(remainingToSupply == 0);
 
         allocations = new MarketAllocation[](allocationCount);
         for (uint256 i; i < allocationCount; ++i) {
@@ -250,47 +271,69 @@ library ERPVaultQueue {
         }
     }
 
-    function _supplyAndWithdrawable(address marketAddress, uint256 supplyShares)
+    function _totalReplacementCapacity(
+        IAltoVault vault,
+        address[] memory replacementMarkets,
+        address[] memory removedMarkets,
+        uint256 bufferAssets
+    ) private view returns (uint256 totalCapacity) {
+        for (uint256 i; i < replacementMarkets.length; ++i) {
+            address replacement = replacementMarkets[i];
+            if (_isDuplicate(replacementMarkets, i) || !_isUsableReplacement(vault, replacement, removedMarkets)) {
+                continue;
+            }
+            (, uint256 capRoom) = _replacementCapacity(vault, replacement, bufferAssets);
+            totalCapacity += capRoom;
+        }
+    }
+
+    function _supplyAndLiquidity(address marketAddress, uint256 supplyShares)
         private
         view
-        returns (uint256 supplyAssets, uint256 withdrawable)
+        returns (uint256 supplyAssets, uint256 availableLiquidity)
     {
         (uint256 totalSupplyAssets, uint256 totalSupplyShares, uint256 totalBorrowAssets,) =
             marketAddress.expectedMarketBalances();
         supplyAssets = supplyShares.convertToAssetsDown(totalSupplyAssets, totalSupplyShares);
         uint256 accountingLiquidity = totalSupplyAssets > totalBorrowAssets ? totalSupplyAssets - totalBorrowAssets : 0;
         uint256 tokenLiquidity = IERC20(IMarket(marketAddress).borrowToken()).balanceOf(marketAddress);
-        withdrawable = _min(supplyAssets, _min(accountingLiquidity, tokenLiquidity));
+        availableLiquidity = _min(accountingLiquidity, tokenLiquidity);
     }
 
-    function _validateReplacement(
-        IAltoVault vault,
-        address[] memory replacements,
-        uint256 replacementIndex,
-        address[] memory removedMarkets
-    ) private view returns (uint256 cap, uint256 capRoom) {
-        address replacement = replacements[replacementIndex];
-        require(replacement != address(0), "Batch A: zero replacement market");
-        require(!contains(removedMarkets, replacement), "Batch A: affected market is replacement");
+    function _isDuplicate(address[] memory replacements, uint256 replacementIndex) private pure returns (bool) {
         for (uint256 i; i < replacementIndex; ++i) {
-            require(replacements[i] != replacement, "Batch A: duplicate replacement market");
+            if (replacements[i] == replacements[replacementIndex]) return true;
         }
-        require(vault.marketRegistry().isBorrowMarket(replacement), "Batch A: replacement market not registered");
+        return false;
+    }
+
+    function _isUsableReplacement(IAltoVault vault, address replacement, address[] memory removedMarkets)
+        private
+        view
+        returns (bool)
+    {
+        if (replacement == address(0) || contains(removedMarkets, replacement)) return false;
+        if (!vault.marketRegistry().isBorrowMarket(replacement)) return false;
 
         MarketConfig memory config = vault.config(replacement);
-        require(config.enabled, "Batch A: replacement market not enabled");
-        require(config.cap != 0, "Batch A: replacement market has zero cap");
-        require(
-            IMarket(replacement).borrowToken() == IERC4626(address(vault)).asset(),
-            "Batch A: replacement asset mismatch"
-        );
-        require(!IPausable(replacement).paused(FROZEN_TYPE), "Batch A: replacement market frozen");
-        require(!IPausable(replacement).paused(PAUSE_TYPE), "Batch A: replacement market paused");
+        if (!config.enabled || config.cap == 0) return false;
+        if (IMarket(replacement).borrowToken() != IERC4626(address(vault)).asset()) return false;
+        if (IPausable(replacement).paused(FROZEN_TYPE) || IPausable(replacement).paused(PAUSE_TYPE)) {
+            return false;
+        }
+        return true;
+    }
 
+    function _replacementCapacity(IAltoVault vault, address replacement, uint256 bufferAssets)
+        private
+        view
+        returns (uint256 cap, uint256 capRoom)
+    {
         (uint256 totalSupplyAssets, uint256 totalSupplyShares,,) = replacement.expectedMarketBalances();
         uint256 supplied = uint256(IMarket(replacement).position(address(vault)).supplyShares)
             .convertToAssetsDown(totalSupplyAssets, totalSupplyShares);
-        cap = config.cap;
+        uint256 configuredCap = vault.config(replacement).cap;
+        cap = configuredCap > bufferAssets ? configuredCap - bufferAssets : 0;
         if (cap > supplied) capRoom = cap - supplied;
     }
 

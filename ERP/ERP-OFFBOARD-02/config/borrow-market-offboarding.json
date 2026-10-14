@@ -17,6 +17,7 @@
       "vault": "0x6954785783c6EE90400fA715E591fBbA0D0Bd749",
       "allocator": "0x7db7C14533a4186EcC07950F78835859320835Be",
       "maxVaultLossAssets": 0,
+      "reallocationBufferAssets": 1000000000000000000,
       "replacementMarkets": []
     }
   ],
