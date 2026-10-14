@@ -311,9 +311,43 @@ contract BatchBReduceLtvTest is BorrowMarketOffboardingTestBase {
         scriptHarness.runPhase(BorrowMarketOffboardingPhase.BATCH_B_REDUCE_LTV, manifest, input);
     }
 
+    /// @dev Schedules the exact correction batch before invoking the operational simulation. Verifies the gate reuses a
+    /// waiting operation by warping to its existing timestamp, then reuses the same operation again once it is ready. The
+    /// simulated execution is reverted each time, leaving the real fork operation pending and its payload unchanged.
+    function testBatchBSimulationReusesPendingAndReadyTimelockOperation() public {
+        _prepareFixedRateMarkets("reduce-ltv-resimulation");
+        BorrowMarketOffboardingPhase phase = BorrowMarketOffboardingPhase.BATCH_B_REDUCE_LTV;
+        bytes32 operationId = _correctionOperationId();
+        input = scriptHarness.runPhase(phase, manifest, input);
+        _executeSafeBatch(phase, REDUCE_LTV_SCHEDULE_FILE, manifest.timelockSafe);
+
+        assertTrue(timelock.isOperationPending(operationId), "operation was not scheduled");
+        assertFalse(timelock.isOperationReady(operationId), "operation unexpectedly ready");
+
+        string memory manifestPath = _writeSimulationInputs(manifest.activationId, type(uint128).max);
+        scriptHarness.run(uint256(phase), manifestPath);
+
+        assertTrue(timelock.isOperationPending(operationId), "pending operation was lost");
+        assertFalse(timelock.isOperationReady(operationId), "simulation changed operation readiness");
+        assertFalse(timelock.isOperationDone(operationId), "simulation executed the real operation");
+
+        vm.warp(timelock.getTimestamp(operationId));
+        assertTrue(timelock.isOperationReady(operationId), "operation did not become ready");
+        scriptHarness.run(uint256(phase), manifestPath);
+
+        assertTrue(timelock.isOperationPending(operationId), "ready operation was lost");
+        assertTrue(timelock.isOperationReady(operationId), "ready operation changed state");
+        assertFalse(timelock.isOperationDone(operationId), "simulation completed the real operation");
+        string memory report = vm.readFile(
+            string.concat(BorrowMarketOffboarding.artifactDirectory(phase, manifest), "/simulation-report.json")
+        );
+        assertEq(vm.parseJsonString(report, ".operationId"), vm.toString(operationId), "simulated payload changed");
+    }
+
     /// @dev Manifest: complete borrower inputs with one approved limit set to zero and every other limit set permissively.
     /// Repeats the fork simulation for liquidation funding, bad debt, supplier loss, protocol loss, and per-Vault loss,
-    /// verifying the measured nonzero outcome exceeds the selected limit and produces the specific rejection.
+    /// after seeding artifacts from a previous passing run. Verifies the measured nonzero outcome exceeds the selected
+    /// limit, produces the specific rejection, and removes every stale operational artifact.
     /// Confirms no schedule, execute, inputs, or report artifact is written after any failed simulation.
     function testBatchBSimulationRejectsEveryExceededLossLimitWithoutWritingArtifacts() public {
         _prepareFixedRateMarkets("reduce-ltv-loss-limits");
@@ -366,10 +400,15 @@ contract BatchBReduceLtvTest is BorrowMarketOffboardingTestBase {
             BorrowMarketOffboardingPhase.BATCH_B_REDUCE_LTV, simulationManifest
         );
 
-        assertFalse(vm.exists(string.concat(outputDirectory, "/", REDUCE_LTV_SCHEDULE_FILE)), "stale schedule");
-        assertFalse(vm.exists(string.concat(outputDirectory, "/", REDUCE_LTV_EXECUTE_FILE)), "stale execute");
-        assertFalse(vm.exists(string.concat(outputDirectory, "/inputs.json")), "stale inputs");
-        assertFalse(vm.exists(string.concat(outputDirectory, "/simulation-report.json")), "stale report");
+        vm.writeFile(string.concat(outputDirectory, "/", REDUCE_LTV_SCHEDULE_FILE), "{}");
+        vm.writeFile(string.concat(outputDirectory, "/", REDUCE_LTV_EXECUTE_FILE), "{}");
+        vm.writeFile(string.concat(outputDirectory, "/inputs.json"), "{}");
+        vm.writeFile(string.concat(outputDirectory, "/simulation-report.json"), '{"passed":true}');
+
+        assertTrue(vm.exists(string.concat(outputDirectory, "/", REDUCE_LTV_SCHEDULE_FILE)), "schedule fixture missing");
+        assertTrue(vm.exists(string.concat(outputDirectory, "/", REDUCE_LTV_EXECUTE_FILE)), "execute fixture missing");
+        assertTrue(vm.exists(string.concat(outputDirectory, "/inputs.json")), "inputs fixture missing");
+        assertTrue(vm.exists(string.concat(outputDirectory, "/simulation-report.json")), "report fixture missing");
 
         vm.expectRevert(expectedError);
         scriptHarness.run(uint256(BorrowMarketOffboardingPhase.BATCH_B_REDUCE_LTV), manifestPath);
@@ -619,6 +658,8 @@ contract BatchBReduceLtvTest is BorrowMarketOffboardingTestBase {
                 vm.toString(manifest.vaults[i].allocator),
                 '","maxVaultLossAssets":',
                 vm.toString(maxVaultLossAssets),
+                ',"reallocationBufferAssets":',
+                vm.toString(manifest.vaults[i].reallocationBufferAssets),
                 ',"replacementMarkets":[]',
                 "}"
             );

@@ -113,6 +113,9 @@ manifest and replace its values instead of passing this block to the script.
         "0x8888888888888888888888888888888888888888"
       ],
 
+      // Raw Vault-asset execution buffer used by Batch A; 1 DUSD including its 18 decimals.
+      "reallocationBufferAssets": 1000000000000000000,
+
       // Maximum approved raw-DUSD loss for this Vault across all manifest markets.
       "maxVaultLossAssets": 0
     }
@@ -217,7 +220,8 @@ Before generation:
 - confirm the exact market/Vault scope and containment approval;
 - confirm every market is unpaused and the Freezer Safe can freeze each market not already frozen;
 - record each Vault's curator, authorized allocator, cap, pending actions, queues, shares, and withdrawable assets;
-- populate each Vault's `replacementMarkets` in approved fill order, or prove no affected assets are withdrawable before using `[]`;
+- optionally populate each Vault's `replacementMarkets` in approved fill order; unusable entries are skipped and an empty
+  list leaves all affected exposure in place;
 - identify every integration that must remain available for repayment, withdrawal, deleveraging, and liquidation.
 
 Execute in this order:
@@ -232,8 +236,11 @@ Execute in this order:
    Vault deposits/withdrawals, and destination cap room can change the derived amounts.
 7. Execute each allocator plan once from its recorded allocator, in listed transaction order:
    - optional `setSupplyQueue`, preserving unaffected order and removing only affected markets;
-   - optional `reallocate`, withdrawing all liquidity available at the source block and supplying it to replacement markets
-     in manifest order. Intermediate destinations fill to cap; the final destination uses `type(uint256).max`.
+   - optional `reallocate`, withdrawing only what fits within both affected-market liquidity and valid replacement cap room.
+     Affected markets and destinations are consumed in manifest order; intermediate destinations fill to cap and the final
+     destination uses `type(uint256).max`. Source liquidity and destination cap calculations reserve the raw `reallocationBufferAssets` manifest amount
+     (use `1000000000000000000` for 1 DUSD) for interest accrued before execution. Check `expectedRemainingAffectedAssets` and keep markets with
+     remaining exposure in the withdraw queue.
 Before proceeding, verify the Batch A acceptance criteria in the Notion ERP, including blocked new exposure, working exit
 routes, zero Vault caps, exact supply queues, retained withdrawal routes where needed, and no unrelated changes.
 
@@ -310,9 +317,9 @@ For a passing step:
 Cleared markets are skipped. Stop immediately when every configured market has zero borrowed assets and shares.
 
 For terminal steps, follow the Notion rules exactly: run a fresh gate after the prior operation executes, use only the next
-step, observe the minimum interval, and never catch up a missed or failed reduction. Ordinary liquidation,
-`governanceLiquidate`, and repay-on-behalf transactions are not generated and require the separate classification,
-simulation, limits, and approval specified by the Notion ERP.
+step, observe the minimum interval, and never catch up a missed or failed reduction.
+As LTV decreases, keepers liquidate eligible positions; the team clears any remaining positions with plain `liquidate` or
+`governanceLiquidate`.
 
 ## Phase 3 — Batch C recovery
 

@@ -13,6 +13,7 @@ import {
     LiquidationConfiguration
 } from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 
 import {BorrowMarketOffboarding} from "../BorrowMarketOffboarding.sol";
 import {ERPOutputWriter} from "../../libraries/ERPOutputWriter.sol";
@@ -69,6 +70,7 @@ contract BorrowMarketOffboardingScript is Script {
 
         if (phase == BorrowMarketOffboardingPhase.BATCH_B_REDUCE_LTV) {
             BorrowerList memory borrowerList = _writeBorrowerList(manifestPath, manifest);
+            _removeBatchBArtifacts(manifest);
             BatchBSimulation memory simulation = _assertBatchBSimulation(manifest, input, borrowerList);
             _runPhase(phase, manifest, input);
             BorrowMarketOffboardingIO.writeSimulationReport(
@@ -94,6 +96,15 @@ contract BorrowMarketOffboardingScript is Script {
         return BorrowMarketOffboardingIO.writeBorrowerList(manifestPath, manifest);
     }
 
+    function _removeBatchBArtifacts(BorrowMarketOffboardingManifest memory manifest) private {
+        string memory outputDirectory =
+            BorrowMarketOffboarding.artifactDirectory(BorrowMarketOffboardingPhase.BATCH_B_REDUCE_LTV, manifest);
+        ERPOutputWriter.removeIfExists(string.concat(outputDirectory, "/batch-b-irm-and-ltv-update-schedule.json"));
+        ERPOutputWriter.removeIfExists(string.concat(outputDirectory, "/batch-b-irm-and-ltv-update-execute.json"));
+        ERPOutputWriter.removeIfExists(string.concat(outputDirectory, "/inputs.json"));
+        ERPOutputWriter.removeIfExists(string.concat(outputDirectory, "/simulation-report.json"));
+    }
+
     /// @notice Asserts the exact Batch B calls are safe, then restores the fork state.
     function _assertBatchBSimulation(
         BorrowMarketOffboardingManifest memory manifest,
@@ -110,8 +121,7 @@ contract BorrowMarketOffboardingScript is Script {
         );
 
         uint256 snapshotId = vm.snapshotState();
-        _callFrom(manifest.timelockSafe, input.contracts.timelock, scheduleData);
-        vm.warp(block.timestamp + report.timelockDelay);
+        _prepareSimulationOperation(input.contracts.timelock, manifest.timelockSafe, operationId, scheduleData);
 
         for (uint256 i; i < resultCount; ++i) {
             results[i].liquidatableBefore = _isLiquidatable(results[i].market, results[i].borrower);
@@ -128,6 +138,19 @@ contract BorrowMarketOffboardingScript is Script {
         simulation.operationId = operationId;
 
         require(vm.revertToState(snapshotId), "Simulation: failed to restore fork state");
+    }
+
+    function _prepareSimulationOperation(
+        address timelockAddress,
+        address timelockSafe,
+        bytes32 operationId,
+        bytes memory scheduleData
+    ) private {
+        TimelockController timelock = TimelockController(payable(timelockAddress));
+        if (!timelock.isOperationPending(operationId)) {
+            _callFrom(timelockSafe, timelockAddress, scheduleData);
+        }
+        if (!timelock.isOperationReady(operationId)) vm.warp(timelock.getTimestamp(operationId));
     }
 
     function _runPhase(

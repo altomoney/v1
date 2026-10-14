@@ -387,6 +387,7 @@ contract BatchCRecoverTest is BorrowMarketOffboardingTestBase {
             BorrowMarketOffboardingVault({
                 allocator: secondAllocator,
                 maxVaultLossAssets: 0,
+                reallocationBufferAssets: 1 ether,
                 replacementMarkets: new address[](0),
                 vault: address(secondVault)
             })
