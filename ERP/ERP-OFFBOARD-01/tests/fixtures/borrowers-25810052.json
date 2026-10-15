@@ -1,0 +1,131 @@
+{
+  "chainId": 1,
+  "markets": [
+    {
+      "borrowers": [
+        "0x00801b11586c8c00e67446abdd245917c6695375",
+        "0x09269732fbf0aa03c061e99595639232794f9d8c",
+        "0x17db5bce9d0b9af3955f1cc3c25048667fcc6ffb",
+        "0x1a887e815117be98fccacc779be87230e895cd1f",
+        "0x1f692434101f4e4a95e9a525177a7e7ec60dcba6",
+        "0x22076fba2ea9650a028aa499d0444c4aa9af1bf8",
+        "0x3679aa1e48eb60bc1cabfb5241b0ccab8747520c",
+        "0x434939528988ee7078340d389813011c4cdafc6d",
+        "0x43e47a90990b0357c5988ff416e77c253f618274",
+        "0x4e90da1ddcd5b0fb295b6a69251b5d04d5bcca7a",
+        "0x53349b1a08d5cbe039892885383970f01bd4c79b",
+        "0x5451c3c1e156b7e8e3004727577485d4ff1152e0",
+        "0x6e3880c88695cebde3e7baa95662050f7126795b",
+        "0x71f0f9669aca235cd39307aa931e1179a0c0dd48",
+        "0x82f5604d78ea962a018049732f81bf74851a77ad",
+        "0x8a2bf6335d11437441e08d0007681ba667553539",
+        "0x918908114e50dc16df32028131e11f1e62383370",
+        "0x94ffd866ad6514a478641d955667c70cb5a08e90",
+        "0x99e3b76d010655688cfdae701026c971f31e883a",
+        "0xa5acf1b71b653662fcf881edbf8c92460b1c387d",
+        "0xb1f4ee1c99e59cf42a3f60b4e241c1059b88d51c",
+        "0xd65370c5565f2bea121f3c22823233f98a4be793",
+        "0xe0b43c8426972f1b3113c0ee0ea835539ec8d3dc",
+        "0xea09616071f14a708e6e99fc3d2aabe8e7ddc6b4",
+        "0xfb1c7fb66c3db6f1f5d1d960709118e47447428c"
+      ],
+      "market": "0x8DED9e2B8Bc5128B862dD534b97c8a32991959ff"
+    },
+    {
+      "borrowers": [
+        "0x0fd90b9d61af052c4328bc2fa9a1529627af0a7d",
+        "0x3482e460d7e8108ef7d24a5d7c60133dc5697597",
+        "0x434939528988ee7078340d389813011c4cdafc6d",
+        "0x513aedace44cc9a0724ca276a8ceeee950903576",
+        "0x71f0f9669aca235cd39307aa931e1179a0c0dd48",
+        "0x8a2bf6335d11437441e08d0007681ba667553539",
+        "0x8bd9a17356a0f61ef331fffa5ca3af5a44059736",
+        "0x99e3b76d010655688cfdae701026c971f31e883a",
+        "0xa1b49f17440261b67a733d76a147bad0f391e42e",
+        "0xd6e8222b207ebdb33dfdd0a6299b9424f2bdf35a",
+        "0xeda089739e7110819e680896a1edf752f2532fb0"
+      ],
+      "market": "0xfd8c25047f4397dC5461B919999585a2a3EaC2eF"
+    },
+    {
+      "borrowers": [
+        "0x051a3190c9342211eb311723b23b8c7cbd7b5a5d",
+        "0x09269732fbf0aa03c061e99595639232794f9d8c",
+        "0x22c5466ff7fcda8a759417da298eab17199bd20f",
+        "0x3482e460d7e8108ef7d24a5d7c60133dc5697597",
+        "0x43e47a90990b0357c5988ff416e77c253f618274",
+        "0x4e90da1ddcd5b0fb295b6a69251b5d04d5bcca7a",
+        "0x513aedace44cc9a0724ca276a8ceeee950903576",
+        "0x5ba323cc3e4b01ded640fc78c8948dcfb8f298cd",
+        "0x6ace206b3d969c8d17070f835518333f8a454fb4",
+        "0x9e1b45a473b8b004a40ddc6ea2730b36d16a1796",
+        "0xa1b49f17440261b67a733d76a147bad0f391e42e",
+        "0xac82362174a32fbbad61efcb0f02b9016b20c768",
+        "0xdd0cdf8d98d9ad3adfaa49aaecd444bfa01d9c9a",
+        "0xf5b812d76db4f0341c49a2d8e2e8b19d800d6ec3",
+        "0xf9373b9cf36547ad019aa24afe48c71fea870c35",
+        "0xfe8cc72d95633e3a40cf3d221a609ef0c4807745"
+      ],
+      "market": "0xc0E2DdB06bB034c1F980531EC5CAd944D71AfFbf"
+    },
+    {
+      "borrowers": [
+        "0x09269732fbf0aa03c061e99595639232794f9d8c",
+        "0x1609f039a96ce10756f5c6d403a80400dc081a02",
+        "0x36020da76371a4fe3855bcec10dda246cd35c076",
+        "0x43e47a90990b0357c5988ff416e77c253f618274",
+        "0x4e90da1ddcd5b0fb295b6a69251b5d04d5bcca7a",
+        "0x513aedace44cc9a0724ca276a8ceeee950903576",
+        "0x5451c3c1e156b7e8e3004727577485d4ff1152e0",
+        "0x5eede1c45e4401d7d95e55446dad71b511328534",
+        "0x6ace206b3d969c8d17070f835518333f8a454fb4",
+        "0x71f0f9669aca235cd39307aa931e1179a0c0dd48",
+        "0x91fc012d62af22390b55b0b3d489ca26473612bb",
+        "0x99e3b76d010655688cfdae701026c971f31e883a",
+        "0x9f9e3267673c40b8819680340ee0ceec3428275f",
+        "0xa1b49f17440261b67a733d76a147bad0f391e42e",
+        "0xa96bb03241b4359aab743020a6a254210decb4bc",
+        "0xb401300129437757a22d8ca3aaced4fbe6c4bb82",
+        "0xea101abf2aa87e621caefeb64e6bfe34340b822d"
+      ],
+      "market": "0xF897188DCd300Fa80a2f7f0f0290F9eF64F2D47b"
+    },
+    {
+      "borrowers": [
+        "0x09269732fbf0aa03c061e99595639232794f9d8c",
+        "0x3482e460d7e8108ef7d24a5d7c60133dc5697597",
+        "0x4096d69dee9ebdbe23c939a241660f7861e0a223",
+        "0x4e90da1ddcd5b0fb295b6a69251b5d04d5bcca7a",
+        "0x5451c3c1e156b7e8e3004727577485d4ff1152e0",
+        "0x5eede1c45e4401d7d95e55446dad71b511328534",
+        "0x863c87d02e40ce7b4da2f409debfb2296211baea",
+        "0xb401300129437757a22d8ca3aaced4fbe6c4bb82",
+        "0xbb5311af8d1982d690050f05aecac08f0ac65f19"
+      ],
+      "market": "0xE17F10f8535336143d4F2FE304f3Dcf7B23671e1"
+    },
+    {
+      "borrowers": [
+        "0x1c523276334d341dc0d3c89117ae44903c0b3a2e",
+        "0x3482e460d7e8108ef7d24a5d7c60133dc5697597",
+        "0x5451c3c1e156b7e8e3004727577485d4ff1152e0",
+        "0x68d3431bd22779b08113b50b3cf6a0ba265fc9e0",
+        "0x6f2d186fd5694e00d2073bc680449e94400ee595",
+        "0x8e599e2f24ef8e3eef45eb91210b70bc96eeb08c"
+      ],
+      "market": "0x210bF54092B66443FddFec0f3F156e74B04CD2a2"
+    },
+    {
+      "borrowers": [
+        "0x04fad3020d3fcfedaa2b548143bfb6127e8ea581",
+        "0x4f4ddf9ac95a1fd0482af4ac931e1fadf8d4736e",
+        "0x5451c3c1e156b7e8e3004727577485d4ff1152e0",
+        "0x571ebd4c979f1725593bfb129a24d595d6adfc23",
+        "0x68d3431bd22779b08113b50b3cf6a0ba265fc9e0"
+      ],
+      "market": "0xD2eA320713158a7b7eaE46025B8Ad4CBF3cdc87e"
+    }
+  ],
+  "sourceBlock": 25810052,
+  "subgraphUrl": "https://api.goldsky.com/api/public/project_cll6foogb576z38zr00ybh2hw/subgraphs/alto-lending-mainnet/0.0.6/gn"
+}

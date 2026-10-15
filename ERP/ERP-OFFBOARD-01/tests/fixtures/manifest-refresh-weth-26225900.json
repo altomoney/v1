@@ -1,0 +1,32 @@
+{
+  "activationId": "erp-offboard-01-refresh-weth-presimulation",
+  "severity": 0,
+  "schedulePhase": 0,
+  "t0": 1793008991,
+  "step": 1,
+  "lastExecutedStep": 0,
+  "lastStepExecutedAt": 0,
+  "lastOperationId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "sourceBlock": 26225900,
+  "deploymentId": 1765364975,
+  "freezerSafe": "0x1c11d2d42929bd17aB7212b79c91862Adfa8bbe4",
+  "timelockSafe": "0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0",
+  "fixedRateIrmVersion": 1,
+  "markets": [
+    {
+      "approvedRecoveryBadDebtAssets": 0,
+      "market": "0x81b2CcE73052f67312eD9994385f62D413eE566e",
+      "leverage": "0x83869789616658532e1805C018149C5CCB033Ddc",
+      "debtCeiling": 2191301555305715382118,
+      "dusdMinterCeiling": 2191301555305715382118,
+      "fixedRateSpy": 3170979198,
+      "correctionRateSpy": 6341958396,
+      "ltvReduction": 50000000000000000,
+      "maxLiquidationFundingAssets": 811049220145503370386,
+      "maxBadDebtAssets": 0,
+      "maxDusdMintedAssets": 28992283384276094291,
+      "maxSeizedCollateralAssets": 403289588602393252,
+      "maxUnbackedDusdAssets": 0
+    }
+  ]
+}
