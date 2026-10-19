@@ -107,13 +107,14 @@ manifest and replace its values instead of passing this block to the script.
 
       // Ordered Batch A destinations. Each must be a distinct, registered, enabled, non-frozen,
       // non-paused market for the Vault asset with a nonzero cap. Earlier entries fill first.
-      // Use [] only when the source block has no withdrawable affected Vault assets.
+      // Unusable entries are skipped. Use [] to leave all affected Vault exposure in place.
       "replacementMarkets": [
         "0x7777777777777777777777777777777777777777",
         "0x8888888888888888888888888888888888888888"
       ],
 
-      // Raw Vault-asset execution buffer used by Batch A; 1 DUSD including its 18 decimals.
+      // Raw Vault-asset interest buffer reserved by Batch A on source targets and destination caps.
+      // Size it as total affected Vault supply x supply APR x expected execution delay. 1 DUSD shown.
       "reallocationBufferAssets": 1000000000000000000,
 
       // Maximum approved raw-DUSD loss for this Vault across all manifest markets.
@@ -237,10 +238,19 @@ Execute in this order:
 7. Execute each allocator plan once from its recorded allocator, in listed transaction order:
    - optional `setSupplyQueue`, preserving unaffected order and removing only affected markets;
    - optional `reallocate`, withdrawing only what fits within both affected-market liquidity and valid replacement cap room.
-     Affected markets and destinations are consumed in manifest order; intermediate destinations fill to cap and the final
-     destination uses `type(uint256).max`. Source liquidity and destination cap calculations reserve the raw `reallocationBufferAssets` manifest amount
-     (use `1000000000000000000` for 1 DUSD) for interest accrued before execution. Check `expectedRemainingAffectedAssets` and keep markets with
-     remaining exposure in the withdraw queue.
+     Affected markets and destinations are consumed in manifest order. Intermediate destinations fill to cap and the final
+     destination uses `type(uint256).max`. Source targets and destination caps reserve the raw `reallocationBufferAssets`
+     manifest amount for interest accrued between generation and execution. A market with zero borrowed assets accrues
+     no interest, so its full Vault position is withdrawn (target `0`) without a buffer. Check
+     `expectedRemainingAffectedAssets` and keep markets with remaining exposure in the withdraw queue.
+
+Size `reallocationBufferAssets` from live state: at least the total affected Vault supply multiplied by the current
+supply APR and the expected delay between generation and allocator execution. At the pinned fork block the five manifest
+markets accrue about 0.22 DUSD per hour in total, so 1 DUSD (`1000000000000000000`) covers a few hours at ordinary
+rates. A phase `0` rerun during the Batch B terminal phase at 80% APR accrues several DUSD per hour on a 50k DUSD
+position and needs a larger buffer. Only the final `type(uint256).max` destination absorbs accrued drift, so its cap room
+must exceed the planned supply by the accrual summed across every source and intermediate destination.
+
 Before proceeding, verify the Batch A acceptance criteria in the Notion ERP, including blocked new exposure, working exit
 routes, zero Vault caps, exact supply queues, retained withdrawal routes where needed, and no unrelated changes.
 
@@ -297,7 +307,7 @@ Running phase `2` automatically:
 6. checks per-market funding, bad debt, supplier loss, protocol loss, and per-Vault loss;
 7. restores the fork and writes operational artifacts only if the limits pass.
 
-Node.js 22 or newer and Goldsky access are required. An approved endpoint may be supplied with
+Node.js 22.18 or newer (the fetcher runs as an unflagged `.ts` file) and Goldsky access are required. An approved endpoint may be supplied with
 `GOLDSKY_SUBGRAPH_URL`. A failed gate may leave `borrowers.json`, but must not produce schedule, execute, inputs, or report
 artifacts.
 
@@ -326,7 +336,9 @@ As LTV decreases, keepers liquidate eligible positions; the team clears any rema
 Before generation:
 
 - confirm every market has zero borrowed assets and shares;
-- manually complete the approved lossless Vault reallocation so each affected Vault has zero market shares and quarantine;
+- once every market has zero debt, rerun phase `0` and execute its allocator plan. With no interest accruing it withdraws
+  each affected Vault position completely (target `0`) into the manifest replacement markets, leaving zero market shares
+  and quarantine;
 - confirm caps and pending actions are zero and affected markets are absent from supply queues;
 - confirm the market remains frozen/unpaused, its oracle is nonzero, its adapter approval is active, and every required
   legacy exit route has been identified;
@@ -383,3 +395,9 @@ FOUNDRY_PROFILE=erp forge test \
 
 FOUNDRY_PROFILE=erp forge build
 ~~~
+
+`tests/RefreshedSusdeEndToEnd.t.sol` is the Notion Section 6 development pre-simulation. It runs Batch A through
+Batch C at Medium severity against the live refreshed sUSDe borrow market `0x5d8fA5E1fAcb746179BD1AEb3aA78Db384C52001`
+and the DUSD Vault at block `26225900`, using `tests/fixtures/manifest-susde-26225900.json` and
+`tests/fixtures/borrowers-susde-26225900.json`. Refresh both fixtures with `scripts/fetch-borrowers.ts` when the
+source block changes.

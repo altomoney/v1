@@ -1,0 +1,37 @@
+{
+  "activationId": "erp-offboard-02-susde-presimulation",
+  "severity": 0,
+  "schedulePhase": 0,
+  "t0": 1792000000,
+  "lastExecutedStep": 0,
+  "lastStepExecutedAt": 0,
+  "lastOperationId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "step": 1,
+  "sourceBlock": 26225900,
+  "deploymentId": 1765364975,
+  "freezerSafe": "0x1c11d2d42929bd17aB7212b79c91862Adfa8bbe4",
+  "timelockSafe": "0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0",
+  "fixedRateIrmVersion": 1,
+  "vaults": [
+    {
+      "vault": "0x6954785783c6EE90400fA715E591fBbA0D0Bd749",
+      "allocator": "0x7db7C14533a4186EcC07950F78835859320835Be",
+      "maxVaultLossAssets": 0,
+      "reallocationBufferAssets": 1000000000000000000,
+      "replacementMarkets": []
+    }
+  ],
+  "markets": [
+    {
+      "market": "0x5d8fA5E1fAcb746179BD1AEb3aA78Db384C52001",
+      "leverage": "0xCEb71c512d41e7CBA42D422D586D5BFF15628B87",
+      "fixedRateSpy": 3170979198,
+      "correctionRateSpy": 6341958396,
+      "ltvReduction": 50000000000000000,
+      "maxLiquidationFundingAssets": 1000000000000000000000,
+      "maxBadDebtAssets": 0,
+      "maxSupplierLossAssets": 0,
+      "maxProtocolLossAssets": 0
+    }
+  ]
+}

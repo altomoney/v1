@@ -229,12 +229,16 @@ library ERPVaultQueue {
             if (supplyShares == 0) continue;
             require(vault.config(market).enabled, "Batch A: Vault market not enabled");
 
-            (uint256 suppliedAssets, uint256 availableLiquidity) = _supplyAndLiquidity(market, supplyShares);
+            (uint256 suppliedAssets, uint256 availableLiquidity, bool accruesInterest) =
+                _supplyAndLiquidity(market, supplyShares);
+            // A market without borrowed assets accrues no interest, so its position cannot grow before execution
+            // and the full position is withdrawable without a buffer.
+            uint256 sourceBuffer = accruesInterest ? bufferAssets : 0;
             uint256 plannedWithdrawal = _min(_min(suppliedAssets, availableLiquidity), remainingWithdrawalBudget);
             bool hasFullExitBuffer =
-                availableLiquidity >= suppliedAssets && availableLiquidity - suppliedAssets >= bufferAssets;
+                availableLiquidity >= suppliedAssets && availableLiquidity - suppliedAssets >= sourceBuffer;
             if (plannedWithdrawal != suppliedAssets || !hasFullExitBuffer) {
-                plannedWithdrawal = plannedWithdrawal > bufferAssets ? plannedWithdrawal - bufferAssets : 0;
+                plannedWithdrawal = plannedWithdrawal > sourceBuffer ? plannedWithdrawal - sourceBuffer : 0;
             }
             uint256 targetAssets = suppliedAssets - plannedWithdrawal;
             if (suppliedAssets == 0 || plannedWithdrawal != 0) {
@@ -290,7 +294,7 @@ library ERPVaultQueue {
     function _supplyAndLiquidity(address marketAddress, uint256 supplyShares)
         private
         view
-        returns (uint256 supplyAssets, uint256 availableLiquidity)
+        returns (uint256 supplyAssets, uint256 availableLiquidity, bool accruesInterest)
     {
         (uint256 totalSupplyAssets, uint256 totalSupplyShares, uint256 totalBorrowAssets,) =
             marketAddress.expectedMarketBalances();
@@ -298,6 +302,7 @@ library ERPVaultQueue {
         uint256 accountingLiquidity = totalSupplyAssets > totalBorrowAssets ? totalSupplyAssets - totalBorrowAssets : 0;
         uint256 tokenLiquidity = IERC20(IMarket(marketAddress).borrowToken()).balanceOf(marketAddress);
         availableLiquidity = _min(accountingLiquidity, tokenLiquidity);
+        accruesInterest = totalBorrowAssets != 0;
     }
 
     function _isDuplicate(address[] memory replacements, uint256 replacementIndex) private pure returns (bool) {

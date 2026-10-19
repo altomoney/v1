@@ -722,11 +722,11 @@ contract BatchCRecoverTest is BorrowMarketOffboardingTestBase {
         replacement = _deployAndApproveReplacementBorrowMarket(targetSupplyAssets + 1 ether);
         _restoreUnaffectedSupplyQueue(replacement);
 
-        MarketAllocation[] memory allocations = new MarketAllocation[](2);
-        allocations[0] = MarketAllocation({market: address(target), assets: 0});
-        allocations[1] = MarketAllocation({market: replacement, assets: type(uint256).max});
-        vm.prank(manifest.vaults[0].allocator);
-        vault.reallocate(allocations);
+        // Nothing accrues once debt is zero, so a phase 0 rerun plans the complete exit (target 0) into the replacement
+        // without an interest buffer. The generated allocator plan is executed exactly as an operator would.
+        delete manifest.vaults[0].replacementMarkets;
+        manifest.vaults[0].replacementMarkets.push(replacement);
+        _executeConfiguredBatchA();
 
         address[] memory expectedWithdrawQueue = _withdrawQueueWithout(address(target));
         _executeRecoveryAllocatorPlans();

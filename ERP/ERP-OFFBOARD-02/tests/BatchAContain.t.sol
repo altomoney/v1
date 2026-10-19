@@ -3,7 +3,11 @@ pragma solidity ^0.8.28;
 
 import {BorrowMarketOffboardingTestBase} from "./BorrowMarketOffboardingTestBase.sol";
 import {BorrowMarketOffboarding} from "../BorrowMarketOffboarding.sol";
-import {BorrowMarketOffboardingPhase, BorrowMarketOffboardingVault} from "../IBorrowMarketOffboarding.sol";
+import {
+    BorrowMarketOffboardingMarket,
+    BorrowMarketOffboardingPhase,
+    BorrowMarketOffboardingVault
+} from "../IBorrowMarketOffboarding.sol";
 
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IAltoVault} from "@alto/lending/interfaces/IAltoVault.sol";
@@ -494,6 +498,54 @@ contract BatchAContainTest is BorrowMarketOffboardingTestBase {
         string memory plan = vm.readFile(planPath);
         assertTrue(_jsonTransactionExists(plan, 0), "missing setSupplyQueue transaction");
         assertFalse(_jsonTransactionExists(plan, 1), "unexpected reallocate transaction");
+    }
+
+    /// @dev Moves the Vault into a fresh replacement during containment, then off-boards that replacement while the
+    /// Vault is its only supplier and it carries no debt. Nothing accrues on a debt-free market, so Batch A withdraws
+    /// the complete position (target `0`) without an interest buffer and a rerun has nothing left to plan.
+    function testBatchAExitsDebtFreeSoleSupplierMarketCompletely() public {
+        manifest.activationId = "batch-a-debt-free-sole-supplier";
+        _executeBatchA();
+        address soleSupplied = manifest.vaults[0].replacementMarkets[0];
+        uint256 supplied = soleSupplied.expectedSupplyAssets(address(vault));
+        (uint256 totalSupplyAssets,, uint256 totalBorrowAssets,) = soleSupplied.expectedMarketBalances();
+        assertGt(supplied, 0, "Vault did not fund the replacement");
+        assertApproxEqAbs(totalSupplyAssets, supplied, 1, "Vault is not the only supplier");
+        assertEq(totalBorrowAssets, 0, "replacement market has debt");
+
+        address destination = _deployAndEnableReplacementBorrowMarket(type(uint128).max);
+        // Cap acceptance warped past the fresh market's oracle heartbeat. Batch A never reads the price, so pin it.
+        vm.mockCall(
+            IMarket(soleSupplied).oracle(), abi.encodeCall(IOracle.getPrice, ()), abi.encode(initialOraclePrices[0])
+        );
+        BorrowMarketOffboardingMarket memory offboarded = manifest.markets[0];
+        offboarded.market = soleSupplied;
+        delete manifest.markets;
+        _pushManifestMarket(offboarded);
+        _bindManifestState();
+        delete manifest.vaults[0].replacementMarkets;
+        manifest.vaults[0].replacementMarkets.push(destination);
+        manifest.activationId = "batch-a-debt-free-sole-supplier-exit";
+        string memory planPath = _batchAAllocatorPlanPath(address(vault));
+
+        _executeConfiguredBatchA();
+
+        assertEq(IMarket(soleSupplied).position(address(vault)).supplyShares, 0, "Vault market supply remains");
+        assertEq(_reportedRemainingAssets(planPath), 0, "complete exit reported remaining exposure");
+        assertApproxEqAbs(
+            destination.expectedSupplyAssets(address(vault)), supplied, 2, "destination did not receive the position"
+        );
+        string memory plan = vm.readFile(planPath);
+        assertEq(
+            vm.parseUint(vm.parseJsonString(plan, ".postconditions.expectedAllocations[0].assets")),
+            0,
+            "debt-free source target is not a complete exit"
+        );
+
+        // The source block advanced, so seed a stale plan at the rerun path and verify the rerun removes it.
+        string memory rerunPlanPath = _writeStaleBatchAAllocatorPlan(address(vault));
+        input = scriptHarness.runPhase(BorrowMarketOffboardingPhase.BATCH_A_CONTAIN, manifest, input);
+        assertFalse(vm.exists(rerunPlanPath), "rerun planned a withdrawal from an exited market");
     }
 
     function _batchAAllocatorPlanPath(address affectedVault) private view returns (string memory) {

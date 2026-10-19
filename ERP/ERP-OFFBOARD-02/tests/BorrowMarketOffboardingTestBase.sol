@@ -114,13 +114,27 @@ abstract contract BorrowMarketOffboardingTestBase is Test {
     uint256[] internal initialOraclePrices;
     BorrowMarketOffboardingBorrowerMarket[] internal borrowerFixtureMarkets;
 
+    /// @dev Pinned fork block. Override together with `_manifestFile` and `_borrowerFixture` to run the suite's
+    /// helpers against another activation manifest.
+    function _forkBlock() internal pure virtual returns (uint256) {
+        return FORK_BLOCK;
+    }
+
+    function _manifestFile() internal pure virtual returns (string memory) {
+        return MANIFEST_FILE;
+    }
+
+    function _borrowerFixture() internal pure virtual returns (string memory) {
+        return BORROWER_FIXTURE;
+    }
+
     function _setUpManifest() internal {
         scriptHarness = new BorrowMarketOffboardingTestHarness();
         BorrowMarketOffboardingManifest memory loadedManifest =
-            BorrowMarketOffboardingIO.loadActivationManifest(MANIFEST_FILE);
+            BorrowMarketOffboardingIO.loadActivationManifest(_manifestFile());
         _storeManifest(loadedManifest);
-        assertEq(manifest.sourceBlock, FORK_BLOCK, "manifest fork block changed");
-        vm.createSelectFork(vm.rpcUrl("ethereum"), FORK_BLOCK);
+        assertEq(manifest.sourceBlock, _forkBlock(), "manifest fork block changed");
+        vm.createSelectFork(vm.rpcUrl("ethereum"), _forkBlock());
         input = BorrowMarketOffboardingIO.loadCurrentChainInput(manifest.deploymentId);
         if (input.contracts.ownerFixedRateIrmFactory.code.length == 0) {
             input.contracts.ownerFixedRateIrmFactory = address(0);
@@ -130,9 +144,9 @@ abstract contract BorrowMarketOffboardingTestBase is Test {
     }
 
     function _loadBorrowerFixture() private {
-        string memory json = vm.readFile(BORROWER_FIXTURE);
+        string memory json = vm.readFile(_borrowerFixture());
         assertEq(vm.parseJsonUint(json, ".chainId"), block.chainid, "borrower fixture chain mismatch");
-        assertEq(vm.parseJsonUint(json, ".sourceBlock"), FORK_BLOCK, "borrower fixture block mismatch");
+        assertEq(vm.parseJsonUint(json, ".sourceBlock"), _forkBlock(), "borrower fixture block mismatch");
 
         BorrowerList memory borrowerList = BorrowMarketOffboardingIO.parseBorrowerList(json);
         delete borrowerFixtureMarkets;
