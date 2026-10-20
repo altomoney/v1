@@ -768,11 +768,12 @@ abstract contract AltoBaseMarket is
         _;
     }
 
+    /// @dev Markets without an IRM skip the IRM notification so they can still be unpaused.
     function _onPause(bytes32 pauseType, bool _paused) internal override {
         if (pauseType == PAUSE_TYPE) {
             if (_paused) {
                 _accrueInterest();
-            } else {
+            } else if (irm != address(0)) {
                 IIrm(irm).onMarketPause(_paused);
             }
         }

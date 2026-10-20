@@ -121,6 +121,26 @@ contract AltoMarketPause is MarketCommon {
         }
     }
 
+    function test_WhenIrmIsZeroAddressAndMarketIsUnpaused() external {
+        vm.prank(OWNER);
+        market.setIrm(address(0), false);
+
+        vm.startPrank(PAUSER);
+        market.pause(PAUSE_TYPE, true);
+        assertTrue(market.paused(PAUSE_TYPE));
+
+        // it should unpause without calling the irm
+        vm.expectEmit();
+        emit IPausable.Paused(PAUSER, PAUSE_TYPE, false);
+        market.pause(PAUSE_TYPE, false);
+        vm.stopPrank();
+
+        assertFalse(market.paused(PAUSE_TYPE));
+
+        // it should allow market operations again
+        market.accrueInterest();
+    }
+
     function test_RevertWhen_MarketIsAlreadyPausedAndPausedAgain() external {
         vm.startPrank(PAUSER);
         market.pause(PAUSE_TYPE, true);

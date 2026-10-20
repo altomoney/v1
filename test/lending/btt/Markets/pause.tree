@@ -4,6 +4,9 @@ AltoBaseMarket::Pause()
 │   └── it should not accrue any inerest as time passes
 ├── when market is unpaused
 │   └── it should restart interest accrual from current time
+├── when irm is zero address and market is unpaused
+│   ├── it should unpause without calling the irm
+│   └── it should allow market operations again
 ├── when market is already paused and paused again
 │   └── it should revert
 └── when market is unpaused and unpaused again
