@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {console2} from "forge-std/console2.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 import {BorrowMarketOffboarding} from "../BorrowMarketOffboarding.sol";
+import {ERPMarketOffboardingIO} from "../../libraries/ERPMarketOffboardingIO.sol";
 import {
     BorrowMarketOffboardingBorrowerMarket,
     BorrowMarketOffboardingInput,
@@ -38,18 +38,12 @@ struct BorrowerSimulationResult {
 library BorrowMarketOffboardingIO {
     Vm internal constant VM = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
-    string internal constant MAINNET_DEPLOYMENT_OUTPUT_DIR = "contracts/deployments/ethereum-mainnet/output";
-    string internal constant BORROWER_FETCHER_SCRIPT = "ERP/ERP-OFFBOARD-02/scripts/fetch-borrowers.ts";
-
     function writeBorrowerList(string memory manifestPath, BorrowMarketOffboardingManifest memory manifest)
         internal
         returns (BorrowerList memory)
     {
-        string[] memory command = new string[](4);
-        command[0] = "node";
-        command[1] = BORROWER_FETCHER_SCRIPT;
-        command[2] = manifestPath;
-        command[3] = borrowerListPath(manifest);
+        string[] memory command =
+            ERPMarketOffboardingIO.borrowerFetcherCommand(manifestPath, borrowerListPath(manifest));
         return parseBorrowerList(string(VM.ffi(command)));
     }
 
@@ -97,13 +91,8 @@ library BorrowMarketOffboardingIO {
         }
 
         string memory json = string.concat(
-            '{"passed":true,"methodology":"isolated-current-oracle","chainId":"',
-            VM.toString(block.chainid),
-            '","sourceBlock":"',
-            VM.toString(manifest.sourceBlock),
-            '","operationId":"',
-            VM.toString(operationId),
-            '","limits":',
+            ERPMarketOffboardingIO.simulationReportPrefix(manifest.sourceBlock, operationId),
+            ',"limits":',
             _limitsJson(manifest),
             ',"markets":[',
             marketJson,
@@ -127,15 +116,16 @@ library BorrowMarketOffboardingIO {
         BorrowMarketOffboardingPhase phase,
         BorrowMarketOffboardingManifest memory manifest
     ) internal {
-        string memory path = string.concat(BorrowMarketOffboarding.artifactDirectory(phase, manifest), "/inputs.json");
-        VM.writeFile(path, VM.readFile(manifestPath));
-        console2.log("ERP inputs written:", path);
+        string memory path = ERPMarketOffboardingIO.artifactPath(
+            BorrowMarketOffboarding.artifactDirectory(phase, manifest), "inputs.json"
+        );
+        ERPMarketOffboardingIO.writeManifestInput(manifestPath, path);
     }
 
     function borrowerListPath(BorrowMarketOffboardingManifest memory manifest) internal pure returns (string memory) {
-        return string.concat(
+        return ERPMarketOffboardingIO.artifactPath(
             BorrowMarketOffboarding.artifactDirectory(BorrowMarketOffboardingPhase.BATCH_B_REDUCE_LTV, manifest),
-            "/borrowers.json"
+            "borrowers.json"
         );
     }
 
@@ -145,29 +135,24 @@ library BorrowMarketOffboardingIO {
         returns (BorrowMarketOffboardingManifest memory manifest)
     {
         string memory json = VM.readFile(path);
-        manifest.activationId = VM.parseJsonString(json, ".activationId");
-        uint256 severity = VM.parseJsonUint(json, ".severity");
-        require(severity <= uint256(BorrowMarketOffboardingSeverity.CRITICAL), "ERP manifest: invalid severity");
-        manifest.severity = BorrowMarketOffboardingSeverity(severity);
-        uint256 schedulePhase = VM.parseJsonUint(json, ".schedulePhase");
-        require(
-            schedulePhase <= uint256(BorrowMarketOffboardingSchedulePhase.TERMINAL),
-            "ERP manifest: invalid schedule phase"
-        );
-        manifest.schedulePhase = BorrowMarketOffboardingSchedulePhase(schedulePhase);
-        manifest.t0 = VM.parseJsonUint(json, ".t0");
-        manifest.lastExecutedStep = VM.parseJsonUint(json, ".lastExecutedStep");
-        manifest.lastStepExecutedAt = VM.parseJsonUint(json, ".lastStepExecutedAt");
-        manifest.lastOperationId = VM.parseJsonBytes32(json, ".lastOperationId");
-        manifest.step = VM.parseJsonUint(json, ".step");
-        manifest.sourceBlock = VM.parseJsonUint(json, ".sourceBlock");
-        manifest.deploymentId = VM.parseJsonUint(json, ".deploymentId");
-        manifest.freezerSafe = VM.parseJsonAddress(json, ".freezerSafe");
-        manifest.timelockSafe = VM.parseJsonAddress(json, ".timelockSafe");
-        manifest.fixedRateIrmVersion = VM.parseJsonUint(json, ".fixedRateIrmVersion");
+        ERPMarketOffboardingIO.ManifestMetadata memory metadata =
+            ERPMarketOffboardingIO.parseManifestMetadata(json, false);
+        manifest.activationId = metadata.activationId;
+        manifest.severity = BorrowMarketOffboardingSeverity(metadata.severity);
+        manifest.schedulePhase = BorrowMarketOffboardingSchedulePhase(metadata.schedulePhase);
+        manifest.t0 = metadata.t0;
+        manifest.step = metadata.step;
+        manifest.lastExecutedStep = metadata.lastExecutedStep;
+        manifest.lastStepExecutedAt = metadata.lastStepExecutedAt;
+        manifest.lastOperationId = metadata.lastOperationId;
+        manifest.sourceBlock = metadata.sourceBlock;
+        manifest.deploymentId = metadata.deploymentId;
+        manifest.freezerSafe = metadata.freezerSafe;
+        manifest.timelockSafe = metadata.timelockSafe;
+        manifest.fixedRateIrmVersion = metadata.fixedRateIrmVersion;
         manifest.vaults = abi.decode(VM.parseJson(json, ".vaults"), (BorrowMarketOffboardingVault[]));
         manifest.markets = abi.decode(VM.parseJson(json, ".markets"), (BorrowMarketOffboardingMarket[]));
-        _validateManifest(manifest);
+        _validateManifest(manifest, metadata);
     }
 
     function loadCurrentChainInput(uint256 deploymentId)
@@ -175,40 +160,33 @@ library BorrowMarketOffboardingIO {
         view
         returns (BorrowMarketOffboardingInput memory input)
     {
-        string memory json = VM.readFile(string.concat(_deploymentFolder(deploymentId), "/addresses.json"));
+        string memory json = VM.readFile(
+            string.concat(ERPMarketOffboardingIO.deploymentFolder(block.chainid, deploymentId), "/addresses.json")
+        );
 
         input.contracts.timelock = VM.parseJsonAddress(json, ".contracts.timelock");
-        input.contracts.ownerFixedRateIrmFactory = _tryParseAddress(json, ".contracts.ownerFixedRateIrmFactory");
+        input.contracts.ownerFixedRateIrmFactory =
+            ERPMarketOffboardingIO.tryParseAddress(json, ".contracts.ownerFixedRateIrmFactory");
         input.contracts.marketRegistry = VM.parseJsonAddress(json, ".contracts.marketRegistry");
         input.contracts.altoAdapter = VM.parseJsonAddress(json, ".contracts.altoAdapter");
         input.contracts.liquidationPeriphery = VM.parseJsonAddress(json, ".contracts.liquidationPeriphery");
     }
 
     function _borrowerResultJson(BorrowerSimulationResult memory result) private pure returns (string memory) {
-        return string.concat(
-            '{"market":"',
-            VM.toString(result.market),
-            '","borrower":"',
-            VM.toString(result.borrower),
-            '","borrowShares":"',
-            VM.toString(result.borrowShares),
-            '","collateralAssets":"',
-            VM.toString(result.collateralAssets),
-            '","liquidatableBefore":',
-            VM.toString(result.liquidatableBefore),
-            ',"liquidatableAfter":',
-            VM.toString(result.liquidatableAfter),
-            ',"newlyLiquidatable":',
-            VM.toString(!result.liquidatableBefore && result.liquidatableAfter),
-            ',"repaidBorrowAssets":"',
-            VM.toString(result.repaidBorrowAssets),
-            '","seizedCollateralAssets":"',
-            VM.toString(result.seizedCollateralAssets),
-            '","badDebtAssets":"',
-            VM.toString(result.badDebtAssets),
-            '","supplierLossAssets":"',
-            VM.toString(result.supplierLossAssets),
-            '"}'
+        return ERPMarketOffboardingIO.borrowerResultJson(
+            ERPMarketOffboardingIO.BorrowerResult({
+                market: result.market,
+                borrower: result.borrower,
+                borrowShares: result.borrowShares,
+                collateralAssets: result.collateralAssets,
+                liquidatableBefore: result.liquidatableBefore,
+                liquidatableAfter: result.liquidatableAfter,
+                repaidBorrowAssets: result.repaidBorrowAssets,
+                seizedCollateralAssets: result.seizedCollateralAssets,
+                badDebtAssets: result.badDebtAssets,
+                supplierLossAssets: result.supplierLossAssets
+            }),
+            true
         );
     }
 
@@ -264,18 +242,12 @@ library BorrowMarketOffboardingIO {
         return string.concat('{"markets":[', marketJson, '],"vaults":[', vaultJson, "]}");
     }
 
-    function _validateManifest(BorrowMarketOffboardingManifest memory manifest) private pure {
-        require(bytes(manifest.activationId).length != 0, "ERP manifest: empty activation ID");
-        require(manifest.step != 0, "ERP manifest: zero step");
-        require(manifest.t0 != 0, "ERP manifest: zero T0");
-        require(manifest.lastExecutedStep < manifest.step, "ERP manifest: invalid last executed step");
-        require(manifest.sourceBlock != 0, "ERP manifest: zero source block");
-        require(manifest.deploymentId != 0, "ERP manifest: zero deployment ID");
-        require(manifest.freezerSafe != address(0), "ERP manifest: zero freezer Safe");
-        require(manifest.timelockSafe != address(0), "ERP manifest: zero Timelock Safe");
-        require(manifest.fixedRateIrmVersion != 0, "ERP manifest: zero IRM version");
+    function _validateManifest(
+        BorrowMarketOffboardingManifest memory manifest,
+        ERPMarketOffboardingIO.ManifestMetadata memory metadata
+    ) private pure {
+        ERPMarketOffboardingIO.validateManifestMetadata(metadata, false);
         require(manifest.markets.length != 0, "ERP manifest: no markets");
-
         for (uint256 i; i < manifest.vaults.length; ++i) {
             address vault = manifest.vaults[i].vault;
             require(manifest.vaults[i].allocator != address(0), "ERP manifest: zero Vault allocator");
@@ -284,32 +256,12 @@ library BorrowMarketOffboardingIO {
                 require(vault != manifest.vaults[j].vault, "ERP manifest: duplicate Vault");
             }
         }
-
+        address[] memory markets = new address[](manifest.markets.length);
+        address[] memory leverages = new address[](manifest.markets.length);
         for (uint256 i; i < manifest.markets.length; ++i) {
-            BorrowMarketOffboardingMarket memory configuredMarket = manifest.markets[i];
-            require(configuredMarket.market != address(0), "ERP manifest: zero market");
-            require(configuredMarket.leverage != address(0), "ERP manifest: zero leverage");
-            for (uint256 j; j < i; ++j) {
-                require(configuredMarket.market != manifest.markets[j].market, "ERP manifest: duplicate market");
-            }
+            markets[i] = manifest.markets[i].market;
+            leverages[i] = manifest.markets[i].leverage;
         }
-    }
-
-    function _tryParseAddress(string memory json, string memory path) private pure returns (address) {
-        try VM.parseJsonAddress(json, path) returns (address parsed) {
-            return parsed;
-        } catch {
-            return address(0);
-        }
-    }
-
-    function _deploymentFolder(uint256 deploymentId) private view returns (string memory) {
-        return string.concat(
-            MAINNET_DEPLOYMENT_OUTPUT_DIR,
-            "/ethereum-mainnet-",
-            VM.toString(block.chainid),
-            "-",
-            VM.toString(deploymentId)
-        );
+        ERPMarketOffboardingIO.validateMarkets(markets, leverages);
     }
 }

@@ -6,6 +6,8 @@ is authoritative for activation, severity, notice, schedules, simulations, limit
 with the activation, live state, manifest, simulation, or generated transactions. Refresh the source block, regenerate,
 and obtain reapproval when outcomes change. Never edit generated JSON.
 
+The Mint and Borrow offboarding tools share scheduling, rate/LTV validation and call builders, integration removal, IO, fork-simulation, and borrower-fetching mechanics under `ERP/libraries` and `ERP/scripts`. This runbook and the ERP-OFFBOARD-01 facade remain the operator-facing interface.
+
 ## Operator flow
 
 1. Confirm Governance/Risk approval, notice or waiver, market scope, severity, and numeric limits.
@@ -191,7 +193,7 @@ To refresh the pre-simulation, select a finalized block, update the manifest's s
 limits, update the test fork-block constant, and regenerate its borrower fixture:
 
 ~~~bash
-node ERP/ERP-OFFBOARD-01/scripts/fetch-borrowers.ts \
+node ERP/scripts/fetch-borrowers.ts \
   ERP/ERP-OFFBOARD-01/tests/fixtures/manifest-refresh-weth-<block>.json \
   ERP/ERP-OFFBOARD-01/tests/fixtures/borrowers-refresh-weth-<block>.json
 ~~~

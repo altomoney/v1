@@ -8,6 +8,8 @@ criteria, and approvals. This README explains only how to operate the implementa
 If the Notion ERP, approved activation record, live state, generated artifacts, and this runbook do not agree, stop and
 obtain a reviewed update. Do not edit Solidity or generated JSON during an incident.
 
+The Mint and Borrow offboarding tools share scheduling, rate/LTV validation and call builders, integration removal, IO, fork-simulation, and borrower-fetching mechanics under `ERP/libraries` and `ERP/scripts`. This runbook and the ERP-OFFBOARD-02 facade remain the operator-facing interface.
+
 ## Emergency flow
 
 1. Confirm Governance/Risk approved the activation and all inputs required by the Notion ERP.
@@ -299,7 +301,7 @@ Before every step:
 
 Running phase `2` automatically:
 
-1. invokes `scripts/fetch-borrowers.ts` through FFI;
+1. invokes `ERP/scripts/fetch-borrowers.ts` through FFI;
 2. fetches the complete historical borrower candidate set from Goldsky at `sourceBlock`;
 3. reconciles active borrower shares exactly with `totalBorrowed().shares`;
 4. schedules and executes the exact proposed Timelock batch on the fork;
@@ -399,5 +401,5 @@ FOUNDRY_PROFILE=erp forge build
 `tests/RefreshedSusdeEndToEnd.t.sol` is the Notion Section 6 development pre-simulation. It runs Batch A through
 Batch C at Medium severity against the live refreshed sUSDe borrow market `0x5d8fA5E1fAcb746179BD1AEb3aA78Db384C52001`
 and the DUSD Vault at block `26225900`, using `tests/fixtures/manifest-susde-26225900.json` and
-`tests/fixtures/borrowers-susde-26225900.json`. Refresh both fixtures with `scripts/fetch-borrowers.ts` when the
-source block changes.
+`tests/fixtures/borrowers-susde-26225900.json`. Refresh both fixtures with `ERP/scripts/fetch-borrowers.ts` when the
+source block changes. Pass the manifest path and the desired borrower JSON output path explicitly.

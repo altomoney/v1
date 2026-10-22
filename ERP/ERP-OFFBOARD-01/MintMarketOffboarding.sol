@@ -3,7 +3,6 @@ pragma solidity ^0.8.28;
 
 import {
     BatchBReduceLtvParams,
-    BatchBSetFixedRateIrmParams,
     BatchCRecoverParams,
     MintMarketOffboardingContracts,
     MintMarketOffboardingInput,
@@ -11,54 +10,24 @@ import {
     MintMarketOffboardingMarket,
     MintMarketOffboardingPhase,
     MintMarketOffboardingReport,
-    MintMarketOffboardingSchedulePhase,
-    MintMarketOffboardingSimulationTotals,
-    MintMarketOffboardingSeverity
+    MintMarketOffboardingSimulationTotals
 } from "./IMintMarketOffboarding.sol";
 
 import {ERPOutputWriter, ERPTransactionBatch} from "../libraries/ERPOutputWriter.sol";
+import {ERPMarketOffboarding} from "../libraries/ERPMarketOffboarding.sol";
 
-import {OwnerFixedRateIrmFactory} from "@alto/deployments/ethereum-mainnet/OwnerFixedRateIrmFactory.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
-import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {Balance, IMarket, IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
-import {IIrm, IRMType} from "@alto/lending/interfaces/IIrm.sol";
-import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
-import {IAltoLeverageSwapper} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
-import {
-    IDcfDlbPriorityLiquidationEngine,
-    IDcfDlbPriorityLiquidationEngineBase,
-    LiquidationConfiguration
-} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
-import {ILiquidationPeripheryBase} from "@alto/lending/liquidation/interfaces/ILiquidationPeriphery.sol";
+import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
-import {AdapterContractApproval} from "@alto/utils/AdapterContractApproval.sol";
-import {FROZEN_TYPE, PAUSE_TYPE} from "@alto/utils/Constants.sol";
-import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
-import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
-import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
-import {console2} from "forge-std/console2.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 /// @notice Builds and writes operational phases for ERP-OFFBOARD-01.
 library MintMarketOffboarding {
     Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
-    uint256 internal constant MAX_LTV_REDUCTION = 0.05 ether;
-    uint256 internal constant YEAR = 365 days;
-    uint256 internal constant MAX_BORROW_RATE_SPY = 8 ether / YEAR;
-    uint256 internal constant TERMINAL_STEP_INTERVAL = 1 hours;
     string internal constant ERP_OUTPUT_DIR = "ERP/ERP-OFFBOARD-01/output";
-
-    struct RecoveryIntegrationState {
-        address leverageSwapper;
-        bool leverageSupported;
-        bool callbackAuthorized;
-        bool swapperWhitelisted;
-        bool liquidationSupported;
-        bool liquidationAuthorized;
-        bool registered;
-    }
 
     struct TimelockArtifactMetadata {
         string fileStem;
@@ -81,7 +50,17 @@ library MintMarketOffboarding {
         } else if (phase == MintMarketOffboardingPhase.BATCH_B_REDUCE_LTV) {
             report = _prepareRateAndLtvReduction(manifest, input);
         } else if (phase == MintMarketOffboardingPhase.BATCH_C_RECOVER) {
-            report = _prepareRecoveryPhase(manifest, contracts);
+            report = _prepareRecovery(
+                BatchCRecoverParams({
+                    timelockSafe: manifest.timelockSafe,
+                    timelock: contracts.timelock,
+                    dusd: contracts.dusd,
+                    marketRegistry: contracts.marketRegistry,
+                    altoAdapter: contracts.altoAdapter,
+                    liquidationPeriphery: contracts.liquidationPeriphery,
+                    markets: manifest.markets
+                })
+            );
         } else {
             revert("ERP: invalid phase");
         }
@@ -93,38 +72,19 @@ library MintMarketOffboarding {
     function _prepareFixedRateIrmPhase(
         MintMarketOffboardingManifest memory manifest,
         MintMarketOffboardingInput memory input
-    ) private returns (MintMarketOffboardingReport memory) {
+    ) private returns (MintMarketOffboardingReport memory report) {
         address factory = input.contracts.ownerFixedRateIrmFactory;
         if (factory == address(0)) {
-            factory = _deployOwnerFixedRateIrmFactory(input.contracts.timelock);
+            factory = ERPMarketOffboarding.deployOwnerFixedRateIrmFactory(input.contracts.timelock);
             input.contracts.ownerFixedRateIrmFactory = factory;
         }
 
-        return _prepareFixedRateIrmAttachment(
-            BatchBSetFixedRateIrmParams({
-                timelockSafe: manifest.timelockSafe,
-                timelock: input.contracts.timelock,
-                ownerFixedRateIrmFactory: factory,
-                version: manifest.fixedRateIrmVersion,
-                markets: manifest.markets
-            })
-        );
-    }
-
-    function _prepareRecoveryPhase(
-        MintMarketOffboardingManifest memory manifest,
-        MintMarketOffboardingContracts memory contracts
-    ) private view returns (MintMarketOffboardingReport memory) {
-        return _prepareRecovery(
-            BatchCRecoverParams({
-                timelockSafe: manifest.timelockSafe,
-                timelock: contracts.timelock,
-                dusd: contracts.dusd,
-                marketRegistry: contracts.marketRegistry,
-                altoAdapter: contracts.altoAdapter,
-                liquidationPeriphery: contracts.liquidationPeriphery,
-                markets: manifest.markets
-            })
+        (report.timelockBatch, report.timelockDelay) = ERPMarketOffboarding.buildFixedRateBatch(
+            manifest.timelockSafe,
+            input.contracts.timelock,
+            factory,
+            manifest.fixedRateIrmVersion,
+            _fixedRateMarkets(manifest.markets)
         );
     }
 
@@ -154,10 +114,12 @@ library MintMarketOffboarding {
         MintMarketOffboardingSimulationTotals memory totals,
         MintMarketOffboardingMarket memory market
     ) internal pure {
-        require(
-            totals.liquidationFundingAssets <= market.maxLiquidationFundingAssets, "Simulation: funding limit exceeded"
+        ERPMarketOffboarding.validateCommonSimulationLimits(
+            totals.liquidationFundingAssets,
+            totals.badDebtAssets,
+            market.maxLiquidationFundingAssets,
+            market.maxBadDebtAssets
         );
-        require(totals.badDebtAssets <= market.maxBadDebtAssets, "Simulation: bad debt limit exceeded");
         require(
             totals.seizedCollateralAssets <= market.maxSeizedCollateralAssets,
             "Simulation: seized collateral limit exceeded"
@@ -169,7 +131,6 @@ library MintMarketOffboarding {
         view
         returns (MintMarketOffboardingReport memory report)
     {
-        uint256 freezerCallCount;
         IDUSD dusd = IDUSD(input.contracts.dusd);
         for (uint256 i; i < manifest.markets.length; ++i) {
             MintMarketOffboardingMarket memory configuredMarket = manifest.markets[i];
@@ -191,26 +152,13 @@ library MintMarketOffboarding {
             require(
                 configuredMarket.dusdMinterCeiling >= minted + claimableFees, "Batch A: DUSD ceiling below current fees"
             );
-
-            if (!IMarketBase(marketAddress).paused(FROZEN_TYPE)) ++freezerCallCount;
         }
 
         report = _newTimelockReport(
             manifest.timelockSafe, input.contracts.timelock, manifest.markets.length * 4, bytes32(0)
         );
-        report.freezerBatch = ERPOutputWriter.newBatch(manifest.freezerSafe, freezerCallCount);
-        uint256 freezerCallIndex;
-        for (uint256 i; i < manifest.markets.length; ++i) {
-            address marketAddress = manifest.markets[i].market;
-            if (IMarketBase(marketAddress).paused(FROZEN_TYPE)) continue;
-            freezerCallIndex = ERPOutputWriter.addBatchCall(
-                report.freezerBatch,
-                freezerCallIndex,
-                marketAddress,
-                abi.encodeCall(IPausable.pause, (FROZEN_TYPE, true))
-            );
-        }
-        assert(freezerCallIndex == freezerCallCount);
+        report.freezerBatch =
+            ERPMarketOffboarding.buildFreezeBatch(manifest.freezerSafe, _marketAddresses(manifest.markets));
 
         uint256 timelockCallCount = report.timelockBatch.targets.length;
         uint256 timelockCallIndex;
@@ -245,55 +193,12 @@ library MintMarketOffboarding {
         assert(timelockCallIndex == timelockCallCount);
     }
 
-    function _deployOwnerFixedRateIrmFactory(address timelock) private returns (address) {
-        require(timelock != address(0), "Factory deploy: invalid Timelock");
-
-        OwnerFixedRateIrmFactory factory = new OwnerFixedRateIrmFactory(timelock);
-
-        console2.log("OwnerFixedRateIrmFactory:", address(factory));
-        console2.log("Owner:", timelock);
-        console2.log("Manual update required in addresses.json: .contracts.ownerFixedRateIrmFactory");
-
-        return address(factory);
-    }
-
-    function _prepareFixedRateIrmAttachment(BatchBSetFixedRateIrmParams memory params)
-        private
-        view
-        returns (MintMarketOffboardingReport memory report)
-    {
-        OwnerFixedRateIrmFactory factory = OwnerFixedRateIrmFactory(params.ownerFixedRateIrmFactory);
-        uint256 marketCount = params.markets.length;
-        report = _newTimelockReport(params.timelockSafe, params.timelock, marketCount * 2, bytes32(0));
-
-        for (uint256 i; i < marketCount; ++i) {
-            address market = params.markets[i].market;
-            uint256 fixedRateSpy = params.markets[i].fixedRateSpy;
-            Balance memory totalBorrowed = IMarket(market).totalBorrowed();
-
-            _validateFrozenAndNotPaused(market, "Batch B");
-            require(totalBorrowed.assets != 0 || totalBorrowed.shares != 0, "Batch B: debt targets reached");
-            require(fixedRateSpy <= MAX_BORROW_RATE_SPY, "Batch B: rate above IRM maximum");
-
-            address predictedIrm = factory.predictIrmAddress(market, params.version, fixedRateSpy);
-            ERPOutputWriter.addBatchCall(
-                report.timelockBatch,
-                i,
-                address(factory),
-                abi.encodeCall(OwnerFixedRateIrmFactory.deploy, (market, params.version, fixedRateSpy))
-            );
-            ERPOutputWriter.addBatchCall(
-                report.timelockBatch, marketCount + i, market, abi.encodeCall(IMarketBase.setIrm, (predictedIrm, false))
-            );
-        }
-    }
-
     function _prepareRateAndLtvReduction(BatchBReduceLtvParams memory params)
         private
         view
         returns (MintMarketOffboardingReport memory report)
     {
-        uint256 marketCount = _debtBearingMarketCount(params.markets);
+        uint256 marketCount = ERPMarketOffboarding.debtBearingMarketCount(_marketAddresses(params.markets));
         require(marketCount != 0, "Batch B: debt targets reached");
 
         report = _newTimelockReport(params.timelockSafe, params.timelock, marketCount * 5, params.lastOperationId);
@@ -301,7 +206,7 @@ library MintMarketOffboarding {
         uint256 callIndex;
         for (uint256 i; i < params.markets.length; ++i) {
             MintMarketOffboardingMarket memory configuredMarket = params.markets[i];
-            if (!_hasDebt(configuredMarket.market)) continue;
+            if (!ERPMarketOffboarding.hasDebt(configuredMarket.market)) continue;
             callIndex = _appendRateAndLtvReductionCalls(report.timelockBatch, callIndex, params, configuredMarket);
         }
         assert(callIndex == marketCount * 5);
@@ -314,36 +219,34 @@ library MintMarketOffboarding {
         MintMarketOffboardingMarket memory configuredMarket
     ) private view returns (uint256) {
         IMarket market = IMarket(configuredMarket.market);
-        _validateFrozenAndNotPaused(address(market), "Batch B");
-        require(configuredMarket.ltvReduction <= MAX_LTV_REDUCTION, "Batch B: LTV reduction above maximum");
+        ERPMarketOffboarding.validateFrozenAndNotPaused(address(market), "Batch B");
+        ERPMarketOffboarding.validateLtvReduction(configuredMarket.ltvReduction);
 
         address fixedRateIrm = market.irm();
         address liquidationEngine = market.liquidationEngine();
-        _validateRateCorrection(
-            params, address(market), fixedRateIrm, liquidationEngine, configuredMarket.correctionRateSpy
+        ERPMarketOffboarding.validateRateCorrection(
+            address(market),
+            fixedRateIrm,
+            liquidationEngine,
+            configuredMarket.correctionRateSpy,
+            params.aprFloorSpy,
+            params.previousAprFloorSpy,
+            params.lastStepExecutedAt
         );
         _validateMintCorrectionState(configuredMarket, market, IDUSD(params.dusd));
 
-        (uint256 reducedMarketMaxLtv, LiquidationConfiguration memory liquidationConfiguration) =
-            _reducedLtvConfiguration(market, liquidationEngine, configuredMarket.ltvReduction);
+        (uint256 reducedMarketMaxLtv, LiquidationConfiguration memory liquidationConfiguration) = ERPMarketOffboarding.reducedLtvConfiguration(
+            address(market), liquidationEngine, configuredMarket.ltvReduction
+        );
 
-        callIndex = ERPOutputWriter.addBatchCall(
-            batch,
-            callIndex,
-            fixedRateIrm,
-            abi.encodeCall(FixedRateIrm.setBorrowRate, (configuredMarket.correctionRateSpy))
+        callIndex = ERPMarketOffboarding.appendRateUpdateCall(
+            batch, callIndex, fixedRateIrm, configuredMarket.correctionRateSpy
         );
         callIndex = ERPOutputWriter.addBatchCall(
             batch, callIndex, address(market), abi.encodeCall(AltoMintMarket.claimInterest, (0))
         );
-        callIndex = ERPOutputWriter.addBatchCall(
-            batch, callIndex, address(market), abi.encodeCall(IMarketBase.setMaxLtv, (reducedMarketMaxLtv))
-        );
-        callIndex = ERPOutputWriter.addBatchCall(
-            batch,
-            callIndex,
-            liquidationEngine,
-            abi.encodeCall(IDcfDlbPriorityLiquidationEngineBase.setLiquidationConfiguration, (liquidationConfiguration))
+        callIndex = ERPMarketOffboarding.appendLtvUpdateCalls(
+            batch, callIndex, address(market), liquidationEngine, reducedMarketMaxLtv, liquidationConfiguration
         );
         return ERPOutputWriter.addBatchCall(
             batch,
@@ -372,162 +275,24 @@ library MintMarketOffboarding {
         );
     }
 
-    function _validateRateCorrection(
-        BatchBReduceLtvParams memory params,
-        address market,
-        address fixedRateIrm,
-        address liquidationEngine,
-        uint256 borrowRateSpy
-    ) private view {
-        require(IIrm(fixedRateIrm).IRM_TYPE() == IRMType.FIXED_RATE, "Batch B: IRM is not fixed-rate");
-        require(FixedRateIrm(fixedRateIrm).market() == market, "Batch B: IRM not dedicated");
-        require(
-            IDcfDlbPriorityLiquidationEngine(liquidationEngine).market() == market, "Batch B: wrong liquidation engine"
-        );
-        require(borrowRateSpy <= FixedRateIrm(fixedRateIrm).MAX_BORROW_RATE(), "Batch B: rate above IRM maximum");
-        require(borrowRateSpy >= params.aprFloorSpy, "Batch B: rate below schedule APR floor");
-
-        (uint256 currentBorrowRate, uint48 lastRateUpdate) = FixedRateIrm(fixedRateIrm).irState();
-        require(currentBorrowRate >= params.previousAprFloorSpy, "Batch B: previous step not executed");
-        require(borrowRateSpy >= currentBorrowRate, "Batch B: rate below current rate");
-        if (params.lastStepExecutedAt != 0) {
-            require(lastRateUpdate >= params.lastStepExecutedAt, "Batch B: prior execution not reflected in IRM");
-        }
-    }
-
-    function _reducedLtvConfiguration(IMarketBase market, address liquidationEngine, uint256 ltvReduction)
-        private
-        view
-        returns (uint256 reducedMarketMaxLtv, LiquidationConfiguration memory configuration)
-    {
-        configuration = IDcfDlbPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
-        reducedMarketMaxLtv = _saturatingSub(market.maxLtv(), ltvReduction);
-        configuration.maxLiquidationLtv = _saturatingSub(configuration.maxLiquidationLtv, ltvReduction);
-        configuration.ltvForCompleteLiquidation = _saturatingSub(configuration.ltvForCompleteLiquidation, ltvReduction);
-        require(
-            reducedMarketMaxLtv <= configuration.maxLiquidationLtv
-                && configuration.maxLiquidationLtv <= configuration.ltvForCompleteLiquidation,
-            "Batch B: invalid LTV order"
-        );
-    }
-
     function _validateCorrectionSchedule(MintMarketOffboardingManifest memory manifest, address timelock)
         private
         view
         returns (uint256 aprFloorSpy, uint256 previousAprFloorSpy)
     {
-        require(manifest.t0 <= block.timestamp, "Batch B: T0 is in the future");
-        require(manifest.lastExecutedStep + 1 == manifest.step, "Batch B: steps must be sequential");
-
-        if (manifest.schedulePhase == MintMarketOffboardingSchedulePhase.SCHEDULED) {
-            (uint256 offset, uint256 aprFloor) = _scheduledStep(manifest.severity, manifest.step);
-            require(block.timestamp >= manifest.t0 + offset, "Batch B: scheduled step is not due");
-
-            if (manifest.step == 1) {
-                require(manifest.lastStepExecutedAt == 0, "Batch B: unexpected prior step timestamp");
-                require(manifest.lastOperationId == bytes32(0), "Batch B: unexpected prior operation");
-            } else {
-                require(manifest.lastStepExecutedAt != 0, "Batch B: missing prior execution timestamp");
-                require(manifest.lastStepExecutedAt <= block.timestamp, "Batch B: prior execution is in the future");
-                (, uint256 previousAprFloor) = _scheduledStep(manifest.severity, manifest.step - 1);
-                _validatePriorOperationExecuted(timelock, manifest.lastOperationId);
-                previousAprFloorSpy = _aprToSpy(previousAprFloor);
-            }
-            aprFloorSpy = _aprToSpy(aprFloor);
-        } else if (manifest.schedulePhase == MintMarketOffboardingSchedulePhase.TERMINAL) {
-            require(manifest.lastStepExecutedAt != 0, "Batch B: missing prior execution timestamp");
-            require(manifest.lastStepExecutedAt <= block.timestamp, "Batch B: prior execution is in the future");
-            require(
-                block.timestamp >= manifest.t0 + _terminalOffset(manifest.severity),
-                "Batch B: terminal phase is not due"
-            );
-            require(
-                block.timestamp >= manifest.lastStepExecutedAt + TERMINAL_STEP_INTERVAL,
-                "Batch B: terminal step interval not elapsed"
-            );
-            require(_debtBearingMarketCount(manifest.markets) != 0, "Batch B: debt targets reached");
-            _validatePriorOperationExecuted(timelock, manifest.lastOperationId);
-
-            uint256 terminalAprFloor = _terminalAprFloor(manifest.severity);
-            aprFloorSpy = _aprToSpy(terminalAprFloor);
-            previousAprFloorSpy = aprFloorSpy;
-        } else {
-            revert("Batch B: invalid schedule phase");
-        }
-    }
-
-    function _scheduledStep(MintMarketOffboardingSeverity severity, uint256 step)
-        private
-        pure
-        returns (uint256 offset, uint256 aprFloor)
-    {
-        if (severity == MintMarketOffboardingSeverity.MEDIUM) {
-            if (step == 1) return (1 days, 0.1 ether);
-            if (step == 2) return (7 days, 0.2 ether);
-            if (step == 3) return (14 days, 0.4 ether);
-            if (step == 4) return (21 days, 0.8 ether);
-        } else if (severity == MintMarketOffboardingSeverity.HIGH) {
-            if (step == 1) return (1 days, 0.1 ether);
-            if (step == 2) return (4 days, 0.2 ether);
-            if (step == 3) return (7 days, 0.4 ether);
-            if (step == 4) return (10 days, 0.8 ether);
-        } else if (severity == MintMarketOffboardingSeverity.CRITICAL) {
-            if (step == 1) return (1 days, 0.1 ether);
-            if (step == 2) return (2 days, 0.2 ether);
-            if (step == 3) return (3 days, 0.4 ether);
-            if (step == 4) return (4 days, 0.8 ether);
-            if (step == 5) return (5 days, 1.6 ether);
-            if (step == 6) return (6 days, 3.2 ether);
-        } else {
-            revert("Batch B: invalid severity");
-        }
-        revert("Batch B: invalid scheduled step");
-    }
-
-    function _terminalOffset(MintMarketOffboardingSeverity severity) private pure returns (uint256) {
-        if (severity == MintMarketOffboardingSeverity.MEDIUM) return 28 days;
-        if (severity == MintMarketOffboardingSeverity.HIGH) return 14 days;
-        if (severity == MintMarketOffboardingSeverity.CRITICAL) return 7 days;
-        revert("Batch B: invalid severity");
-    }
-
-    function _terminalAprFloor(MintMarketOffboardingSeverity severity) private pure returns (uint256) {
-        return severity == MintMarketOffboardingSeverity.CRITICAL ? 3.2 ether : 0.8 ether;
-    }
-
-    function _aprToSpy(uint256 apr) private pure returns (uint256) {
-        return apr / YEAR;
-    }
-
-    function _debtBearingMarketCount(MintMarketOffboardingMarket[] memory markets)
-        private
-        view
-        returns (uint256 count)
-    {
-        for (uint256 i; i < markets.length; ++i) {
-            if (_hasDebt(markets[i].market)) ++count;
-        }
-    }
-
-    function _hasDebt(address market) private view returns (bool) {
-        Balance memory borrowed = IMarket(market).totalBorrowed();
-        return borrowed.assets != 0 || borrowed.shares != 0;
-    }
-
-    function _saturatingSub(uint256 value, uint256 reduction) private pure returns (uint256) {
-        return value > reduction ? value - reduction : 0;
-    }
-
-    function _validatePriorOperationExecuted(address timelock, bytes32 operationId) private view {
-        require(operationId != bytes32(0), "Batch B: missing prior operation");
-        require(
-            TimelockController(payable(timelock)).isOperationDone(operationId), "Batch B: prior operation not executed"
+        return ERPMarketOffboarding.validateCorrectionSchedule(
+            ERPMarketOffboarding.ScheduleParams({
+                severity: uint8(manifest.severity),
+                schedulePhase: uint8(manifest.schedulePhase),
+                t0: manifest.t0,
+                step: manifest.step,
+                lastExecutedStep: manifest.lastExecutedStep,
+                lastStepExecutedAt: manifest.lastStepExecutedAt,
+                lastOperationId: manifest.lastOperationId
+            }),
+            timelock,
+            _marketAddresses(manifest.markets)
         );
-    }
-
-    function _validateFrozenAndNotPaused(address market, string memory batchName) private view {
-        require(IMarketBase(market).paused(FROZEN_TYPE), string.concat(batchName, ": market not frozen"));
-        require(!IMarketBase(market).paused(PAUSE_TYPE), string.concat(batchName, ": market paused"));
     }
 
     function _prepareRecovery(BatchCRecoverParams memory params)
@@ -537,15 +302,23 @@ library MintMarketOffboarding {
     {
         _validateRecoveryState(params);
 
-        (RecoveryIntegrationState[] memory integrations, uint256 integrationCallCount) =
-            _loadRecoveryIntegrationStates(params);
+        ERPMarketOffboarding.RecoveryMarket[] memory markets = _recoveryMarkets(params.markets);
+        (ERPMarketOffboarding.RecoveryIntegrationState[] memory integrations, uint256 integrationCallCount) = ERPMarketOffboarding.loadRecoveryIntegrationStates(
+            markets, params.liquidationPeriphery, params.marketRegistry, true
+        );
         uint256 callCount = params.markets.length * 4 + integrationCallCount;
         report = _newTimelockReport(params.timelockSafe, params.timelock, callCount, bytes32(0));
 
         uint256 callIndex = _appendMintShutdownCalls(params, report.timelockBatch, 0);
-        callIndex = _appendLeverageRemovalCalls(params, integrations, report.timelockBatch, callIndex);
-        callIndex = _appendLiquidationRemovalCalls(params, integrations, report.timelockBatch, callIndex);
-        callIndex = _appendRegistryRemovalCalls(params, integrations, report.timelockBatch, callIndex);
+        callIndex = ERPMarketOffboarding.appendRecoveryIntegrationRemovalCalls(
+            markets,
+            integrations,
+            params.liquidationPeriphery,
+            params.marketRegistry,
+            true,
+            report.timelockBatch,
+            callIndex
+        );
         assert(callIndex == callCount);
     }
 
@@ -566,42 +339,8 @@ library MintMarketOffboarding {
             );
             require(AltoMintMarket(marketAddress).claimableFeesAssets() == 0, "Batch C: claimable fees remain");
             require(minted <= params.markets[i].maxUnbackedDusdAssets, "Batch C: unbacked DUSD exceeds approved limit");
-            _validateFrozenAndNotPaused(marketAddress, "Batch C");
-            require(market.oracle() != address(0), "Batch C: market oracle unavailable");
-            require(
-                AdapterContractApproval(params.altoAdapter).isApprovedContract(marketAddress),
-                "Batch C: adapter route unavailable"
-            );
-        }
-    }
-
-    function _loadRecoveryIntegrationStates(BatchCRecoverParams memory params)
-        private
-        view
-        returns (RecoveryIntegrationState[] memory integrations, uint256 callCount)
-    {
-        integrations = new RecoveryIntegrationState[](params.markets.length);
-        for (uint256 i; i < params.markets.length; ++i) {
-            address market = params.markets[i].market;
-            AltoLeverage leverage = AltoLeverage(params.markets[i].leverage);
-            IAltoLeverageSwapper leverageSwapper = leverage.swapper();
-            RecoveryIntegrationState memory integration = RecoveryIntegrationState({
-                leverageSwapper: address(leverageSwapper),
-                leverageSupported: leverage.supportedMarkets(market),
-                callbackAuthorized: IMarket(market).authorizedCallbacks(address(leverage)),
-                swapperWhitelisted: leverageSwapper.isWhitelisted(address(leverage)),
-                liquidationSupported: ILiquidationPeripheryBase(params.liquidationPeriphery).supportedMarkets(market),
-                liquidationAuthorized: IMarket(market).authorizedLiquidationPeriphery(params.liquidationPeriphery),
-                registered: IMarketRegistry(params.marketRegistry).isMintMarket(market)
-            });
-            integrations[i] = integration;
-
-            if (integration.leverageSupported) ++callCount;
-            if (integration.callbackAuthorized) ++callCount;
-            if (integration.swapperWhitelisted) ++callCount;
-            if (integration.liquidationSupported) ++callCount;
-            if (integration.liquidationAuthorized) ++callCount;
-            if (integration.registered) ++callCount;
+            ERPMarketOffboarding.validateFrozenAndNotPaused(marketAddress, "Batch C");
+            ERPMarketOffboarding.validateRecoveryExitRoutes(marketAddress, params.altoAdapter);
         }
     }
 
@@ -629,96 +368,12 @@ library MintMarketOffboarding {
         return callIndex;
     }
 
-    function _appendLeverageRemovalCalls(
-        BatchCRecoverParams memory params,
-        RecoveryIntegrationState[] memory integrations,
-        ERPTransactionBatch memory batch,
-        uint256 callIndex
-    ) private pure returns (uint256) {
-        for (uint256 i; i < params.markets.length; ++i) {
-            address market = params.markets[i].market;
-            AltoLeverage leverage = AltoLeverage(params.markets[i].leverage);
-            RecoveryIntegrationState memory integration = integrations[i];
-
-            if (integration.leverageSupported) {
-                callIndex = ERPOutputWriter.addBatchCall(
-                    batch, callIndex, address(leverage), abi.encodeCall(AltoLeverage.setMarket, (market, false))
-                );
-            }
-            if (integration.callbackAuthorized) {
-                callIndex = ERPOutputWriter.addBatchCall(
-                    batch,
-                    callIndex,
-                    market,
-                    abi.encodeCall(IMarketBase.setAuthorizedCallback, (address(leverage), false))
-                );
-            }
-
-            if (integration.swapperWhitelisted) {
-                callIndex = ERPOutputWriter.addBatchCall(
-                    batch,
-                    callIndex,
-                    integration.leverageSwapper,
-                    abi.encodeCall(IAltoLeverageSwapper.setWhitelisted, (address(leverage), false))
-                );
-            }
-        }
-        return callIndex;
-    }
-
-    function _appendLiquidationRemovalCalls(
-        BatchCRecoverParams memory params,
-        RecoveryIntegrationState[] memory integrations,
-        ERPTransactionBatch memory batch,
-        uint256 callIndex
-    ) private pure returns (uint256) {
-        for (uint256 i; i < params.markets.length; ++i) {
-            address market = params.markets[i].market;
-            RecoveryIntegrationState memory integration = integrations[i];
-            if (integration.liquidationSupported) {
-                callIndex = ERPOutputWriter.addBatchCall(
-                    batch,
-                    callIndex,
-                    params.liquidationPeriphery,
-                    abi.encodeCall(ILiquidationPeripheryBase.setSupportedMarket, (market, false))
-                );
-            }
-            if (integration.liquidationAuthorized) {
-                callIndex = ERPOutputWriter.addBatchCall(
-                    batch,
-                    callIndex,
-                    market,
-                    abi.encodeCall(IMarketBase.setAuthorizedLiquidationPeriphery, (params.liquidationPeriphery, false))
-                );
-            }
-        }
-        return callIndex;
-    }
-
-    function _appendRegistryRemovalCalls(
-        BatchCRecoverParams memory params,
-        RecoveryIntegrationState[] memory integrations,
-        ERPTransactionBatch memory batch,
-        uint256 callIndex
-    ) private pure returns (uint256) {
-        for (uint256 i; i < params.markets.length; ++i) {
-            address market = params.markets[i].market;
-            if (!integrations[i].registered) continue;
-
-            callIndex = ERPOutputWriter.addBatchCall(
-                batch, callIndex, params.marketRegistry, abi.encodeCall(IMarketRegistry.removeMintMarket, (market))
-            );
-        }
-        return callIndex;
-    }
-
     function _newTimelockReport(address safe, address timelock, uint256 callCount, bytes32 predecessor)
         private
         view
         returns (MintMarketOffboardingReport memory report)
     {
-        report.timelockBatch = ERPOutputWriter.newBatch(safe, callCount);
-        report.timelockDelay = TimelockController(payable(timelock)).getMinDelay();
+        (report.timelockBatch, report.timelockDelay) = ERPMarketOffboarding.newTimelockBatch(safe, timelock, callCount);
         report.predecessor = predecessor;
     }
 
@@ -792,22 +447,46 @@ library MintMarketOffboarding {
         pure
         returns (string memory)
     {
-        string memory outputDirectory = string.concat(ERP_OUTPUT_DIR, "/", manifest.activationId);
-        if (
-            phase == MintMarketOffboardingPhase.BATCH_B_SET_FIXED_RATE_IRM
-                || phase == MintMarketOffboardingPhase.BATCH_B_REDUCE_LTV
-        ) {
-            outputDirectory = string.concat(
-                outputDirectory, "/severity-", _severityName(manifest.severity), "/step-", vm.toString(manifest.step)
-            );
-        }
-        return string.concat(outputDirectory, "/source-block-", vm.toString(manifest.sourceBlock));
+        return ERPMarketOffboarding.artifactDirectory(
+            ERP_OUTPUT_DIR,
+            manifest.activationId,
+            uint8(phase),
+            uint8(manifest.severity),
+            manifest.step,
+            manifest.sourceBlock
+        );
     }
 
-    function _severityName(MintMarketOffboardingSeverity severity) private pure returns (string memory) {
-        if (severity == MintMarketOffboardingSeverity.MEDIUM) return "medium";
-        if (severity == MintMarketOffboardingSeverity.HIGH) return "high";
-        if (severity == MintMarketOffboardingSeverity.CRITICAL) return "critical";
-        revert("ERP: invalid severity");
+    function _marketAddresses(MintMarketOffboardingMarket[] memory markets)
+        private
+        pure
+        returns (address[] memory addresses)
+    {
+        addresses = new address[](markets.length);
+        for (uint256 i; i < markets.length; ++i) {
+            addresses[i] = markets[i].market;
+        }
+    }
+
+    function _fixedRateMarkets(MintMarketOffboardingMarket[] memory markets)
+        private
+        pure
+        returns (ERPMarketOffboarding.FixedRateMarket[] memory configured)
+    {
+        configured = new ERPMarketOffboarding.FixedRateMarket[](markets.length);
+        for (uint256 i; i < markets.length; ++i) {
+            configured[i] = ERPMarketOffboarding.FixedRateMarket(markets[i].market, markets[i].fixedRateSpy);
+        }
+    }
+
+    function _recoveryMarkets(MintMarketOffboardingMarket[] memory markets)
+        private
+        pure
+        returns (ERPMarketOffboarding.RecoveryMarket[] memory configured)
+    {
+        configured = new ERPMarketOffboarding.RecoveryMarket[](markets.length);
+        for (uint256 i; i < markets.length; ++i) {
+            configured[i] = ERPMarketOffboarding.RecoveryMarket(markets[i].market, markets[i].leverage);
+        }
     }
 }
