@@ -47,6 +47,19 @@ address constant CVX_TOKEN_MAINNET = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
 // Wrapped Frax token address on mainnet
 address constant WFRAX_TOKEN_MAINNET = 0x04ACaF8D2865c0714F79da09645C13FD2888977f;
 
+// sDUSD/frxUSD Curve pool and LP token on mainnet
+address constant SDUSD_FRXUSD_CURVE_POOL_MAINNET = 0x6cfD300bF4e3F879ba0C33c800eaA0B54f310578;
+// sDUSD/frxUSD Curve gauge on mainnet
+address constant SDUSD_FRXUSD_CURVE_GAUGE_MAINNET = 0xF56E9E4351Ee8c67176e37aaF7Bc4dA174f8A633;
+// Convex pool ID for the sDUSD/frxUSD Curve LP token on mainnet
+uint256 constant POOL_ID_SDUSD_FRXUSD_CURVE_POOL_MAINNET = 593;
+// Convex reward pool for staked sDUSD/frxUSD Curve LP tokens on mainnet
+address constant CONVEX_REWARD_POOL_CVX_SDUSD_FRXUSD_MAINNET = 0x97F029a72A5498d5A0F2d12D3FA89a134199706F;
+// Stake DAO sDUSD/frxUSD reward vault on mainnet
+address constant STAKEDAO_REWARD_VAULT_SDUSD_FRXUSD_MAINNET = 0xEe4A4cd4eBcb57EBbC7e4DF451F090896c6F88DF;
+// Yearn v2 sDUSD/frxUSD vault on mainnet
+address constant YEARN_VAULT_SDUSD_FRXUSD_MAINNET = 0x1dCDdAaC98e3b9D3466fc808B7787FA4CfAF9813;
+
 // Chainlink feeds
 // Standard Chainlink ETH/USD feed
 address constant CHAINLINK_ETH_USD_PRICE_FEED = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
