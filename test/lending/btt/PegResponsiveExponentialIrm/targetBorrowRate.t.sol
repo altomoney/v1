@@ -72,6 +72,19 @@ contract PegResponsiveExponentialIrmTargetBorrowRateTest is PegResponsiveExponen
         assertEq(irm.targetBorrowRate(5), 100);
     }
 
+    function test_WhenBaseRateIsZero_TheHealthyRateIsZeroAndTheBridgeRisesFromZero() external {
+        PegResponsiveExponentialIrmConfig memory config = irmConfig;
+        config.baseRate = 0;
+        _useConfig(config);
+
+        assertEq(irm.targetBorrowRate(type(uint256).max), 0);
+        assertEq(irm.targetBorrowRate(RECOVERY_PRICE), 0);
+        assertEq(irm.targetBorrowRate(RECOVERY_PRICE - 1), _bridgeExpected(config, RECOVERY_PRICE - 1));
+        assertEq(irm.targetBorrowRate(MID_BRIDGE_PRICE), STRESS_RATE / 2);
+        assertEq(irm.targetBorrowRate(STRESS_PRICE), STRESS_RATE);
+        assertEq(irm.targetBorrowRate(STRESS_PRICE - DOUBLING_DISTANCE), STRESS_RATE * 2);
+    }
+
     function test_WhenPriceIsOneUnitBelowStress_ItReturnsTheExactRoundedExponentialResult() external view {
         assertEq(irm.targetBorrowRate(STRESS_PRICE - 1), STRESS_RATE);
     }
@@ -272,8 +285,8 @@ contract PegResponsiveExponentialIrmTargetBorrowRateTest is PegResponsiveExponen
     ) private pure returns (PegResponsiveExponentialIrmConfig memory config) {
         config.stressPrice = bound(rawStressPrice, 1, MAX_RECOVERY - 1);
         config.recoveryPrice = bound(rawRecoveryPrice, config.stressPrice + 1, MAX_RECOVERY);
-        config.baseRate = bound(rawBaseRate, 1, MAX_RATE - 2);
-        config.stressRate = bound(rawStressRate, config.baseRate, MAX_RATE - 1);
+        config.baseRate = bound(rawBaseRate, 0, MAX_RATE - 2);
+        config.stressRate = bound(rawStressRate, Math.max(config.baseRate, 1), MAX_RATE - 1);
         config.maxRate = bound(rawMaxRate, config.stressRate + 1, MAX_RATE);
         config.doublingDistance = rawDoublingDistance == 0 ? 1 : rawDoublingDistance;
         config.recoveryDelay = rawRecoveryDelay == 0 ? 1 : rawRecoveryDelay;

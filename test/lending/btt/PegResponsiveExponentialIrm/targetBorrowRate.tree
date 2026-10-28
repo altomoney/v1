@@ -4,8 +4,10 @@ PegResponsiveExponentialIrm::targetBorrowRate(uint256)
 │   │   └── it should return baseRate exactly
 │   ├── when price is greater than recoveryPrice
 │   │   └── it should return baseRate exactly
-│   └── when price is type(uint256).max
-│       └── it should return baseRate without performing subtractive curve math
+│   ├── when price is type(uint256).max
+│   │   └── it should return baseRate without performing subtractive curve math
+│   └── when baseRate is zero
+│       └── it should return zero
 ├── given price is in the linear bridge where stressPrice <= price < recoveryPrice
 │   ├── when price equals stressPrice
 │   │   └── it should return stressRate exactly
@@ -22,8 +24,10 @@ PegResponsiveExponentialIrm::targetBorrowRate(uint256)
 │   │   └── it should return the two-stage implementation result
 │   ├── when recoveryPrice is exactly one unit above stressPrice
 │   │   └── it should handle the minimum-width valid bridge without division by zero
-│   └── when baseRate equals stressRate
-│       └── it should return the same flat rate throughout the bridge
+│   ├── when baseRate equals stressRate
+│   │   └── it should return the same flat rate throughout the bridge
+│   └── when baseRate is zero
+│       └── it should interpolate from zero at recoveryPrice to stressRate at stressPrice
 ├── given price is below stressPrice
 │   ├── it should calculate stressDrop as stressPrice minus price
 │   ├── it should calculate rawExponent as floor(ExpLib.LN_2_INT times stressDrop divided by doublingDistance)

@@ -150,6 +150,11 @@ PegResponsiveExponentialIrm::updateInterestRate(uint256,uint256)
         │   ├── it should preserve stress through recoveryDelay minus one
         │   ├── it should exit stress at the exact recoveryDelay and return to baseRate
         │   └── at every step it should accrue the elapsed interval at the prior stored rate and apply the new rate prospectively
+        ├── given baseRate is zero and a lifecycle of valid checkpoints
+        │   ├── it should accrue no interest over healthy intervals
+        │   ├── it should rise from zero through the bridge and enter stress at stressPrice
+        │   ├── it should accrue interest over stressed intervals
+        │   └── it should return to a zero rate after recovery and accrue no further interest
         └── given any successful checkpoint
             ├── it should call getPrice exactly once
             ├── it should not query the market paused state

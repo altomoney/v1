@@ -65,9 +65,10 @@ contract PegResponsiveExponentialIrmConstructorTest is PegResponsiveExponentialI
         );
     }
 
-    function test_RevertWhen_BaseRateIsZero() external {
+    function test_RevertWhen_StressRateIsZero() external {
         PegResponsiveExponentialIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.baseRate = 0;
+        invalidConfig.stressRate = 0;
         _expectDeployConfigRevert(
             invalidConfig, IPegResponsiveExponentialIrmErrors.PegResponsiveExponentialIrmInvalidRateConfig.selector
         );
@@ -135,7 +136,7 @@ contract PegResponsiveExponentialIrmConstructorTest is PegResponsiveExponentialI
     function test_RevertWhen_PriceAndLaterGroupsAreInvalid_PrioritizesPriceError() external {
         PegResponsiveExponentialIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.stressPrice = 0;
-        invalidConfig.baseRate = 0;
+        invalidConfig.stressRate = invalidConfig.maxRate;
         invalidConfig.doublingDistance = 0;
         _expectDeployConfigRevert(
             invalidConfig, IPegResponsiveExponentialIrmErrors.PegResponsiveExponentialIrmInvalidPriceConfig.selector
@@ -144,7 +145,7 @@ contract PegResponsiveExponentialIrmConstructorTest is PegResponsiveExponentialI
 
     function test_RevertWhen_RateAndControllerGroupsAreInvalid_PrioritizesRateError() external {
         PegResponsiveExponentialIrmConfig memory invalidConfig = irmConfig;
-        invalidConfig.baseRate = 0;
+        invalidConfig.stressRate = invalidConfig.maxRate;
         invalidConfig.doublingDistance = 0;
         _expectDeployConfigRevert(
             invalidConfig, IPegResponsiveExponentialIrmErrors.PegResponsiveExponentialIrmInvalidRateConfig.selector
@@ -168,7 +169,12 @@ contract PegResponsiveExponentialIrmConstructorTest is PegResponsiveExponentialI
 
     function test_AcceptsRateBoundaryConfigurations() external {
         PegResponsiveExponentialIrmConfig memory boundaryConfig = irmConfig;
-        boundaryConfig.baseRate = 1;
+        boundaryConfig.baseRate = 0;
+        _deployAndAssertConfig(boundaryConfig);
+
+        boundaryConfig = irmConfig;
+        boundaryConfig.baseRate = 0;
+        boundaryConfig.stressRate = 1;
         _deployAndAssertConfig(boundaryConfig);
 
         boundaryConfig = irmConfig;
@@ -182,6 +188,14 @@ contract PegResponsiveExponentialIrmConstructorTest is PegResponsiveExponentialI
         boundaryConfig = irmConfig;
         boundaryConfig.maxRate = irm.MAX_BORROW_RATE();
         _deployAndAssertConfig(boundaryConfig);
+    }
+
+    function test_WhenBaseRateIsZero_InitializesZeroBorrowRate() external {
+        PegResponsiveExponentialIrmConfig memory zeroBaseConfig = irmConfig;
+        zeroBaseConfig.baseRate = 0;
+        _deployAndAssertConfig(zeroBaseConfig);
+
+        _assertIRState(IRState({borrowRate: 0, lastUpdate: 0, recoveryStartedAt: 0, stressMode: false}));
     }
 
     function test_AcceptsControllerBoundaryConfigurations() external {

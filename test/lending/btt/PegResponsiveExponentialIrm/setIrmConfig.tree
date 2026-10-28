@@ -5,13 +5,13 @@ PegResponsiveExponentialIrm::setIrmConfig(PegResponsiveExponentialIrmConfig)
     ├── given configuration is invalid
     │   ├── when stressPrice is zero or not below recoveryPrice, or recoveryPrice exceeds the limit
     │   │   └── it should revert with PegResponsiveExponentialIrmInvalidPriceConfig
-    │   ├── when baseRate is zero, baseRate exceeds stressRate, stressRate reaches maxRate, or maxRate exceeds the limit
+    │   ├── when stressRate is zero, baseRate exceeds stressRate, stressRate reaches maxRate, or maxRate exceeds the limit
     │   │   └── it should revert with PegResponsiveExponentialIrmInvalidRateConfig
     │   ├── when doublingDistance, recoveryDelay, or maxOracleAge is zero
     │   │   └── it should revert with PegResponsiveExponentialIrmInvalidControllerConfig
     │   └── it should prioritize price then rate then controller errors before any checkpoint
     └── given configuration is valid
-        ├── it should accept exact supported boundaries and adjacent valid values
+        ├── it should accept exact supported boundaries and adjacent valid values, including a zero baseRate
         ├── it should not enforce a relationship between recoveryDelay and maxOracleAge
         ├── given market is unbound
         │   └── it should skip market queries and accrual

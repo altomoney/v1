@@ -12,9 +12,9 @@ struct PegResponsiveExponentialIrmConfig {
     uint256 recoveryPrice;
     /// @dev Price below which the raw curve grows exponentially.
     uint256 stressPrice;
-    /// @dev Minimum SPY rate returned at or above `recoveryPrice`.
+    /// @dev Minimum SPY rate returned at or above `recoveryPrice`. May be zero.
     uint256 baseRate;
-    /// @dev SPY rate returned at `stressPrice` and stress-mode rate floor.
+    /// @dev SPY rate returned at `stressPrice` and stress-mode rate floor. Must be nonzero.
     uint256 stressRate;
     /// @dev Extreme safety ceiling for the SPY rate.
     uint256 maxRate;

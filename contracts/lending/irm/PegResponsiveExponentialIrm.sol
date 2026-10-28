@@ -31,6 +31,8 @@ import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 /// @dev The raw target is flat at `baseRate` above `recoveryPrice`, increases
 /// linearly to `stressRate` at `stressPrice`, and increases exponentially below
 /// `stressPrice` according to `doublingDistance`, subject to `maxRate`.
+/// `baseRate` may be zero, in which case debt accrues no interest while the peg
+/// is healthy and stress mode is inactive.
 /// @dev Stress-mode hysteresis is applied separately from the raw curve. Stress
 /// begins at or below `stressPrice` and keeps the effective rate at or above
 /// `stressRate` until qualifying recovery checkpoints are separated by at least
@@ -360,9 +362,10 @@ contract PegResponsiveExponentialIrm is AltoOwnable2Step, IPegResponsiveExponent
         // reversed thresholds would invalidate the ordering of the curve regions.
         // recoveryPrice is also limited to the supported oracle price range.
         //
-        // baseRate must be nonzero and no greater than stressRate.
-        // stressRate must be strictly below maxRate so the exponential region has
-        // room to increase, and maxRate must not exceed the protocol safety limit.
+        // baseRate may be zero but must be no greater than stressRate.
+        // stressRate must be nonzero because the exponential region scales it, and
+        // strictly below maxRate so that region has room to increase. maxRate must
+        // not exceed the protocol safety limit.
         //
         // doublingDistance must be nonzero to prevent division by zero.
         // recoveryDelay and maxOracleAge must be nonzero so recovery confirmation
@@ -376,7 +379,7 @@ contract PegResponsiveExponentialIrm is AltoOwnable2Step, IPegResponsiveExponent
         }
 
         if (
-            config.baseRate == 0 || config.baseRate > config.stressRate || config.stressRate >= config.maxRate
+            config.stressRate == 0 || config.baseRate > config.stressRate || config.stressRate >= config.maxRate
                 || config.maxRate > MAX_BORROW_RATE
         ) {
             revert PegResponsiveExponentialIrmInvalidRateConfig();
