@@ -450,6 +450,39 @@ contract PegResponsiveExponentialIrmUpdateInterestRateTest is PegResponsiveExpon
         _assertLifecycleStep(RECOVERY_PRICE, BASE_RATE, 0, false, true, STRESS_RATE);
     }
 
+    function test_WhenBaseRateIsZero_HealthyIntervalsAccrueNothingAndStressStillCharges() external {
+        irmConfig.baseRate = 0;
+        _replaceBoundIrm(irmConfig, address(oracle));
+        uint256 debt = 1_000_000e18;
+        _openDebt(debt);
+        _setIRState(0, uint48(block.timestamp), 0, false);
+
+        vm.warp(block.timestamp + 10);
+        _assertLifecycleStep(RECOVERY_PRICE, 0, 0, false, false, 0);
+
+        vm.warp(block.timestamp + 10);
+        _assertLifecycleStep(MID_BRIDGE_PRICE, STRESS_RATE / 2, 0, false, false, 0);
+        (uint128 debtAfterHealthyIntervals,) = market.totalBorrowed();
+        assertEq(debtAfterHealthyIntervals, debt, "zero base rate accrued interest");
+
+        vm.warp(block.timestamp + 10);
+        _assertLifecycleStep(STRESS_PRICE, STRESS_RATE, 0, true, true, STRESS_RATE / 2);
+
+        vm.warp(block.timestamp + 10);
+        uint48 recoveryStartedAt = uint48(block.timestamp);
+        _assertLifecycleStep(RECOVERY_PRICE, STRESS_RATE, recoveryStartedAt, true, true, STRESS_RATE);
+
+        vm.warp(block.timestamp + RECOVERY_DELAY);
+        _assertLifecycleStep(RECOVERY_PRICE, 0, 0, false, true, STRESS_RATE);
+        (uint128 debtAfterStress,) = market.totalBorrowed();
+        assertGt(debtAfterStress, debtAfterHealthyIntervals, "stress interval accrued interest");
+
+        vm.warp(block.timestamp + 10);
+        _assertLifecycleStep(RECOVERY_PRICE, 0, 0, false, false, 0);
+        (uint128 debtAfterRecovery,) = market.totalBorrowed();
+        assertEq(debtAfterRecovery, debtAfterStress, "recovered zero base rate accrued interest");
+    }
+
     function test_WhenCheckpointSucceeds_ItCallsOracleOnceAndNeverQueriesMarketPauseState() external {
         _setCurrentObservation(RECOVERY_PRICE);
         bytes memory pausedCall = abi.encodeWithSignature("paused(bytes32)", PAUSE_TYPE);

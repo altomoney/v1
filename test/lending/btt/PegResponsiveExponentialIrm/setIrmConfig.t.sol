@@ -86,9 +86,10 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
         );
     }
 
-    function test_RevertWhen_BaseRateIsZero() external {
+    function test_RevertWhen_StressRateIsZero() external {
         PegResponsiveExponentialIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.baseRate = 0;
+        invalidConfig.stressRate = 0;
         _expectConfigRevert(
             invalidConfig, IPegResponsiveExponentialIrmErrors.PegResponsiveExponentialIrmInvalidRateConfig.selector
         );
@@ -156,7 +157,7 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
     function test_RevertWhen_PriceAndLaterGroupsAreInvalid_PrioritizesPriceError() external {
         PegResponsiveExponentialIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.stressPrice = 0;
-        invalidConfig.baseRate = 0;
+        invalidConfig.stressRate = invalidConfig.maxRate;
         invalidConfig.maxOracleAge = 0;
         _expectConfigRevert(
             invalidConfig, IPegResponsiveExponentialIrmErrors.PegResponsiveExponentialIrmInvalidPriceConfig.selector
@@ -165,7 +166,7 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
 
     function test_RevertWhen_RateAndControllerGroupsAreInvalid_PrioritizesRateError() external {
         PegResponsiveExponentialIrmConfig memory invalidConfig = irmConfig;
-        invalidConfig.baseRate = 0;
+        invalidConfig.stressRate = invalidConfig.maxRate;
         invalidConfig.maxOracleAge = 0;
         _expectConfigRevert(
             invalidConfig, IPegResponsiveExponentialIrmErrors.PegResponsiveExponentialIrmInvalidRateConfig.selector
@@ -201,7 +202,12 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
 
     function test_AcceptsRateBoundaryConfigurations() external {
         PegResponsiveExponentialIrmConfig memory boundaryConfig = irmConfig;
-        boundaryConfig.baseRate = 1;
+        boundaryConfig.baseRate = 0;
+        _setAndAssertConfig(boundaryConfig);
+
+        boundaryConfig = irmConfig;
+        boundaryConfig.baseRate = 0;
+        boundaryConfig.stressRate = 1;
         _setAndAssertConfig(boundaryConfig);
 
         boundaryConfig = irmConfig;
@@ -536,7 +542,7 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
         PegResponsiveExponentialIrmConfig memory newConfig = irmConfig;
         newConfig.maxRate = bound(maxRate, 2, MAX_RATE);
         newConfig.stressRate = bound(stressRate, 1, newConfig.maxRate - 1);
-        newConfig.baseRate = bound(baseRate, 1, newConfig.stressRate);
+        newConfig.baseRate = bound(baseRate, 0, newConfig.stressRate);
         failure = uint8(bound(failure, 0, 4));
         if (failure == 0) oracle.setGetPriceReverts(true);
         if (failure == 1) _setObservation(RECOVERY_PRICE, uint48(block.timestamp), false);

@@ -19,7 +19,7 @@ PegResponsiveExponentialIrm::constructor(address,PegResponsiveExponentialIrmConf
         │   └── when stressPrice is greater than recoveryPrice
         │       └── it should revert with PegResponsiveExponentialIrmInvalidPriceConfig
         ├── given the price configuration is valid and the rate configuration is invalid
-        │   ├── when baseRate is zero
+        │   ├── when stressRate is zero
         │   │   └── it should revert with PegResponsiveExponentialIrmInvalidRateConfig
         │   ├── when baseRate is greater than stressRate
         │   │   └── it should revert with PegResponsiveExponentialIrmInvalidRateConfig
@@ -48,8 +48,11 @@ PegResponsiveExponentialIrm::constructor(address,PegResponsiveExponentialIrmConf
             │   └── it should accept the immediate valid side of the strict price ordering
             ├── when recoveryPrice equals MAX_RECOVERY_PRICE
             │   └── it should deploy successfully
-            ├── when baseRate is one
-            │   └── it should accept the minimum non-zero base rate
+            ├── when baseRate is zero
+            │   ├── it should accept the zero base rate
+            │   └── it should initialize IRState with a zero borrowRate
+            ├── when baseRate is zero and stressRate is one
+            │   └── it should accept the minimum non-zero stress rate
             ├── when baseRate equals stressRate
             │   └── it should deploy successfully
             ├── when maxRate equals stressRate plus one
