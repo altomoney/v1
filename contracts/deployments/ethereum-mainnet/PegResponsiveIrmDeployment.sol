@@ -45,6 +45,7 @@ library PegResponsiveIrmDeployment {
     uint256 private constant ACTIVE_MINT_MARKET_COUNT = 6;
     uint256 private constant IRM_VERSION = 1;
     uint256 private constant YEAR = 365 days;
+    uint48 private constant MAX_ORACLE_AGE = 12 hours;
     string private constant SAFE_BATCH_NAME = "mint-market-peg-responsive-irm";
 
     function generate(AltoEthereumMainnetInput memory input) internal returns (AltoEthereumMainnetInput memory) {
@@ -52,7 +53,7 @@ library PegResponsiveIrmDeployment {
         require(timelock != address(0), "Invalid timelock");
 
         DusdPegCurveOracleRuntimeConfig memory oracleConfig = _oracleRuntimeConfig();
-        PegResponsiveExponentialIrmConfig memory irmConfig = _irmConfig();
+        PegResponsiveExponentialIrmConfig[] memory irmConfigs = _irmConfigs();
 
         if (input.contracts.dusdPegCurveOracle == address(0)) {
             input.contracts.dusdPegCurveOracle = address(
@@ -77,10 +78,10 @@ library PegResponsiveIrmDeployment {
 
         MarketContracts[] memory markets = _activeMintMarkets(input);
         _validateFactoryAndOracle(input, oracleConfig);
-        _validateOracleObservation(input.contracts.dusdPegCurveOracle, irmConfig.maxOracleAge);
-        _validateInitialMarkets(input, markets, irmConfig);
+        _validateOracleObservation(input.contracts.dusdPegCurveOracle, MAX_ORACLE_AGE);
+        _validateInitialMarkets(input, markets, irmConfigs);
 
-        PegResponsiveIrmBatch memory batch = _buildBatch(input, markets, irmConfig);
+        PegResponsiveIrmBatch memory batch = _buildBatch(input, markets, irmConfigs);
         SafeTransactionBuilder.writeTimelockBatch(
             SAFE_BATCH_NAME,
             timelock,
@@ -94,14 +95,14 @@ library PegResponsiveIrmDeployment {
     }
 
     function preflight(AltoEthereumMainnetInput memory input) internal view {
-        PegResponsiveExponentialIrmConfig memory irmConfig = _irmConfig();
+        PegResponsiveExponentialIrmConfig[] memory irmConfigs = _irmConfigs();
         MarketContracts[] memory markets = _activeMintMarkets(input);
 
         _validateFactoryAndOracle(input, _oracleRuntimeConfig());
-        _validateOracleObservation(input.contracts.dusdPegCurveOracle, irmConfig.maxOracleAge);
-        _validateInitialMarkets(input, markets, irmConfig);
+        _validateOracleObservation(input.contracts.dusdPegCurveOracle, MAX_ORACLE_AGE);
+        _validateInitialMarkets(input, markets, irmConfigs);
 
-        PegResponsiveIrmBatch memory batch = _buildBatch(input, markets, irmConfig);
+        PegResponsiveIrmBatch memory batch = _buildBatch(input, markets, irmConfigs);
         TimelockController timelock = TimelockController(payable(input.contracts.timelock));
         bytes32 operationId =
             timelock.hashOperationBatch(batch.targets, batch.values, batch.payloads, bytes32(0), bytes32(0));
@@ -109,13 +110,13 @@ library PegResponsiveIrmDeployment {
     }
 
     function reconcile(AltoEthereumMainnetInput memory input) internal view returns (AltoEthereumMainnetInput memory) {
-        PegResponsiveExponentialIrmConfig memory irmConfig = _irmConfig();
+        PegResponsiveExponentialIrmConfig[] memory irmConfigs = _irmConfigs();
         _validateFactoryAndOracle(input, _oracleRuntimeConfig());
 
         MarketContracts[] memory markets = _activeMintMarkets(input);
-        address[] memory expectedIrms = _predictedIrms(input, markets, irmConfig);
+        address[] memory expectedIrms = _predictedIrms(input, markets, irmConfigs);
         for (uint256 i; i < markets.length; ++i) {
-            _validateFinalMarket(input, markets[i].market, expectedIrms[i], irmConfig);
+            _validateFinalMarket(input, markets[i].market, expectedIrms[i], irmConfigs[i]);
             markets[i].marketIrm = expectedIrms[i];
         }
         return input;
@@ -124,7 +125,7 @@ library PegResponsiveIrmDeployment {
     function _buildBatch(
         AltoEthereumMainnetInput memory input,
         MarketContracts[] memory markets,
-        PegResponsiveExponentialIrmConfig memory irmConfig
+        PegResponsiveExponentialIrmConfig[] memory irmConfigs
     ) private view returns (PegResponsiveIrmBatch memory batch) {
         uint256 callCount = markets.length * 3;
         batch.targets = new address[](callCount);
@@ -136,11 +137,11 @@ library PegResponsiveIrmDeployment {
         for (uint256 i; i < markets.length; ++i) {
             uint256 callIndex = i * 3;
             address market = markets[i].market;
-            address irm = factory.predictIrmAddress(market, IRM_VERSION, irmConfig);
+            address irm = factory.predictIrmAddress(market, IRM_VERSION, irmConfigs[i]);
 
             batch.targets[callIndex] = address(factory);
             batch.payloads[callIndex] =
-                abi.encodeCall(OwnerPegResponsiveExponentialIrmFactory.deploy, (market, IRM_VERSION, irmConfig));
+                abi.encodeCall(OwnerPegResponsiveExponentialIrmFactory.deploy, (market, IRM_VERSION, irmConfigs[i]));
 
             batch.targets[callIndex + 1] = market;
             batch.payloads[callIndex + 1] = abi.encodeCall(IMarketBase.setIrm, (irm, false));
@@ -194,7 +195,7 @@ library PegResponsiveIrmDeployment {
     function _validateInitialMarkets(
         AltoEthereumMainnetInput memory input,
         MarketContracts[] memory markets,
-        PegResponsiveExponentialIrmConfig memory irmConfig
+        PegResponsiveExponentialIrmConfig[] memory irmConfigs
     ) private view {
         require(markets.length == ACTIVE_MINT_MARKET_COUNT, "Expected six mint markets");
 
@@ -224,7 +225,7 @@ library PegResponsiveIrmDeployment {
 
             (address deployed,,) = factory.deployments(market, IRM_VERSION);
             require(deployed == address(0), "IRM already deployed");
-            address predicted = factory.predictIrmAddress(market, IRM_VERSION, irmConfig);
+            address predicted = factory.predictIrmAddress(market, IRM_VERSION, irmConfigs[i]);
             require(predicted.code.length == 0, "Predicted IRM already deployed");
         }
     }
@@ -256,13 +257,13 @@ library PegResponsiveIrmDeployment {
     function _predictedIrms(
         AltoEthereumMainnetInput memory input,
         MarketContracts[] memory markets,
-        PegResponsiveExponentialIrmConfig memory irmConfig
+        PegResponsiveExponentialIrmConfig[] memory irmConfigs
     ) private view returns (address[] memory irms) {
         irms = new address[](markets.length);
         OwnerPegResponsiveExponentialIrmFactory factory =
             OwnerPegResponsiveExponentialIrmFactory(input.contracts.ownerPegResponsiveExponentialIrmFactory);
         for (uint256 i; i < markets.length; ++i) {
-            irms[i] = factory.predictIrmAddress(markets[i].market, IRM_VERSION, irmConfig);
+            irms[i] = factory.predictIrmAddress(markets[i].market, IRM_VERSION, irmConfigs[i]);
         }
     }
 
@@ -281,25 +282,39 @@ library PegResponsiveIrmDeployment {
         markets[5] = input.contracts.refreshFrxUsdMarket;
     }
 
-    /// @dev TENTATIVE DEPLOYMENT PARAMETERS: review and update every value before mainnet deployment.
+    /// @dev Values from the peg IRM "Deployment Parameters and Setup" specification. Risk must approve
+    /// them before mainnet deployment.
     function _oracleRuntimeConfig() private pure returns (DusdPegCurveOracleRuntimeConfig memory config) {
-        config = DusdPegCurveOracleRuntimeConfig({
-            expectedMaExpTime: 866, // TENTATIVE: review and update before mainnet deployment.
-            expectedAPrecise: 100_000 // TENTATIVE: review and update before mainnet deployment.
-        });
+        config = DusdPegCurveOracleRuntimeConfig({expectedMaExpTime: 866, expectedAPrecise: 100_000});
     }
 
-    /// @dev TENTATIVE DEPLOYMENT PARAMETERS: review and update every value before mainnet deployment.
-    function _irmConfig() private pure returns (PegResponsiveExponentialIrmConfig memory config) {
+    /// @dev Values from the peg IRM "Deployment Parameters and Setup" specification. Risk must approve
+    /// them before mainnet deployment. Entries follow `_activeMintMarkets` order. Rates are APRs
+    /// converted to per-second rates, rounded down over a 365-day year.
+    function _irmConfigs() private pure returns (PegResponsiveExponentialIrmConfig[] memory configs) {
+        configs = new PegResponsiveExponentialIrmConfig[](ACTIVE_MINT_MARKET_COUNT);
+        configs[0] = _irmConfig(0.035e18 / YEAR, 0.07e18 / YEAR, 5.2e18 / YEAR); // WETH
+        configs[1] = _irmConfig(0.0415e18 / YEAR, 0.083e18 / YEAR, 2.3e18 / YEAR); // wstETH
+        configs[2] = _irmConfig(0.0503e18 / YEAR, 0.1005e18 / YEAR, 2.3e18 / YEAR); // rETH
+        configs[3] = _irmConfig(0.0425e18 / YEAR, 0.085e18 / YEAR, 2.8e18 / YEAR); // sUSDe
+        configs[4] = _irmConfig(0.0445e18 / YEAR, 0.089e18 / YEAR, 1.1e18 / YEAR); // syrupUSDC
+        configs[5] = _irmConfig(0, 0.0894e18 / YEAR, 0.9e18 / YEAR); // frxUSD
+    }
+
+    function _irmConfig(uint256 baseRate, uint256 stressRate, uint256 maxRate)
+        private
+        pure
+        returns (PegResponsiveExponentialIrmConfig memory config)
+    {
         config = PegResponsiveExponentialIrmConfig({
-            recoveryPrice: 1.001e18, // TENTATIVE: review and update before mainnet deployment.
-            stressPrice: 1e18, // TENTATIVE: review and update before mainnet deployment.
-            baseRate: 0.05e18 / YEAR, // TENTATIVE: review and update before mainnet deployment.
-            stressRate: 0.075e18 / YEAR, // TENTATIVE: review and update before mainnet deployment.
-            maxRate: 8e18 / YEAR, // TENTATIVE: review and update before mainnet deployment.
-            doublingDistance: 0.0025e18, // TENTATIVE: review and update before mainnet deployment.
-            recoveryDelay: 6 hours, // TENTATIVE: review and update before mainnet deployment.
-            maxOracleAge: 30 minutes // TENTATIVE: review and update before mainnet deployment.
+            recoveryPrice: 0.999e18,
+            stressPrice: 0.995e18,
+            baseRate: baseRate,
+            stressRate: stressRate,
+            maxRate: maxRate,
+            doublingDistance: 0.0025e18,
+            recoveryDelay: 6 hours,
+            maxOracleAge: MAX_ORACLE_AGE
         });
     }
 }
