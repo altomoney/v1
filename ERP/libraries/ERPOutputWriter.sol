@@ -65,8 +65,17 @@ library ERPOutputWriter {
         pure
         returns (bytes memory scheduleData, bytes memory executeData, bytes32 operationId)
     {
+        return timelockCalldata(timelock, calls, delay, predecessor, bytes32(0));
+    }
+
+    function timelockCalldata(
+        address timelock,
+        ERPTransactionBatch memory calls,
+        uint256 delay,
+        bytes32 predecessor,
+        bytes32 salt
+    ) internal pure returns (bytes memory scheduleData, bytes memory executeData, bytes32 operationId) {
         _validateBatch(calls);
-        bytes32 salt;
         scheduleData = abi.encodeCall(
             TimelockController.scheduleBatch, (calls.targets, calls.values, calls.payloads, predecessor, salt, delay)
         );
@@ -86,6 +95,19 @@ library ERPOutputWriter {
         uint256 delay,
         bytes32 predecessor
     ) internal {
+        writeOptionalTimelockPair(outputDirectory, fileStem, name, timelock, batch, delay, predecessor, bytes32(0));
+    }
+
+    function writeOptionalTimelockPair(
+        string memory outputDirectory,
+        string memory fileStem,
+        string memory name,
+        address timelock,
+        ERPTransactionBatch memory batch,
+        uint256 delay,
+        bytes32 predecessor,
+        bytes32 salt
+    ) internal {
         if (batch.targets.length == 0) {
             removeIfExists(string.concat(outputDirectory, "/", fileStem, "-schedule.json"));
             removeIfExists(string.concat(outputDirectory, "/", fileStem, "-execute.json"));
@@ -93,7 +115,7 @@ library ERPOutputWriter {
             return;
         }
 
-        writeTimelockPair(outputDirectory, fileStem, name, timelock, batch, delay, predecessor);
+        writeTimelockPair(outputDirectory, fileStem, name, timelock, batch, delay, predecessor, salt);
     }
 
     function writeTimelockPair(
@@ -105,7 +127,21 @@ library ERPOutputWriter {
         uint256 delay,
         bytes32 predecessor
     ) internal {
-        (bytes memory scheduleData, bytes memory executeData,) = timelockCalldata(timelock, batch, delay, predecessor);
+        writeTimelockPair(outputDirectory, fileStem, name, timelock, batch, delay, predecessor, bytes32(0));
+    }
+
+    function writeTimelockPair(
+        string memory outputDirectory,
+        string memory fileStem,
+        string memory name,
+        address timelock,
+        ERPTransactionBatch memory batch,
+        uint256 delay,
+        bytes32 predecessor,
+        bytes32 salt
+    ) internal {
+        (bytes memory scheduleData, bytes memory executeData,) =
+            timelockCalldata(timelock, batch, delay, predecessor, salt);
 
         writeSingleTransactionSafeBatch(
             outputDirectory,

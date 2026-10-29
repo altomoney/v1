@@ -14,7 +14,7 @@ type Manifest = {
   severity: number;
   sourceBlock: number;
   step: number;
-  markets: { market: Address }[];
+  markets: (Address | { market: Address })[];
 };
 type Metadata = { block: { number: number | string }; hasIndexingErrors: boolean };
 type QueryData = {
@@ -111,7 +111,8 @@ async function main() {
 
   const subgraphUrl = process.env.GOLDSKY_SUBGRAPH_URL || DEFAULT_SUBGRAPH_URL;
   const markets: MarketBorrowers[] = [];
-  for (const { market } of manifest.markets) {
+  for (const configuredMarket of manifest.markets) {
+    const market = typeof configuredMarket === "string" ? configuredMarket : configuredMarket.market;
     const borrowers = await fetchBorrowers(market, manifest.sourceBlock, subgraphUrl);
     markets.push({ borrowers, market });
   }
