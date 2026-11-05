@@ -10,8 +10,6 @@ contract AltoRewardsDistributorConstructor is Test {
     address owner = address(0x1);
     uint256 merkleRootTimelock = 1 days;
 
-    function testRoot() public {}
-
     function test_RevertWhen_RewardTokenAddressIsZeroAddress() public {
         vm.expectRevert(IRewardsErrors.AltoRewardsDistributorInvalidInput.selector);
         new AltoRewardsDistributor(owner, merkleRootTimelock, address(0));

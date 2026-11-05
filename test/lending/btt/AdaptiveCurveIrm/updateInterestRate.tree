@@ -1,0 +1,49 @@
+AdaptiveCurveIrm::updateInterestRate(uint256,uint256)
+├── given caller is not the bound market
+│   └── when caller is owner or another address with market unset or bound
+│       └── it should revert with IrmUnauthorized preserve state and emit no events
+└── given caller is the bound market
+    ├── when timestamp precedes lastUpdate
+    │   └── it should revert with arithmetic panic 0x11 preserve state and emit no events
+    ├── when utilization multiplication compounding or final interest multiplication overflows
+    │   └── it should revert with arithmetic panic 0x11 preserve state and emit no events
+    ├── when elapsed time is zero
+    │   └── it should return zero interest and apply the below or above target curve without adapting rateAtTarget
+    ├── when utilization equals target and time passes
+    │   └── it should preserve rateAtTarget return that rate and accrue exact rounded interest over the elapsed interval
+    ├── when utilization is above target and time passes
+    │   └── it should increase rateAtTarget and calculate interest using the time averaged upper curve rate
+    ├── when utilization is below target and time passes
+    │   └── it should decrease rateAtTarget and calculate interest using the time averaged lower curve rate
+    ├── when borrowed amount is zero and supply is nonzero
+    │   └── it should return zero interest but still adapt the rate downward
+    ├── when supply is zero but debt is nonzero
+    │   └── it should use zero utilization adapt downward and accrue interest on the debt
+    ├── when supply and debt are both zero
+    │   └── it should use zero utilization return zero interest and still adapt downward
+    ├── when positive adaptation makes both midpoint and endpoint exceed maxRateAtTarget
+    │   └── it should bound both to the maximum and use the bounded time average for interest
+    ├── when negative adaptation makes both midpoint and endpoint fall below minRateAtTarget
+    │   └── it should bound both to the minimum and return the bounded time averaged curve rate
+    ├── when positive adaptation makes only the endpoint exceed maxRateAtTarget
+    │   └── it should cap the endpoint retain the uncapped midpoint and use their time average for the borrow rate and interest
+    ├── when negative adaptation makes only the endpoint fall below minRateAtTarget
+    │   └── it should floor the endpoint retain the unfloored midpoint and use their time average for the borrow rate and interest
+    ├── when debt exceeds supply and targetUtilization is below one
+    │   └── it should extrapolate the curve without clamping utilization to one
+    ├── when targetUtilization is one
+    │   ├── when utilization is exactly one
+    │   │   └── it should accrue at the unchanged target rate
+    │   └── when utilization is greater than one
+    │       └── it should revert with division panic 0x12 preserve state and emit no events
+    ├── when called repeatedly at the same and later timestamps
+    │   └── it should use the previous adapted rate accrue only since the last checkpoint and emit even with zero elapsed time
+    ├── when timestamp is zero or type(uint48).max
+    │   └── it should accept and store the exact timestamp
+    ├── when a short accrual interval crosses type(uint48).max
+    │   └── it should accrue for the full elapsed interval then truncate the stored timestamp to its low 48 bits
+    └── given calculation succeeds
+        ├── it should return accrued interest and the average borrow rate in that order
+        ├── it should store the endpoint rateAtTarget and low 48 bits of the current timestamp
+        ├── it should preserve configuration owner and market
+        └── it should emit exactly one IRStateUpdated with the complete resulting state

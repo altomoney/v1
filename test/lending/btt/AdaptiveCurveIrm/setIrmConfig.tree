@@ -1,0 +1,51 @@
+AdaptiveCurveIrm::setIrmConfig(AdaptiveCurveIrmConfig)
+├── given caller is not the owner
+│   └── when market is unset or bound and the configuration is invalid
+│       └── it should revert with OwnableUnauthorizedAccount before market queries or validation and preserve state
+├── given caller is owner and market is unset
+│   └── it should revert with IrmMarketNotSet before configuration validation and preserve state
+└── given caller is owner and market is bound
+    ├── when querying the market pause status fails even with an invalid configuration
+    │   └── it should bubble the query revert before configuration validation and preserve all state
+    ├── when active market accounting overflows after calling back even with an invalid configuration
+    │   └── it should bubble arithmetic panic 0x11 and roll back both market accounting and IRM state
+    ├── given the proposed configuration is invalid
+    │   ├── when curveSteepness is below 1.01e18 or above 100e18
+    │   │   └── it should revert with IrmInvalidParams
+    │   ├── when adjustmentSpeed is below 2e18 per year or above 1000e18 per year
+    │   │   └── it should revert with IrmInvalidParams
+    │   ├── when targetUtilization is negative zero or above 1e18
+    │   │   └── it should revert with IrmInvalidParams
+    │   ├── when initialRateAtTarget is below minRateAtTarget or above maxRateAtTarget
+    │   │   └── it should revert with IrmInvalidParams
+    │   ├── when minRateAtTarget or maxRateAtTarget is outside 0.001e18 per year through 10e18 per year
+    │   │   └── it should revert with IrmInvalidParams
+    │   ├── when minRateAtTarget exceeds maxRateAtTarget
+    │   │   └── it should revert with IrmInvalidParams
+    │   ├── when market is paused
+    │   │   └── it should leave configuration IRState and market accounting unchanged without accruing
+    │   └── when market is active
+    │       └── it should attempt accrual before validation then roll back all accrual and configuration effects
+    └── given the proposed configuration is valid
+        ├── when market is active
+        │   ├── it should query the exact PAUSE_TYPE and accrue exactly once using the old configuration
+        │   ├── it should add interest at the old rate to market supply and borrowed assets and update lastUpdate through the callback
+        │   └── it should emit the callback IRStateUpdated then the market AccrueInterest with exact payloads before the setter events
+        ├── when the active market has already adapted its rate upward and a different valid configuration is supplied
+        │   ├── it should accrue only since the prior checkpoint using the adapted rate and old configuration
+        │   └── it should reset to the new initialRateAtTarget after emitting the adapted-rate accrual events
+        ├── when market is paused
+        │   └── it should query the exact PAUSE_TYPE skip accrual and preserve lastUpdate
+        ├── when curveSteepness and adjustmentSpeed are at either inclusive boundary
+        │   └── it should accept and store each boundary
+        ├── when targetUtilization is one wei or 1e18
+        │   └── it should accept and store each boundary
+        ├── when minimum initial and maximum rates are all equal at either absolute rate boundary
+        │   └── it should accept and store the equal rates
+        ├── when configuration is unchanged and market is active
+        │   └── it should still accrue reset the rate and emit the setter events
+        ├── when configuration is unchanged and the paused market has already adapted its rate
+        │   └── it should reset the adapted rate to initialRateAtTarget while retaining the prior checkpoint
+        ├── it should store every new configuration field and reset rateAtTarget to the new initialRateAtTarget
+        ├── it should preserve owner and market
+        └── it should emit IRStateUpdated then SetIrmConfig with exact payloads and no extra events

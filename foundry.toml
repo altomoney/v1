@@ -4,7 +4,7 @@ src = 'contracts'
 libs = ["node_modules", "lib"]
 test = 'test'
 script = 'script'
-no-match-path = '{playground/*,test/deprecated/*}'
+no-match-path = 'playground/*'
 no-match-test = "testSimulate*"
 
 evm_version = 'cancun'

@@ -1,71 +1,52 @@
 # Alto v1
 
-## Setup
+Alto v1 is a lending and stablecoin protocol built around DUSD.
 
-### Devcontainer
+## How it works
 
-Open the repository in the VS Code devcontainer. It installs the tools declared
-in `mise.toml` and runs `mise run setup` when the container is created or rebuilt.
-Normal restarts do not reinstall dependencies.
+- **Mint markets back DUSD.** Users deposit collateral and mint DUSD against it,
+  creating debt secured by that collateral. Borrowing limits and liquidation
+  rules enforce collateral requirements.
+- **Borrow markets provide DUSD lending.** Suppliers deposit existing DUSD.
+  Borrowers deposit collateral and borrow from that supplied liquidity, paying
+  interest. Borrow markets do not mint new DUSD.
+- **Credit-line markets provide dedicated DUSD credit.** Each market is deployed
+  for a specific credit account, which deposits collateral to obtain DUSD credit.
+  Debt can only be opened on behalf of that market's configured credit account.
+- **Lending vaults allocate DUSD.** Users deposit DUSD and receive ERC-4626 shares.
+  The vault allocates DUSD across configured borrow markets, providing liquidity
+  to borrowers. Interest earned by those allocations accrues to vault depositors.
+- **Stability modules** exchange DUSD and supported assets using configured
+  prices, fees and limits.
+- **sDUSD** accepts DUSD deposits in exchange for shares. Allocated protocol fees
+  unlock gradually, increasing the DUSD backing those shares.
 
-### Fully Local Environment
+DUSD minted against collateral can be supplied directly to borrow markets or
+deposited into a vault that supplies those markets.
 
-Install [mise](https://mise.jdx.dev/getting-started.html), then run:
+## Development
+
+Use the VS Code devcontainer for automatic tool and dependency setup.
+
+For a local setup, install and activate [mise](https://mise.jdx.dev/getting-started.html), then run:
 
 ```bash
 mise install
 mise run setup
 ```
 
-The same Node, Foundry, and Graphite versions are used locally and in the
-devcontainer. mise reads the pnpm version from `package.json`. Install `lcov`
-separately if you need code coverage outside the devcontainer.
+Copy `.env.example` to `.env` and set `ALCHEMY_KEY` for fork tests.
 
-Activate mise in your shell as described in its installation guide, or prefix
-commands with `mise exec --`, for example `mise exec -- forge test`. Editors and
-Git clients also need mise's shims on their PATH. The devcontainer configures
-this automatically.
+### Tests
 
-After pulling dependency or tool version changes, rerun `mise install` and
-`mise run setup`. Setup installs the Git hook that formats staged Solidity files
-with the pinned `forge fmt` before each commit.
+Run the test suite:
 
-## Testing
-Test without proxy verification.
 ```bash
 forge test
 ```
-or with proxy verification (proxy verification requires up to date build)
+
+For proxy upgrade validation, rebuild the artifacts first:
+
 ```bash
 forge clean && forge build && VERIFY_PROXY=true forge test
-```
-
-## Creating Addresses in Forge
-
-**For development purposes only!**
-
-Create a new wallet (private key will be displayed):
-```bash
-cast wallet new
-```
-
-Import the private key securely to vault:
-```bash
-cast wallet import --interactive <account_name>
-```
-
-## Deployment
-
-- Create address as described above.
-- Copy and create `.env` file using `.env.example` supplying address data and other information
-
-### Testnet Deployment
-```bash
-pnpm deploy:testnet
-```
-The output is stored to `contracts/deployments/testnet/output`.
-
-Verify (Optional)
-```bash
-pnpm verify:testnet
 ```

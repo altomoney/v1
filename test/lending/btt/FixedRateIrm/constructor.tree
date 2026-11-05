@@ -1,0 +1,15 @@
+FixedRateIrm::constructor(uint256,address)
+├── given owner is zero even when the borrow rate is also invalid
+│   └── it should revert with OwnableInvalidOwner before validating the rate
+└── given owner is nonzero
+    ├── when borrow rate exceeds MAX_BORROW_RATE
+    │   └── it should revert with IrmInvalidParams
+    └── when borrow rate is valid
+        ├── when rate is zero or MAX_BORROW_RATE
+        │   └── it should accept both inclusive boundaries
+        ├── when rate is any value inside the supported range
+        │   └── it should store the supplied rate exactly
+        ├── it should set owner and leave pendingOwner and market zero
+        ├── it should initialize lastUpdate to zero regardless of deployment time
+        ├── it should emit OwnershipTransferred from zero to owner
+        └── it should then emit exactly IRStateUpdated with the supplied rate and zero timestamp

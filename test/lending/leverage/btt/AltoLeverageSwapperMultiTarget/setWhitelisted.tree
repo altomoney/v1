@@ -1,0 +1,15 @@
+AltoLeverageSwapperMultiTarget::setWhitelisted(address,bool)
+├── given caller is not owner even when the requested status is unchanged
+│   └── it should revert with OwnableUnauthorizedAccount before status validation and preserve the mapping
+└── given caller is owner
+    ├── when requested status equals the current false or true status
+    │   └── it should revert with AltoLeverageSwapperInvalidInput and preserve the mapping
+    └── when requested status changes
+        ├── when account is nonzero
+        │   └── it should allow adding then removing the account
+        ├── when account is zero
+        │   └── it should allow adding then removing the zero address
+        ├── when another account is already whitelisted
+        │   └── it should keep that account whitelisted while adding and removing the requested account
+        ├── it should store the requested status while preserving owner and unrelated whitelist entries
+        └── it should emit exactly one SetWhitelisted with the indexed account and requested status

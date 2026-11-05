@@ -1,0 +1,29 @@
+FixedRateIrm::setBorrowRate(uint256)
+├── given caller is not the owner
+│   └── when market is unset or bound and the supplied rate is invalid
+│       └── it should revert with OwnableUnauthorizedAccount before market queries or rate validation and preserve state
+├── given caller is owner and market is unset
+│   └── it should revert with IrmMarketNotSet before rate validation and preserve state
+└── given caller is owner and market is bound
+    ├── when supplied rate exceeds MAX_BORROW_RATE
+    │   └── it should revert with IrmInvalidParams before market queries or accrual and preserve all state
+    └── when supplied rate is valid
+        ├── when querying the market pause status fails
+        │   └── it should bubble the query revert and preserve all state
+        ├── when market accounting overflows after calling back
+        │   └── it should bubble arithmetic panic 0x11 and roll back both market accounting and IRM state
+        ├── when market is active
+        │   ├── it should query the exact PAUSE_TYPE and accrue exactly once at the old rate
+        │   ├── it should add interest at the old rate to market supply and borrowed assets and update lastUpdate through the callback
+        │   └── it should emit the callback IRStateUpdated then the market AccrueInterest with exact payloads before the setter events
+        ├── when market is paused
+        │   └── it should query the exact PAUSE_TYPE skip accrual and preserve lastUpdate
+        ├── when supplied rate is zero or MAX_BORROW_RATE
+        │   └── it should accept and store both inclusive boundaries
+        ├── when supplied rate equals the stored rate
+        │   ├── when market is active
+        │   │   └── it should still accrue and emit the setter events
+        │   └── when market is paused
+        │       └── it should skip accrual preserve market accounting and lastUpdate and still emit exactly the two setter events
+        ├── it should store the supplied rate and preserve owner and market
+        └── it should emit IRStateUpdated then SetBorrowRate with exact payloads and no extra events

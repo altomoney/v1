@@ -1,0 +1,44 @@
+AltoLeverageSwapper::swap(address,address,uint256,bytes)
+├── given caller is not whitelisted including the owner
+│   └── it should revert with AltoLeverageSwapperSenderNotValid before decoding parameters and preserve balances and target allowance
+└── given caller is whitelisted
+    ├── when encoded swap parameters are malformed
+    │   └── it should revert with empty ABI decoding error data and preserve balances and target allowance
+    ├── given swap parameters are valid
+    │   ├── when the caller allowance is insufficient
+    │   │   └── it should bubble ERC20InsufficientAllowance and preserve balances and target allowance
+    │   ├── when the caller balance is insufficient
+    │   │   └── it should bubble ERC20InsufficientBalance and preserve balances and target allowance
+    │   ├── when transferFrom returns false
+    │   │   └── it should revert with SafeERC20FailedOperation and preserve balances and target allowance
+    │   ├── when the target attempts to spend more than amountIn and its call fails
+    │   │   └── it should replace the target error with AltoLeverageSwapperSwapFailed and roll back transfers and approvals
+    │   ├── when received output is one wei below minAmountOut
+    │   │   └── it should revert with AltoLeverageSwapperMinAmountOutNotMet containing both exact amounts and roll back the swap
+    │   ├── when clearing the target approval returns false
+    │   │   └── it should revert with SafeERC20FailedOperation and roll back the swap and approvals
+    │   ├── when transferring the leftover sell tokens returns false
+    │   │   └── it should revert with SafeERC20FailedOperation and roll back the swap and approvals
+    │   ├── when transferring the bought tokens returns false
+    │   │   └── it should revert with SafeERC20FailedOperation and roll back the swap and approvals
+    │   └── when sellToken equals buyToken and the swap reduces the token balance
+    │       └── it should revert with arithmetic panic 0x11 during balance subtraction and roll back the swap
+    └── given sellToken and buyToken are distinct and the swap completes
+        ├── when all input is spent and received output equals the minimum
+        │   └── it should accept equality and transfer the bought tokens without a sell refund
+        ├── when input is partially spent and output exceeds the minimum
+        │   └── it should return the unspent portion and transfer the bought tokens
+        ├── when no input is spent and output and minimum are zero
+        │   └── it should refund all input without transferring bought tokens
+        ├── when amountIn is zero
+        │   └── it should accept a zero input and zero output swap
+        ├── when the target returns a large amount without transferring output
+        │   └── it should ignore the returned value and use the actual zero balance delta
+        ├── when native value is attached
+        │   └── it should retain that value in the swapper without forwarding it to the target
+        ├── when the configured target has no code and minimum is zero
+        │   └── it should accept the successful no-op call and refund the input
+        ├── it should preserve preexisting sell and buy token balances on the swapper
+        ├── it should clear the target allowance after execution
+        ├── it should return the exact bought-token balance delta
+        └── it should emit Swap with token addresses input output and leftover amounts exactly

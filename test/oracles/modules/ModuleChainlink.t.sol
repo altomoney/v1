@@ -178,38 +178,4 @@ contract ModuleChainlinkDecimalsTest is Test {
 
         assertEq(wbtcAmount, 1e8, "Invalid wbtcAmount in ChainlinkModule");
     }
-
-    function testSameOutAndOracleDecimal() public {
-        // WETH/WBTC oracle that returns 8 decimals
-
-        // Going from WETH to WBTC
-        uint256 wethAmount = moduleChainlink.readChainlinkFeed(
-            1e8,
-            ChainlinkNode({
-                feed: new MockChainlinkFeed(8, int256(25 * 10 ** 8)), // 25 WETH per WBTC
-                direction: ConversionDirection.IN_TO_OUT,
-                stalePeriod: 2 days,
-                inDecimals: 8,
-                outDecimals: 18,
-                feedDecimals: 8
-            })
-        );
-
-        assertEq(wethAmount, 25e18, "Invalid wethAmount in ChainlinkModule");
-
-        // Going from WETH to WBTC
-        uint256 wbtcAmount = moduleChainlink.readChainlinkFeed(
-            25e18,
-            ChainlinkNode({
-                feed: new MockChainlinkFeed(8, int256(25 * 10 ** 8)), // 25 WETH per WBTC
-                direction: ConversionDirection.OUT_TO_IN,
-                stalePeriod: 2 days,
-                inDecimals: 18,
-                outDecimals: 8,
-                feedDecimals: 8
-            })
-        );
-
-        assertEq(wbtcAmount, 1e8, "Invalid wbtcAmount in ChainlinkModule");
-    }
 }

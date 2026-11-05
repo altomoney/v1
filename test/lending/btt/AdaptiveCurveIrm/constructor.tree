@@ -1,0 +1,28 @@
+AdaptiveCurveIrm::constructor(AdaptiveCurveIrmConfig,address)
+├── given owner is zero even when the configuration is also invalid
+│   └── it should revert with OwnableInvalidOwner before validating the configuration
+├── given owner is nonzero and configuration is invalid
+│   ├── when curveSteepness is below 1.01e18 or above 100e18
+│   │   └── it should revert with IrmInvalidParams
+│   ├── when adjustmentSpeed is below 2e18 per year or above 1000e18 per year
+│   │   └── it should revert with IrmInvalidParams
+│   ├── when targetUtilization is negative zero or above 1e18
+│   │   └── it should revert with IrmInvalidParams
+│   ├── when initialRateAtTarget is below minRateAtTarget or above maxRateAtTarget
+│   │   └── it should revert with IrmInvalidParams
+│   ├── when minRateAtTarget or maxRateAtTarget is outside 0.001e18 per year through 10e18 per year
+│   │   └── it should revert with IrmInvalidParams
+│   └── when minRateAtTarget exceeds maxRateAtTarget
+│       └── it should revert with IrmInvalidParams
+└── given owner is nonzero and configuration is valid
+    ├── when deploying with ordinary parameters
+    │   └── it should store every configuration field exactly
+    ├── when curveSteepness and adjustmentSpeed are at either inclusive boundary
+    │   └── it should accept and store each boundary
+    ├── when targetUtilization is one wei or 1e18
+    │   └── it should accept and store each boundary
+    ├── when minimum initial and maximum rates are all equal at either absolute rate boundary
+    │   └── it should accept and store the equal rates
+    ├── it should set owner and leave pendingOwner and market zero
+    ├── it should leave rateAtTarget and lastUpdate zero until market binding
+    └── it should emit only OwnershipTransferred from zero to owner with no IRM events
