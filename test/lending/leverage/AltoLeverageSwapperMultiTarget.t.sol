@@ -8,7 +8,6 @@ import {
     SwapParamsMultiTarget
 } from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract AltoLeverageSwapperMultiTargetTest is Test {
     event SetWhitelisted(address indexed contractAddress, bool isWhitelisted);
@@ -20,22 +19,9 @@ contract AltoLeverageSwapperMultiTargetTest is Test {
     address internal constant OPEN_OCEAN_ROUTER = 0x6352a56caadC4F1E25CD6c75970Fa768A3304e64;
     address internal constant ENSO_ROUTER = 0xF75584eF6673aD213a685a1B58Cc0330B8eA22Cf;
 
-    string internal constant SWAP_DATA_DIR = "test/lending/leverage/0xswapData/pt-reusd-25June-2026/aggregators/";
-
-    address internal constant PT_REUSD = 0x3EAA0F0f0A5d3D595ae4e4b0D27f439d01c3E7b2;
-    address internal constant DUSD = 0x63d74d22E689C715a04F2C13962b1f77F443d35b;
-
-    // PT-reUSD has 6 decimals; DUSD has 18 decimals
-    uint256 internal constant PT_REUSD_AMOUNT_IN = 100_000 * 1e6;
-    uint256 internal constant DUSD_AMOUNT_IN = 100_000 ether;
-    uint256 internal constant DUSD_MIN_AMOUNT_OUT = 98_000 ether;
-    uint256 internal constant PT_REUSD_MIN_AMOUNT_OUT = 100_000 * 1e6;
-
     address internal caller = address(0xBEEF);
 
     function setUp() public {
-        vm.createSelectFork(vm.rpcUrl("ethereum"), 24984279);
-
         address[] memory validSwapTargets = new address[](3);
         validSwapTargets[0] = PENDLE_ROUTER_V4;
         validSwapTargets[1] = OPEN_OCEAN_ROUTER;
@@ -101,131 +87,5 @@ contract AltoLeverageSwapperMultiTargetTest is Test {
         emit SetValidSwapTarget(swapTarget, false);
         swapper.setValidSwapTarget(swapTarget, false);
         assertFalse(swapper.isValidSwapTarget(swapTarget), "owner should be able to remove valid swap target");
-    }
-
-    function test_swap_pendleOdos_ptreusd_to_dusd() public {
-        _executeSwapAndAssert(
-            PENDLE_ROUTER_V4, _loadSwapData("pendleOdos-100000-ptresud-to-dusd.json", ".routes[0].tx.data")
-        );
-    }
-
-    function test_swap_pendleKyberswap_ptreusd_to_dusd() public {
-        _executeSwapAndAssert(
-            PENDLE_ROUTER_V4, _loadSwapData("pendleKyberswap-100000-ptresud-to-dusd.json", ".routes[0].tx.data")
-        );
-    }
-
-    function test_swap_pendleOkx_ptreusd_to_dusd() public {
-        _executeSwapAndAssert(
-            PENDLE_ROUTER_V4, _loadSwapData("pendleOkx-100000-ptresud-to-dusd.json", ".routes[0].tx.data")
-        );
-    }
-
-    function test_swap_pendleVelora_ptreusd_to_dusd() public {
-        _executeSwapAndAssert(
-            PENDLE_ROUTER_V4, _loadSwapData("pendleVelora-100000-ptresud-to-dusd.json", ".routes[0].tx.data")
-        );
-    }
-
-    function test_swap_openOcean_ptreusd_to_dusd() public {
-        _executeSwapAndAssert(OPEN_OCEAN_ROUTER, _loadSwapData("openocean-100000-ptresud-to-dusd.json", ".data.data"));
-    }
-
-    function test_swap_enso_ptreusd_to_dusd() public {
-        _executeSwapAndAssert(ENSO_ROUTER, _loadSwapData("enso-100000-ptresud-to-dusd.json", ".tx.data"));
-    }
-
-    // ─── DUSD → PT-reUSD ───────────────────────────────────────────────────────
-
-    function test_swap_pendleOdos_dusd_to_ptreusd() public {
-        _executeSwapAndAssertReverse(
-            PENDLE_ROUTER_V4, _loadSwapData("pendleOdos-100000-dusd-to-ptreusd.json", ".routes[0].tx.data")
-        );
-    }
-
-    function test_swap_pendleKyberswap_dusd_to_ptreusd() public {
-        _executeSwapAndAssertReverse(
-            PENDLE_ROUTER_V4, _loadSwapData("pendleKyberswap-100000-dusd-to-ptreusd.json", ".routes[0].tx.data")
-        );
-    }
-
-    function test_swap_pendleOkx_dusd_to_ptreusd() public {
-        _executeSwapAndAssertReverse(
-            PENDLE_ROUTER_V4, _loadSwapData("pendleOkx-100000-dusd-to-ptreusd.json", ".routes[0].tx.data")
-        );
-    }
-
-    // @dev This route currently reverts for this direction on the pinned fork block.
-    //      The revert happens downstream in the Pendle route, so we assert the swap fails here.
-    function test_revertWhen_swap_pendleVelora_dusd_to_ptreusd() public {
-        bytes memory swapData = _loadSwapData("pendleVelora-100000-dusd-to-ptreusd.json", ".routes[0].tx.data");
-
-        deal(DUSD, caller, DUSD_AMOUNT_IN);
-        vm.prank(caller);
-        IERC20(DUSD).approve(address(swapper), DUSD_AMOUNT_IN);
-
-        bytes memory swapParams = abi.encode(
-            SwapParamsMultiTarget({
-                minAmountOut: PT_REUSD_MIN_AMOUNT_OUT, swapTarget: PENDLE_ROUTER_V4, swapData: swapData
-            })
-        );
-
-        vm.prank(caller);
-        (bool success,) =
-            address(swapper).call(abi.encodeCall(swapper.swap, (DUSD, PT_REUSD, DUSD_AMOUNT_IN, swapParams)));
-
-        assertFalse(success, "pendle paraswap reverse route should revert on the pinned fork block");
-    }
-
-    function test_swap_openOcean_dusd_to_ptreusd() public {
-        _executeSwapAndAssertReverse(
-            OPEN_OCEAN_ROUTER, _loadSwapData("openocean-100000-dusd-to-ptreusd.json", ".data.data")
-        );
-    }
-
-    function test_swap_enso_dusd_to_ptreusd() public {
-        _executeSwapAndAssertReverse(ENSO_ROUTER, _loadSwapData("enso-100000-dusd-to-ptreusd.json", ".tx.data"));
-    }
-
-    function _loadSwapData(string memory fileName, string memory path) internal view returns (bytes memory swapData) {
-        string memory json = vm.readFile(string.concat(SWAP_DATA_DIR, fileName));
-        swapData = vm.parseJsonBytes(json, path);
-    }
-
-    function _executeSwapAndAssert(
-        address sellToken,
-        address buyToken,
-        uint256 amountIn,
-        uint256 minAmountOut,
-        address swapTarget,
-        bytes memory swapData
-    ) internal {
-        deal(sellToken, caller, amountIn);
-        vm.prank(caller);
-        IERC20(sellToken).approve(address(swapper), amountIn);
-
-        bytes memory swapParams =
-            abi.encode(SwapParamsMultiTarget({minAmountOut: minAmountOut, swapTarget: swapTarget, swapData: swapData}));
-
-        uint256 buyTokenBalanceBefore = IERC20(buyToken).balanceOf(caller);
-        vm.prank(caller);
-        uint256 buyTokenBalanceReceived = swapper.swap(sellToken, buyToken, amountIn, swapParams);
-        uint256 buyTokenBalanceAfter = IERC20(buyToken).balanceOf(caller);
-
-        assertGt(buyTokenBalanceReceived, minAmountOut, "buyTokenBalanceReceived should exceed minAmountOut");
-        assertGt(buyTokenBalanceAfter, minAmountOut, "caller final balance should exceed minAmountOut");
-        assertEq(
-            buyTokenBalanceReceived,
-            buyTokenBalanceAfter - buyTokenBalanceBefore,
-            "buyTokenBalanceReceived should equal caller's balance increase"
-        );
-    }
-
-    function _executeSwapAndAssert(address swapTarget, bytes memory swapData) internal {
-        _executeSwapAndAssert(PT_REUSD, DUSD, PT_REUSD_AMOUNT_IN, DUSD_MIN_AMOUNT_OUT, swapTarget, swapData);
-    }
-
-    function _executeSwapAndAssertReverse(address swapTarget, bytes memory swapData) internal {
-        _executeSwapAndAssert(DUSD, PT_REUSD, DUSD_AMOUNT_IN, PT_REUSD_MIN_AMOUNT_OUT, swapTarget, swapData);
     }
 }

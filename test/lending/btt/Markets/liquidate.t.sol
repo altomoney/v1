@@ -528,38 +528,6 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         assertGt(protocolFee, 0);
     }
 
-    /// @dev This test is covered by AltoBorrowMarket.liquidations.sol
-    function test_GivenLiquidationProceeds() external {
-        // it should calculate liquidation fee based on liquidator type
-        // it should calculate liquidation percentage
-        // it should calculate new LTV target
-        // it should calculate collateral to sell
-        // it should calculate final amounts
-    }
-
-    /// @dev This test is covered by AltoBorrowMarket.liquidations.sol
-    function test_WhenDifferenceIsLessThanVIRTUAL_SHARES() external {
-        // it should cap repay shares to user borrow shares
-    }
-
-    /// @dev This test is covered by AltoBorrowMarket.liquidations.sol
-    function test_WhenDifferenceIsGreaterThanOrEqualToVIRTUAL_SHARES() external {
-        // it should use calculated repay shares
-    }
-
-    /// @dev This test is covered by AltoBorrowMarket.liquidations.sol
-    function test_WhenRepaySharesDoNotExceedUserBorrowShares() external {
-        // it should use calculated repay shares
-    }
-
-    /// @dev This test is covered by AltoBorrowMarket.liquidations.sol
-    function test_GivenLiquidationStateUpdates() external {
-        // it should decrease borrower collateral assets
-        // it should decrease borrower borrow shares
-        // it should decrease total borrowed shares
-        // it should decrease total borrowed assets
-    }
-
     modifier givenMaxLtvPosition() {
         vm.startPrank(OWNER);
         market.setIrm(address(new FixedRateIrm(8 ether / uint256(365 days), address(this))), false);
@@ -632,31 +600,6 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         assertFalse(liquidablePosition.tagged);
     }
 
-    /// @dev This test is covered by AltoBorrowMarket.liquidations.sol
-    function test_WhenBorrowerHasNoCollateralRemaining() external {
-        // it should calculate bad debt shares
-        // it should calculate bad debt assets
-        // it should apply bad debt to market
-        // it should reset borrower borrow shares to zero
-    }
-
-    /// @dev This test is covered by AltoBorrowMarket.liquidations.sol
-    function test_WhenBorrowerHasCollateralRemaining() external {
-        // it should not apply bad debt
-    }
-
-    /// @dev This test is covered by AltoBorrowMarket.liquidations.sol
-    function test_GivenTokenTransfers() external {
-        // it should transfer collateral tokens to liquidator
-        // it should transfer borrow tokens from liquidator to market
-    }
-
-    /// @dev This test is covered by AltoBorrowMarket.liquidations.sol
-    function test_WhenCallbackDataIsProvided() external {
-        // it should call onLiquidateCallback
-        // it should pass collateral amount and data
-    }
-
     function test_GivenEventEmission_WhenDirectLiquidator()
         external
         givenPositionIsInsolvent
@@ -698,10 +641,5 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         assertGt(collateralAmount, 0);
         assertGt(repayAmount, 0);
         assertGt(protocolFee, 0);
-    }
-
-    /// @dev This test is covered by AltoBorrowMarket.liquidations.sol
-    function test_GivenFunctionCompletion() external {
-        // it should return collateral amount and repay amount
     }
 }

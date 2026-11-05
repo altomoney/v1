@@ -1,0 +1,18 @@
+AltoLeverageSwapperMultiTarget::constructor(address,address[])
+├── given owner is zero even when the target list also contains zero
+│   └── it should revert with OwnableInvalidOwner before target validation
+└── given owner is nonzero
+    ├── when any target is zero including after valid entries
+    │   └── it should revert with AltoLeverageSwapperInvalidInput
+    ├── when the target list is empty
+    │   └── it should deploy without enabling any targets
+    ├── when all targets are nonzero
+    │   ├── when entries are contracts or EOAs
+    │   │   └── it should mark every supplied target as valid without interface validation
+    │   ├── when an address occurs more than once
+    │   │   └── it should accept duplicates and emit for every occurrence
+    │   └── it should emit SetValidSwapTarget with true for each entry in input order after OwnershipTransferred
+    ├── it should store owner and emit OwnershipTransferred from zero to owner
+    ├── it should leave owner and deployer unwhitelisted
+    ├── it should leave zero and unrelated targets invalid
+    └── it should emit no events beyond the ownership and per-entry target events

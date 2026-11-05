@@ -1,0 +1,14 @@
+AltoLeverageSwapper::constructor(address,address)
+├── given owner is zero even when target is also zero
+│   └── it should revert with OwnableInvalidOwner before target validation
+└── given owner is nonzero
+    ├── when swap target is zero
+    │   └── it should revert with AltoLeverageSwapperInvalidInput
+    └── when swap target is nonzero
+        ├── when target is a contract
+        │   └── it should store the immutable SWAP_TARGET exactly
+        ├── when target is an EOA
+        │   └── it should accept and store the address without interface validation
+        ├── it should store the supplied owner
+        ├── it should leave owner and deployer unwhitelisted
+        └── it should emit only OwnershipTransferred from zero to owner

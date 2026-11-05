@@ -1,0 +1,27 @@
+FixedRateIrm::onMarketPause(bool)
+├── given market is unset
+│   └── when owner or another address calls with either pause flag
+│       ├── it should revert with IrmUnauthorized
+│       ├── it should preserve the complete IRState owner and market
+│       └── it should emit no events
+└── given market is bound
+    ├── when caller is owner or another address other than the bound market
+    │   ├── it should revert with IrmUnauthorized for either pause flag
+    │   ├── it should preserve the complete IRState owner and market
+    │   └── it should emit no events
+    └── when caller is the bound market
+        ├── when paused is true
+        │   └── when called repeatedly at normal and oversized timestamps
+        │       ├── it should preserve the complete IRState owner and market
+        │       └── it should emit no events
+        └── when paused is false
+            ├── when timestamp is within uint48
+            │   └── it should set lastUpdate to the current timestamp
+            ├── when called repeatedly at the same and later timestamps
+            │   └── it should update lastUpdate and emit even when the timestamp is unchanged
+            ├── when timestamp is zero or type(uint48).max
+            │   └── it should accept the exact boundary timestamp
+            ├── when timestamp exceeds type(uint48).max
+            │   └── it should truncate to the low 48 bits rather than revert
+            ├── it should preserve borrowRate owner and market
+            └── it should emit exactly one IRStateUpdated with the resulting state

@@ -1,0 +1,11 @@
+AltoLeverage::constructor(address,address)
+├── given owner is zero
+│   └── it should revert with OwnableInvalidOwner
+└── given owner is nonzero
+    ├── when swapper is a contract
+    │   └── it should store the supplied swapper
+    ├── when swapper is zero or an EOA
+    │   └── it should accept and store it without interface validation
+    ├── it should store owner and initialize pendingOwner to zero
+    ├── it should leave markets unsupported including zero owner and deployer addresses
+    └── it should emit only OwnershipTransferred from zero to owner with no SwapperUpdated or MarketUpdated event

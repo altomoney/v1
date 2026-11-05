@@ -120,6 +120,4 @@ contract TVLWeightedContainers_Main is Test {
         assertEq(tVLWeightedContainers.getContainer(2).currentDurationEpochs, 2);
         assertEq(tVLWeightedContainers.getContainer(3).currentDurationEpochs, 3);
     }
-
-    function test_Main_2() public {}
 }

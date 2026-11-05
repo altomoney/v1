@@ -1,0 +1,25 @@
+AdaptiveCurveIrm::setMarket(address)
+├── given market is already nonzero
+│   └── when the new address is zero the existing market or another address
+│       ├── it should revert with IrmMarketAlreadySet
+│       └── it should preserve market and IRState and configuration and emit no events
+└── given market is zero
+    ├── when caller is owner another address or the supplied market
+    │   └── it should allow permissionless binding to an EOA without interface validation
+    ├── when supplied market is zero
+    │   ├── it should accept zero and initialize the state while leaving market unbound
+    │   └── it should allow repeated zero binding followed by a nonzero binding
+    ├── when timestamp is zero or type(uint48).max
+    │   └── it should accept the exact timestamp
+    ├── when timestamp exceeds type(uint48).max on the first binding
+    │   └── it should truncate lastUpdate to the low 48 bits without reverting
+    ├── when a prior zero binding initialized the rate and the next timestamp exceeds uint48
+    │   └── it should adapt from the prior rate using elapsed time since the truncated timestamp and reach the rate floor
+    ├── when rateAtTarget is zero before binding
+    │   └── it should set rateAtTarget to the configured initialRateAtTarget
+    ├── when repeated zero bindings remain within uint48 timestamps
+    │   └── it should retain the initialized rate because lastUpdate is written before computing elapsed time
+    ├── it should preserve every configuration field
+    ├── it should store the supplied market and preserve owner
+    ├── it should set lastUpdate to uint48 of the current timestamp
+    └── it should emit exactly one IRStateUpdated with the resulting rate and timestamp

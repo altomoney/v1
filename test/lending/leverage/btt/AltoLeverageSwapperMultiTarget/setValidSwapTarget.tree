@@ -1,0 +1,17 @@
+AltoLeverageSwapperMultiTarget::setValidSwapTarget(address,bool)
+├── given caller is not owner even when target is zero
+│   └── it should revert with OwnableUnauthorizedAccount before target validation and preserve target permissions
+└── given caller is owner
+    ├── when target is zero with either requested status
+    │   └── it should revert with AltoLeverageSwapperInvalidInput and keep zero invalid
+    ├── when requested status equals the current false or true status
+    │   └── it should revert with AltoLeverageSwapperInvalidInput and preserve target permissions
+    └── when target is nonzero and status changes
+        ├── when target is an EOA
+        │   └── it should allow adding and removing it without code validation
+        ├── when target is a contract
+        │   └── it should allow revoking and restoring its permission
+        ├── when the caller is already whitelisted
+        │   └── it should keep the caller whitelisted while adding and revoking target permissions
+        ├── it should preserve owner the caller whitelist and the invalid zero target
+        └── it should emit exactly one SetValidSwapTarget with the indexed target and requested status

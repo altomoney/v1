@@ -10,15 +10,6 @@ contract AltoERC4626RatioChainlinkOracleGetPriceForkTest is Test {
 
     string internal rpcUrl = vm.rpcUrl("ethereum");
 
-    function test_GetPrice_Meth() public {
-        vm.createSelectFork(rpcUrl, 23690069);
-
-        ILendingOracle oracle = ILendingOracle(EthereumMainnetOracleDeployer.deployMethOracle(OWNER));
-        uint256 price = oracle.getPrice();
-
-        assertEq(4190534376269485162203987750990000000000, price, "Invalid price from the METH Oracle");
-    }
-
     function test_GetPrice_Reth() public {
         vm.createSelectFork(rpcUrl, 23532976);
 

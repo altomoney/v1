@@ -1,0 +1,35 @@
+FixedRateIrm::updateInterestRate(uint256,uint256)
+├── given caller is not the bound market
+│   └── when caller is owner or another address with market unset or bound
+│       └── it should revert with IrmUnauthorized preserve state and emit no events
+└── given caller is the bound market
+    ├── when timestamp precedes lastUpdate
+    │   └── it should revert with arithmetic panic 0x11 preserve state and emit no events
+    ├── when compounding or final interest multiplication overflows
+    │   └── it should revert with arithmetic panic 0x11 preserve state and emit no events
+    ├── when rate debt and elapsed time are within supported arithmetic ranges
+    │   └── it should use the stored rate to calculate exact rounded compound interest regardless of totalSupply
+    ├── when elapsed time is zero
+    │   └── it should return zero interest and still emit the state checkpoint
+    ├── when debt is zero
+    │   └── it should return zero interest but still advance lastUpdate
+    ├── when rate is zero
+    │   └── it should return zero interest and rate but still advance lastUpdate
+    ├── when interest is below one wei
+    │   └── it should round interest down to zero
+    ├── when rate times elapsed time equals 0.2e18
+    │   └── it should use compound interest through the cubic term
+    ├── when rate times elapsed time first exceeds 0.2e18
+    │   └── it should include the fourth compound interest term
+    ├── when the compound factor exceeds 1e20
+    │   └── it should cap accrued interest at one hundred times the debt
+    ├── when called repeatedly at the same and later timestamps
+    │   └── it should accrue only since the last checkpoint and still emit at the same timestamp
+    ├── when timestamp is zero or type(uint48).max
+    │   └── it should accept and store the exact timestamp
+    ├── when a short accrual interval crosses type(uint48).max
+    │   └── it should accrue for the full elapsed interval then truncate the stored timestamp to its low 48 bits
+    └── given calculation succeeds
+        ├── it should return accrued interest and the stored borrow rate in that order
+        ├── it should update lastUpdate and preserve borrowRate owner and market
+        └── it should emit exactly one IRStateUpdated with the complete resulting state
