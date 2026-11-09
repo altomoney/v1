@@ -31,7 +31,6 @@ import {ISDUSDVaultStaticTypes, ISDUSDVaultBase, SDUSDInitParams} from "./interf
 ///      offset); inflation resistance instead comes from ignoring raw donations, requiring deployment to make
 ///      a permanent seed deposit to address(1), and refusing new reward releases while
 ///      all outstanding shares are held by address(1).
-/// @custom:audit Pending
 contract SDUSD is
     Initializable,
     ERC4626Upgradeable,

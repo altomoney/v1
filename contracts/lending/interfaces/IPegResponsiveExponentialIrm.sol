@@ -26,8 +26,10 @@ struct PegResponsiveExponentialIrmConfig {
     /// This confirms sampled recovery, not a continuously healthy price.
     uint48 recoveryDelay;
     /// @dev Maximum permitted age of an oracle observation.
-    /// Configure below recoveryDelay to prevent reuse of one observation for recovery.
-    /// This relationship is not enforced on-chain.
+    /// If this exceeds recoveryDelay, one observation can start and complete recovery,
+    /// so recovery can be confirmed without new pool activity.
+    /// Setting it below recoveryDelay only requires a newer observation at completion.
+    /// It does not prove continuous health or resist manipulation.
     uint48 maxOracleAge;
 }
 

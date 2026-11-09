@@ -38,7 +38,6 @@ import {
 ///         withdrawn through a restricted path to a fixed manual-swap receiver
 ///         which will swap the collateral to DUSD and add back to this contract
 /// @dev This contract should be configured as the single fee recipient of every source.
-/// @custom:audit Pending
 contract ProtocolFeeCollector is
     Initializable,
     AltoOwnable2StepUpgradeable,
