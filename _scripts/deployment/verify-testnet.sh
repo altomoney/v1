@@ -371,7 +371,7 @@ verify_contract "AltoMulticall" "$ALTO_MULTICALL" "contracts/deployments/testnet
 verify_contract "AltoAdapter" "$ALTO_ADAPTER" "contracts/utils/AltoAdapter.sol:AltoAdapter"
 verify_contract "AltoLeverage" "$ALTO_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 verify_contract "Bundler3" "$BUNDLER3" "lib/bundler3/src/Bundler3.sol:Bundler3"
-verify_contract "MockSwapper" "$MOCK_SWAPPER" "contracts/lending/mocks/SwapperSimpleMock.sol:SwapperSimpleMock"
+verify_contract "MockSwapper" "$MOCK_SWAPPER" "contracts/deployments/testnet/contracts/SwapperSimpleMock.sol:SwapperSimpleMock"
 verify_contract "MultiTokenSender" "$MULTI_TOKEN_SENDER" "contracts/deployments/testnet/contracts/MultiTokenSender.sol:MultiTokenSender"
 verify_contract "AltoVault" "$ALTO_VAULT" "contracts/lending/vault/AltoVault.sol:AltoVault"
 

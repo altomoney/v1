@@ -541,7 +541,6 @@ contract DeployAltoEthereumMainnetScript is Script {
         // Extract ABIs based on phase
         if (PHASE_TO_DEPLOY == DeploymentPhase.CORE) {
             _extractContractABI("AltoAdapter", abiFolder);
-            _extractContractABI("MockFeeCollector", abiFolder);
             _extractContractABI("AltoTimelockController", abiFolder);
             _extractContractABI("AltoTimelockControllerMintMarketFee", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.REGISTRY) {

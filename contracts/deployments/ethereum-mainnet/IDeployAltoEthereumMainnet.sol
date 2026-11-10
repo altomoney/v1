@@ -6,7 +6,7 @@ import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 
 enum DeploymentPhase {
-    CORE, // Phase 0: Deploy TimelockController, AltoAdapter, and MockFeeCollector
+    CORE, // Phase 0: Deploy the timelock controllers and AltoAdapter
     REGISTRY, // Phase 1: Deploy MarketRegistry and UsmRegistry
     DUSD, // Phase 2: Deploy DUSD and DUSDFlashMinter
     MINT_MARKET_WETH, // Phase 3: Deploy refreshed WETH Mint Market

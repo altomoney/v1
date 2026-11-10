@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
-import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
+import {SwapperSimpleMock} from "@alto/deployments/testnet/contracts/SwapperSimpleMock.sol";
 
 contract AltoLeverageConstructorTest is Test {
     address internal constant OWNER = address(0xA11CE);

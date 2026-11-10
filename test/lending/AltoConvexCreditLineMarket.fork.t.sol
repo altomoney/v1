@@ -18,7 +18,7 @@ import {
 import {IConvexBooster} from "@alto/lending/interfaces/vendor/IConvexBooster.sol";
 import {IConvexRewardPool} from "@alto/lending/interfaces/vendor/IConvexRewardPool.sol";
 import {Balance, BaseMarketInitParams, IMarketErrors, MarketType, Position} from "@alto/lending/interfaces/IMarket.sol";
-import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {OracleMock} from "@alto-test/helpers/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {DUSD} from "@alto/tokens/DUSD.sol";
 

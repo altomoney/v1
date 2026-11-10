@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
-import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {OracleMock} from "@alto-test/helpers/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";

@@ -14,7 +14,7 @@ import {
 } from "@alto/deployments/testnet/TestnetMintMarketBatch.sol";
 import {TestnetMarketBatchReport} from "@alto/deployments/testnet/ITestnetMarketBatch.sol";
 import {MultiTokenSender} from "@alto/deployments/testnet/contracts/MultiTokenSender.sol";
-import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
+import {SwapperSimpleMock} from "@alto/deployments/testnet/contracts/SwapperSimpleMock.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IAltoLiquidationEngine} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";

@@ -11,8 +11,8 @@ import {ERC20MockMintableDecimals} from "@alto-test/helpers/ERC20MockMintableDec
 import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 import {FixedPriceStrategy} from "@alto/usm/FixedPriceStrategy.sol";
 import {FixedFeeStrategy} from "@alto/usm/FixedFeeStrategy.sol";
-import {SampleLiquidator} from "@alto/usm/mocks/SampleLiquidator.sol";
-import {SampleSwapFreezer} from "@alto/usm/mocks/SampleSwapFreezer.sol";
+import {SampleLiquidator} from "@alto-test/usm/mocks/SampleLiquidator.sol";
+import {SampleSwapFreezer} from "@alto-test/usm/mocks/SampleSwapFreezer.sol";
 import {DUSDUsm} from "@alto/usm/DUSDUsm.sol";
 import {PercentageMath} from "./PercentageMath.sol";
 import {IUsm, AccessMode} from "@alto/usm/interfaces/IUsm.sol";

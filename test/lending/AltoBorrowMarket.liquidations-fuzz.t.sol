@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
 import {IMarket, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
-import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {OracleMock} from "@alto-test/helpers/OracleMock.sol";
 import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";

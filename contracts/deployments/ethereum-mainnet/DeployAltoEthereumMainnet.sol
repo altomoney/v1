@@ -51,7 +51,6 @@ import {
     EthereumMainnetLendingOracleAsset
 } from "@alto/deployments/EthereumMainnetOracleDeployer.sol";
 
-import {MockFeeCollector} from "@alto/deployments/ethereum-mainnet/MockFeeCollector.sol";
 import {DUSDBatch, DUSDBatchParams, DUSDBatchReport} from "@alto/deployments/ethereum-mainnet/DUSDBatch.sol";
 import {MintMarketBatch, MintMarketBatchParams} from "@alto/deployments/ethereum-mainnet/MintMarketBatch.sol";
 import {BorrowMarketBatch, BorrowMarketBatchParams} from "@alto/deployments/ethereum-mainnet/BorrowMarketBatch.sol";

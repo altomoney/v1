@@ -9,7 +9,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
 import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
-import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {OracleMock} from "@alto-test/helpers/OracleMock.sol";
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {IMerkleRootManagerEvents} from "@alto/utils/interfaces/IMerkleRootManager.sol";

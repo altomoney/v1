@@ -10,7 +10,7 @@ import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfP
 import {BaseMarketInitParams, MintMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
 import {PegResponsiveExponentialIrmConfig, IRState} from "@alto/lending/interfaces/IPegResponsiveExponentialIrm.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
-import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {OracleMock} from "@alto-test/helpers/OracleMock.sol";
 import {IDusdPegOracle} from "@alto/oracles/interfaces/IDusdPegOracle.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";

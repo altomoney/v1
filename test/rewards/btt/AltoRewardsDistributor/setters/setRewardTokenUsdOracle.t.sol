@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {RewardsDistributorCommon} from "../RewardsDistributorCommon.t.sol";
 import {IRewardsEvents, IRewardsErrors} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
-import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {OracleMock} from "@alto-test/helpers/OracleMock.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract AltoRewardsDistributorSetRewardTokenUsdOracle is RewardsDistributorCommon {

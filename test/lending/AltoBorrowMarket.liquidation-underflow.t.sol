@@ -6,7 +6,7 @@ import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol"
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
-import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {OracleMock} from "@alto-test/helpers/OracleMock.sol";
 import {
     IDcfDlbPriorityLiquidationEngine,
     LiquidationConfiguration

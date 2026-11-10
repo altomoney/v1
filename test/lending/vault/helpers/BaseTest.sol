@@ -14,7 +14,7 @@ import {
 import {IrmMock} from "@alto-test/helpers/IrmMock.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
 import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
-import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {OracleMock} from "@alto-test/helpers/OracleMock.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 

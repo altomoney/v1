@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {RewardsDistributorCommon} from "../RewardsDistributorCommon.t.sol";
 import {IRewardsEvents} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
-import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {OracleMock} from "@alto-test/helpers/OracleMock.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract AltoRewardsDistributorSetPaymentToken is RewardsDistributorCommon {
