@@ -1,0 +1,8 @@
+DUSD::permit
+├── when deadline has passed
+│   └── it should revert with ERC2612ExpiredSignature
+├── when signature was not produced by owner
+│   └── it should revert with ERC2612InvalidSigner
+└── when signature is valid
+    ├── it should set the allowance
+    └── it should increment the owner nonce
