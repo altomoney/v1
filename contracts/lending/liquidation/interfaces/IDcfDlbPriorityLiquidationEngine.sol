@@ -115,6 +115,11 @@ interface IDcfDlbPriorityLiquidationEngineBase is
     function priorityLiquidators(address liquidator) external view returns (bool);
 
     /// @notice Function to tag a position for liquidation.
+    /// @dev Anyone can tag, and solvency is checked at call time. A position that is transiently insolvent inside a
+    /// market operation, for example a leveraged borrow before its callback adds the collateral, can be tagged from
+    /// that callback and stays tagged once the operation completes. This is accepted by design: the tag only gives
+    /// `liquidator` priority once the position is actually liquidable, liquidation checks solvency again, and the tag
+    /// expires after `liquidationWindowTag`.
     /// @param user The address of the user whose position is being tagged
     /// @param liquidator The address of the liquidator that tagged the position
     function tagLiquidablePosition(address user, address liquidator) external;
