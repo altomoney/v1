@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {Test} from "forge-std/Test.sol";
-import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {OracleMock} from "@alto-test/helpers/OracleMock.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IRewardsDistributor, ClaimData} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {IAltoStaking} from "@alto/staking/interfaces/IAltoStaking.sol";

@@ -10,7 +10,7 @@ import {
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {BaseMarketInitParams, BorrowMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
-import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {OracleMock} from "@alto-test/helpers/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";

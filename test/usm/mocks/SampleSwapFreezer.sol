@@ -2,7 +2,7 @@
 pragma solidity ^0.8.10;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IUsm} from "../interfaces/IUsm.sol";
+import {IUsm} from "@alto/usm/interfaces/IUsm.sol";
 
 /**
  * @title SampleSwapFreezer

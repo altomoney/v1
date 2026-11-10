@@ -20,7 +20,7 @@ import {
 } from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {Balance, BaseMarketInitParams, IMarketEvents, Position} from "@alto/lending/interfaces/IMarket.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
-import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {OracleMock} from "@alto-test/helpers/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {DUSD} from "@alto/tokens/DUSD.sol";

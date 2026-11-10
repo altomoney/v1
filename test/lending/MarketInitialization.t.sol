@@ -13,7 +13,7 @@ import {
 } from "@alto/lending/interfaces/IMarket.sol";
 import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
-import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {OracleMock} from "@alto-test/helpers/OracleMock.sol";
 
 contract MarketInitializationTest is Test {
     BaseMarketInitParams internal baseParams;

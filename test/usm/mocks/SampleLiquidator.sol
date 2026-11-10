@@ -2,7 +2,7 @@
 pragma solidity ^0.8.10;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IUsm} from "../interfaces/IUsm.sol";
+import {IUsm} from "@alto/usm/interfaces/IUsm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 
