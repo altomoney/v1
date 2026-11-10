@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
+import {BytecodeLib} from "@alto/deployments/ethereum-mainnet/BytecodeLib.sol";
+
+import {OWNER_FIXED_RATE_IRM_FACTORY_CODEHASH_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
+
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IIrm, IRMType} from "@alto/lending/interfaces/IIrm.sol";
 import {IMarketBase, MarketType} from "@alto/lending/interfaces/IMarket.sol";
@@ -217,6 +221,7 @@ library MarketDeprecationDeployment {
             (address deployed, address irmOwner, uint256 borrowRate) =
                 factory.deployments(marketRate.market, T0_IRM_VERSION);
             require(deployed == IMarketBase(marketRate.market).irm(), "Wrong deployed IRM");
+            require(BytecodeLib.matchesDeployed(deployed, type(FixedRateIrm).runtimeCode), "Wrong IRM code");
             require(irmOwner == params.timelock && borrowRate == marketRate.rateSpy, "Wrong IRM deployment");
 
             (uint184 cap, bool enabled, uint64 removableAt) =
@@ -236,7 +241,12 @@ library MarketDeprecationDeployment {
     }
 
     function _validateFactory(address factory, address timelock) private view {
-        require(factory.codehash == keccak256(type(OwnerFixedRateIrmFactory).runtimeCode), "Wrong factory code");
+        require(
+            BytecodeLib.matchesKnownOrCompiled(
+                factory, OWNER_FIXED_RATE_IRM_FACTORY_CODEHASH_MAINNET, type(OwnerFixedRateIrmFactory).runtimeCode
+            ),
+            "Wrong factory code"
+        );
         require(OwnerFixedRateIrmFactory(factory).owner() == timelock, "Wrong factory owner");
         require(OwnerFixedRateIrmFactory(factory).pendingOwner() == address(0), "Unexpected pending factory owner");
     }
