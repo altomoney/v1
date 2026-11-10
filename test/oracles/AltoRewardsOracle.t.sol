@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
+import {Fork} from "@alto-test/helpers/Fork.sol";
+
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -54,8 +56,7 @@ contract AltoRewardsOracleTest is Test {
     address public OWNER = makeAddr("Alto-multisig");
 
     function setUp() public {
-        string memory rpcUrl = vm.rpcUrl("ethereum");
-        vm.createSelectFork(rpcUrl, 23368665);
+        Fork.selectEthereum(23368665);
 
         vm.startPrank(OWNER);
         altoToken = new AltoToken(ENDPOINTV2, OWNER);

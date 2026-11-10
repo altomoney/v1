@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
+import {Fork} from "@alto-test/helpers/Fork.sol";
+
 import {Test} from "forge-std/Test.sol";
 import {
     IDcfDlbPriorityLiquidationEngine,
@@ -35,9 +37,8 @@ contract AltoLeverageWethMarketTest is Test {
     address oracle;
 
     function setUp() public {
-        string memory rpcUrl = vm.rpcUrl("ethereum");
         (, uint256 blockNumber) = _loadInputFromJson("test/lending/leverage/0xswapData/weth/data_100_weth_to_dai.txt");
-        vm.createSelectFork(rpcUrl, blockNumber);
+        Fork.selectEthereum(blockNumber);
 
         swapper = new AltoLeverageSwapper(address(this), SWAP_TARGET);
         leverage = new AltoLeverage(address(swapper), address(this));

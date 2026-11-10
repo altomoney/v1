@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
+import {Fork} from "@alto-test/helpers/Fork.sol";
+
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
@@ -14,8 +16,7 @@ contract ModuleChainlinkTest is Test {
     address OWNER = makeAddr("Alto-multisig");
 
     function setUp() public {
-        string memory rpcUrl = vm.rpcUrl("ethereum");
-        vm.createSelectFork(rpcUrl, 23447653);
+        Fork.selectEthereum(23447653);
         moduleChainlink = new ModuleChainlink();
     }
 

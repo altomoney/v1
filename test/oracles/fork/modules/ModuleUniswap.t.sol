@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
+import {Fork} from "@alto-test/helpers/Fork.sol";
+
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 import {ModuleUniswap} from "@alto/oracles/modules/ModuleUniswap/ModuleUniswap.sol";
@@ -14,8 +16,7 @@ contract ModuleUniswapTest is Test {
     address OWNER = makeAddr("Alto-multisig");
 
     function setUp() public {
-        string memory rpcUrl = vm.rpcUrl("ethereum");
-        vm.createSelectFork(rpcUrl, 23448120);
+        Fork.selectEthereum(23448120);
         moduleUniswap = new ModuleUniswap();
     }
 

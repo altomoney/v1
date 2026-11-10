@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
+import {Fork} from "@alto-test/helpers/Fork.sol";
+
 import {Test} from "forge-std/Test.sol";
 import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/AltoMultiChainlinkLendingOracle.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
@@ -11,8 +13,7 @@ contract AltoMultiChainlinkLendingOracleGetPriceForkTest is Test {
 
     function test_GetPrice_Weth() public {
         // Fork and setup
-        string memory rpcUrl = vm.rpcUrl("ethereum");
-        vm.createSelectFork(rpcUrl, 23474424);
+        Fork.selectEthereum(23474424);
 
         AltoMultiChainlinkLendingOracle oracle =
             AltoMultiChainlinkLendingOracle(EthereumMainnetOracleDeployer.deployWethOracle(OWNER));

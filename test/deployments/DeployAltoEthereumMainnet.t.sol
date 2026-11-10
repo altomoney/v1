@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
+import {Fork} from "@alto-test/helpers/Fork.sol";
+
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {console} from "forge-std/console.sol";
@@ -154,8 +156,7 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
     bytes32 immutable DEFAULT_ADMIN_ROLE = bytes32(0);
 
     function setUp() public virtual {
-        string memory rpcUrl = vm.rpcUrl("ethereum");
-        vm.createSelectFork(rpcUrl);
+        Fork.selectEthereum();
 
         DEPLOYER = address(this);
 
@@ -1173,7 +1174,7 @@ contract DeployPegResponsiveIrmMigrationPhaseTest is DeployAltoEthereumMainnetTe
 
     function setUp() public override {
         super.setUp();
-        vm.createSelectFork(vm.rpcUrl("ethereum"), FORK_BLOCK);
+        Fork.selectEthereum(FORK_BLOCK);
         _loadCurrentChainInput();
 
         params.timelockAdmin = MAINNET_TIMELOCK_ADMIN;
@@ -1556,7 +1557,7 @@ contract SDUSDMainnetDeploymentForkTest is DeployAltoEthereumMainnetTestBase {
 
     function setUp() public override {
         super.setUp();
-        vm.createSelectFork(vm.rpcUrl("ethereum"), MAINNET_FORK_BLOCK);
+        Fork.selectEthereum(MAINNET_FORK_BLOCK);
         // This fork predates the deployment now recorded in the active address book.
         input.contracts.protocolFeeCollector = address(0);
         input.contracts.protocolFeeCollectorImplementation = address(0);
