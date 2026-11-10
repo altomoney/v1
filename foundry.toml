@@ -42,6 +42,8 @@ match-test = "testSimulate"
 no-match-test = "testNeverExists" # Override default to allow simulation tests
 
 [lint]
+# Run the linter on demand with `forge lint`; its advisories otherwise drown the compiler output.
+lint_on_build = false
 exclude_lints = [
 	"mixed-case-variable",
 	"mixed-case-function",
