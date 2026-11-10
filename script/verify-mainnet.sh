@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source "$(dirname "$0")/_loadEnv.sh"
+source "$(dirname "$0")/load-env.sh"
 
 # Check required environment variables
 if [ -z "$ETHERSCAN_API_KEY" ] || [ -z "$ETHERSCAN_API_URL" ] || [ -z "$CHAIN_ID" ]; then

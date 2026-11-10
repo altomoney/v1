@@ -4,10 +4,6 @@ ARG MISE_VERSION=2026.9.4
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends lcov \
-    && rm -rf /var/lib/apt/lists/*
-
 USER vscode
 
 ENV DEVCONTAINER=true

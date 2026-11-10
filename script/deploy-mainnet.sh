@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source "$(dirname "$0")/_loadEnv.sh"
+source "$(dirname "$0")/load-env.sh"
 
 FOUNDRY_PROFILE=deployment forge clean
 
