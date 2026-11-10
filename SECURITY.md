@@ -10,4 +10,4 @@ Audit reports, the commit each review covered, the bug bounty terms and the list
 
 ## Audit status of contracts
 
-Contracts whose NatSpec carries `@custom:audit Pending` have not been audited, are not deployed on mainnet and are outside the bug bounty scope.
+The audit table in that repository lists the contracts each review covered. Contracts whose NatSpec carries `@custom:audit Pending` have not been reviewed yet; they are not deployed on mainnet and are outside the bug bounty scope.
