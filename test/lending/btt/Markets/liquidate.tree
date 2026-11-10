@@ -46,45 +46,11 @@ AltoBaseMarket::liquidate()
 │   │       └── it should proceed with liquidation
 │   └── when priority liquidation is disabled
 │       └── it should proceed with liquidation
-├── given liquidation proceeds
-│   ├── it should calculate liquidation fee based on liquidator type
-│   ├── it should calculate liquidation percentage
-│   ├── it should calculate new LTV target
-│   ├── it should calculate collateral to sell
-│   └── it should calculate final amounts
-├── given share calculations
-│   ├── when repay shares exceed user borrow shares
-│   │   ├── when difference is less than VIRTUAL_SHARES
-│   │   │   └── it should cap repay shares to user borrow shares
-│   │   └── when difference is greater than or equal to VIRTUAL_SHARES
-│   │       └── it should use calculated repay shares
-│   └── when repay shares do not exceed user borrow shares
-│       └── it should use calculated repay shares
 ├── given liquidation state updates
-│   ├── it should decrease borrower collateral assets
-│   ├── it should decrease borrower borrow shares
-│   ├── it should decrease total borrowed shares
-│   ├── it should decrease total borrowed assets
 │   └── when priority liquidation is enabled and current LTV is below threshold
 │       └── it should delete liquidable position
-├── given bad debt handling
-│   ├── when borrower has no collateral remaining
-│   │   ├── it should calculate bad debt shares
-│   │   ├── it should calculate bad debt assets
-│   │   ├── it should apply bad debt to market
-│   │   └── it should reset borrower borrow shares to zero
-│   └── when borrower has collateral remaining
-│       └── it should not apply bad debt
-├── given token transfers
-│   ├── it should transfer collateral tokens to msg.sender
-│   ├── it should transfer borrow tokens from msg.sender to market
-│   └── when callback data is provided
-│       ├── it should call onLiquidateCallback on msg.sender
-│       └── it should pass collateral amount and data
-├── given event emission
-│   ├── when caller is direct liquidator
-│   │   └── it should emit Liquidation event with borrower and originalLiquidator
-│   └── when caller is authorized liquidation periphery
-│       └── it should emit Liquidation event with borrower and forwarded originalLiquidator
-└── given function completion
-    └── it should return collateral amount and repay amount
+└── given event emission
+    ├── when caller is direct liquidator
+    │   └── it should emit Liquidation event with borrower and originalLiquidator
+    └── when caller is authorized liquidation periphery
+        └── it should emit Liquidation event with borrower and forwarded originalLiquidator
