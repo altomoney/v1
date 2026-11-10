@@ -6,7 +6,6 @@ import {PegResponsiveExponentialIrm} from "@alto/lending/irm/PegResponsiveExpone
 import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 
 /// @title Owner Peg Responsive Exponential Interest Rate Model Factory
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Deterministically deploys PegResponsiveExponentialIrms owned by the factory owner.
 /// @dev A newly deployed IRM has a permissionless, one-time `setMarket`. Deploy it and wire it to its market

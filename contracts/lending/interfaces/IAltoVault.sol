@@ -389,7 +389,6 @@ interface IAltoVaultStaticTypes is IAltoVaultBase {
 }
 
 /// @title IAltoVault
-/// @author GPM
 /// @author Adapted from Morpho Labs' IMetaMorphoV1.1 (https://github.com/morpho-org/metamorpho-v1.1/blob/main/src/interfaces/IMetaMorphoV1_1.sol)
 /// @custom:contact security@altofoundation.org
 /// @dev Use this interface for AltoVault to have access to all the functions with the appropriate function signatures.

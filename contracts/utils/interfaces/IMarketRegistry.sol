@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 /// @title IMarketRegistry
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Interface for the MarketRegistry contract
 interface IMarketRegistry {

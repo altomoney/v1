@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 /// @title AssetShareConversionMath
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Library for converting between asset amounts and share amounts with precision control.
 library AssetShareConversionMath {

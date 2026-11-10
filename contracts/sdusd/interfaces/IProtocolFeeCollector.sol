@@ -42,7 +42,6 @@ struct ProtocolFeeCollectorInitParams {
 }
 
 /// @title IAltoMintMarketFees
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Minimal view of the mint market fee-claiming entrypoint (not part of IMarket).
 interface IAltoMintMarketFees {
@@ -53,7 +52,6 @@ interface IAltoMintMarketFees {
 }
 
 /// @title IProtocolFeeCollectorErrors
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Errors for the ProtocolFeeCollector contract
 interface IProtocolFeeCollectorErrors {
@@ -91,7 +89,6 @@ interface IProtocolFeeCollectorErrors {
 }
 
 /// @title IProtocolFeeCollectorEvents
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Events for the ProtocolFeeCollector contract
 interface IProtocolFeeCollectorEvents {
@@ -158,7 +155,6 @@ interface IProtocolFeeCollectorEvents {
 }
 
 /// @title IProtocolFeeCollectorBase
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice State-changing functions of the ProtocolFeeCollector contract
 interface IProtocolFeeCollectorBase is IProtocolFeeCollectorErrors, IProtocolFeeCollectorEvents {
@@ -284,13 +280,11 @@ interface IProtocolFeeCollectorBase is IProtocolFeeCollectorErrors, IProtocolFee
 }
 
 /// @title IProtocolFeeCollector
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Full interface of the ProtocolFeeCollector contract
 interface IProtocolFeeCollector is IProtocolFeeCollectorBase {}
 
 /// @title IProtocolFeeCollectorStaticTypes
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Static-typed view of the ProtocolFeeCollector contract
 interface IProtocolFeeCollectorStaticTypes is IProtocolFeeCollectorBase {}

@@ -6,7 +6,6 @@ import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 int256 constant MATH_PRECISION_INT = int256(MATH_PRECISION);
 
 /// @title ExpLib
-/// @author GPM
 /// @author Adapted from Morpho Labs (https://github.com/morpho-org/morpho-blue-irm)
 /// @custom:contact security@altofoundation.org
 /// @notice Library to approximate the exponential function.

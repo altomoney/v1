@@ -5,7 +5,6 @@ import {Usm} from "./Usm.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 
-/// @author GPM
 /// @author Adapted from Aave (https://github.com/aave/gho-core/)
 contract DUSDUsm is Usm {
     /// @custom:oz-upgrades-unsafe-allow constructor

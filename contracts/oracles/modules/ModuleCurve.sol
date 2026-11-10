@@ -5,7 +5,6 @@ import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {CurveNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 /// @title ModuleCurve
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Module contract that is used to read from Curve pools
 /// @dev work-in-progress

@@ -132,7 +132,6 @@ interface IDusdPegCurveOracleBase is IDusdPegOracle, IDusdPegCurveOracleErrors, 
 }
 
 /// @title IDusdPegCurveOracle
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Interface for the DUSD/quoteToken peg oracle bound to one two-coin
 /// Curve StableSwap NG pool with owner-managed approved pool parameters.

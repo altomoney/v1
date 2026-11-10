@@ -6,7 +6,6 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 
 /**
  * @title Alto Ownable 2 Step
- * @author GPM
  * @custom:contact security@altofoundation.org
  * @notice This contract extends Ownable2StepUpgradeable contract from OpenZeppelin, with a way to bypass the 2 steps ownership transfer.
  */

@@ -136,7 +136,6 @@ interface IPegResponsiveExponentialIrmBase is
 }
 
 /// @title IPegResponsiveExponentialIrm
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Interface for the DUSD peg-responsive interest-rate model.
 interface IPegResponsiveExponentialIrm is IPegResponsiveExponentialIrmBase {

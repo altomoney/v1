@@ -20,7 +20,6 @@ import {FROZEN_TYPE, PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {ISDUSDVaultStaticTypes, ISDUSDVaultBase, SDUSDInitParams} from "./interfaces/ISDUSDVault.sol";
 
 /// @title SDUSD
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice UUPS-upgradeable ERC-4626 vault where users stake DUSD to receive non-rebasing sDUSD shares. Protocol
 ///         revenue is delivered by the ProtocolFeeCollector through `notifyRewardAmount` and is released

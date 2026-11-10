@@ -7,7 +7,6 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
  * @title AdvancedPermissionsFeeStrategy
- * @author GPM
  * @author Adapted from Aave (https://github.com/aave/gho-core/)
  * @custom:contact security@altofoundation.org
  * @notice Fee strategy to calculate buy/sell fees for Advanced Permissions USMs.

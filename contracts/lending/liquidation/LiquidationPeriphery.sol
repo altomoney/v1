@@ -13,7 +13,6 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {IUsmRegistry} from "@alto/utils/interfaces/IUsmRegistry.sol";
 
 /// @title LiquidationPeriphery
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice This contract is used as a periphery to liquidate positions in a market
 /// @notice This contract sources borrow tokens from USM by selling underlying asset of USM in USM

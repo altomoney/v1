@@ -20,7 +20,6 @@ import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 /// @title Peg-Responsive Exponential Interest Rate Model
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Adjusts a mint market's borrow rate in response to a validated DUSD/quoteToken
 /// peg price.

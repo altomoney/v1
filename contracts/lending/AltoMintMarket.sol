@@ -13,7 +13,6 @@ import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {AltoBaseMarket} from "./AltoBaseMarket.sol";
 
 /// @title Alto Mint Market
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice An Isolated Mint Market
 contract AltoMintMarket is AltoBaseMarket {

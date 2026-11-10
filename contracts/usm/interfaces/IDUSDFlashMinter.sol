@@ -18,7 +18,6 @@ struct FlashFee {
 
 /// @title IDUSDFlashMinter
 /// @notice Defines the behavior of the DUSD Flash Minter
-/// @author GPM
 /// @author Adapted from Aave (https://github.com/aave/gho-core/)
 interface IDUSDFlashMinter is IERC3156FlashLender, IStableTokenFacilitator {
     /// @notice Event emitted when the flash mint fee is updated

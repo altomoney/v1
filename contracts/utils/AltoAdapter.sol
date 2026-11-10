@@ -19,7 +19,6 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title AltoAdapter
-/// @author GPM
 /// @author Inspired by Morpho's GeneralAdapter1 (https://github.com/morpho-org/bundler3).
 /// @custom:contact security@altofoundation.org
 /// @notice A contract that allows for transaction bundling Alto's contracts via Morpho's Bundler3.

@@ -11,7 +11,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title AltoLeverageSwapperMultiTarget
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice This contract is used to swap tokens in AltoLeverage contract during levarage and deleverage
 /// @dev This contract uses whitelisted swap targets instead of a single fixed swap target

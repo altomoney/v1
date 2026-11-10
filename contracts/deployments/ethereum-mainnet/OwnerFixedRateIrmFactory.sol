@@ -5,7 +5,6 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 
 /// @title Owner Fixed Rate Interest Rate Model Factory
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Deterministically deploys FixedRateIrms owned by the factory owner.
 /// @dev A newly deployed IRM has a permissionless, one-time `setMarket`. Deploy it and wire it to its market

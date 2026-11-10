@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 /// @title ConstantsLib
-/// @author GPM
 /// @author Adapted from Morpho Labs' ConstantsLib (https://github.com/morpho-org/metamorpho-v1.1/blob/main/src/libraries/ConstantsLib.sol) for AltoVault.
 /// @custom:contact security@altofoundation.org
 /// @notice Library exposing constants.

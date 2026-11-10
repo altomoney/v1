@@ -13,7 +13,6 @@ interface IUsmMinimal {
 }
 
 /// @title UsmSellAdapter
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @dev Stateless adapter that allows liquidators to swap an underlying asset (e.g. USDC) into
 ///      DUSD via a USM's `sellAsset` in a single call. The caller must have previously approved

@@ -9,7 +9,6 @@ interface IReth {
 }
 
 /// @title ERC4626RatioChainlinkOracleRETH
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice An oracle that gets the price of RETH using the ERC4626 ratio of RETH to ETH and Chainlink price feed
 contract ERC4626RatioChainlinkOracleRETH is AltoERC4626RatioChainlinkOracle {

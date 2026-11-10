@@ -30,7 +30,6 @@ struct SDUSDInitParams {
 }
 
 /// @title ISDUSDVaultErrors
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Errors for the sDUSD vault
 interface ISDUSDVaultErrors {
@@ -67,7 +66,6 @@ interface ISDUSDVaultErrors {
 }
 
 /// @title ISDUSDVaultEvents
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Events for the sDUSD vault
 interface ISDUSDVaultEvents {
@@ -92,7 +90,6 @@ interface ISDUSDVaultEvents {
 }
 
 /// @title ISDUSDVaultBase
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice State-changing and view functions of the sDUSD vault beyond ERC-4626
 interface ISDUSDVaultBase is ISDUSDVaultErrors, ISDUSDVaultEvents {
@@ -191,13 +188,11 @@ interface ISDUSDVaultBase is ISDUSDVaultErrors, ISDUSDVaultEvents {
 }
 
 /// @title ISDUSDVault
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Full non-ERC4626 interface of the sDUSD vault
 interface ISDUSDVault is ISDUSDVaultBase {}
 
 /// @title ISDUSDVaultStaticTypes
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Static-typed view of the sDUSD vault contract
 interface ISDUSDVaultStaticTypes is ISDUSDVaultBase {}

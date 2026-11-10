@@ -4,7 +4,6 @@ pragma solidity ^0.8.22;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title IMintableERC20
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Interface for mintable ERC20 tokens.
 /// @dev This is used as a borrow token in the AltoMintMarket contract.

@@ -9,7 +9,6 @@ interface IMethStaking {
 }
 
 /// @title ERC4626RatioChainlinkOracleMETH
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice An oracle that gets the price of mETH using the ERC4626 ratio of mETH to ETH and Chainlink price feed
 contract ERC4626RatioChainlinkOracleMETH is AltoERC4626RatioChainlinkOracle {

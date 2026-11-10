@@ -12,7 +12,6 @@ import {IConvexBooster} from "@alto/lending/interfaces/vendor/IConvexBooster.sol
 import {IConvexRewardPool} from "@alto/lending/interfaces/vendor/IConvexRewardPool.sol";
 
 /// @title Alto Convex Credit Line Library
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Stateless Convex custody and reward operations for AltoConvexCreditLineMarket
 /// @dev Linked functions execute in the calling market's context, so `address(this)` and storage refer to the market.

@@ -10,7 +10,6 @@ import {UtilsLib} from "@bundler3/lib/morpho-blue/src/libraries/UtilsLib.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 
 /// @title AltoBalancesLib
-/// @author GPM
 /// @author Adapted from Morpho Labs' MorphoBalancesLib (https://github.com/morpho-org/morpho-blue) for Alto markets.
 /// @custom:contact security@altofoundation.org
 /// @notice Helper library exposing getters with the expected value after interest accrual.
