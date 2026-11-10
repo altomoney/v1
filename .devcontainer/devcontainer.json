@@ -15,8 +15,7 @@
 				"NomicFoundation.hardhat-solidity",
 				"Graphite.gti-vscode",
 				"hverlin.mise-vscode",
-				"tamasfe.even-better-toml",
-				"openai.chatgpt"
+				"tamasfe.even-better-toml"
 			]
 		}
 	}
