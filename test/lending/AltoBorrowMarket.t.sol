@@ -10,7 +10,7 @@ import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {console2} from "forge-std/console2.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
-import {SwapperSimpleMock} from "@alto/deployments/testnet/contracts/SwapperSimpleMock.sol";
+import {SwapperSimpleMock} from "@alto-test/helpers/SwapperSimpleMock.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";

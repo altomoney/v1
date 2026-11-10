@@ -13,7 +13,7 @@ import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.s
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IMarket, Position, IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
-import {SwapperSimpleMock} from "@alto/deployments/testnet/contracts/SwapperSimpleMock.sol";
+import {SwapperSimpleMock} from "@alto-test/helpers/SwapperSimpleMock.sol";
 import {console} from "forge-std/console.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";

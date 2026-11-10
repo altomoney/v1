@@ -12,9 +12,7 @@
     "coverage:open": "npx -y open-cli coverage/index.html",
     "coverage:server": "npx -y http-server coverage",
     "upload:emergency-controller": "node tools/emergency-controller/upload.mjs",
-    "deploy:testnet": "./_scripts/deployment/alto-testnet.sh",
-    "deploy:1": "./_scripts/deployment/alto-1.sh",
-    "verify:testnet": "./_scripts/deployment/verify-testnet.sh"
+    "deploy:1": "./_scripts/deployment/alto-1.sh"
   },
   "lint-staged": {
     "**/*.sol": "forge fmt"
