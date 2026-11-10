@@ -3,7 +3,8 @@ pragma solidity ^0.8.28;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {
-    IProtocolFeeCollectorErrors, IProtocolFeeCollectorEvents
+    IProtocolFeeCollectorErrors,
+    IProtocolFeeCollectorEvents
 } from "@alto/sdusd/interfaces/IProtocolFeeCollector.sol";
 import {MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {ProtocolFeeCollectorCommon} from "../ProtocolFeeCollectorCommon.t.sol";
