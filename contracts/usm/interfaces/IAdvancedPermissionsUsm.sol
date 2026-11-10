@@ -15,7 +15,6 @@ enum DirectionAccess {
 
 /**
  * @title IAdvancedPermissionsUsm
- * @author GPM
  * @author Adapted from Aave (https://github.com/aave/gho-core/)
  * @custom:contact security@altofoundation.org
  * @notice Defines the behaviour of a Universal Stability Module with per-direction access configuration

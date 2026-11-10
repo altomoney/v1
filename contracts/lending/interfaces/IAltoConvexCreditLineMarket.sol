@@ -253,7 +253,6 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
 }
 
 /// @title Alto Convex Credit Line Market
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Interface for a Curve-LP-backed credit line market staked through Convex
 interface IAltoConvexCreditLineMarket is IMarket, IAltoConvexCreditLineMarketBase {

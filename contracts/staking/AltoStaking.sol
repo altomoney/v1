@@ -16,7 +16,6 @@ import {Auth} from "@alto/utils/Auth.sol";
 import {PAUSE_TYPE, RESCUE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title Alto Staking
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice A contract for staking tokens and getting votes based on the amount of tokens locked.
 contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, AltoOwnable2Step, Auth, Pausable {

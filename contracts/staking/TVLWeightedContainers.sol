@@ -9,7 +9,6 @@ import {
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 /// @title TVL Weighted Containers
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice An abstract contract for managing TVL weighted containers used for staking.
 abstract contract TVLWeightedContainers is ITVLWeightedContainersStaticTypes {

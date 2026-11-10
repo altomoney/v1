@@ -41,7 +41,6 @@ import {
 } from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
 
 /// @title Alto Base Market
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice An Isolated Borrow Market
 abstract contract AltoBaseMarket is

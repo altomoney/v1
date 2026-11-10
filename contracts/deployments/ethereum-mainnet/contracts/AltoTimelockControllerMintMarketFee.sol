@@ -7,7 +7,6 @@ import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 
 /**
  * @title AltoTimelockControllerMintMarketFee
- * @author GPM
  * @custom:contact security@altofoundation.org
  * @dev Custom TimelockController that requires AccessControl role changes - grantRole, revokeRole -
  *      to go through the timelock process. Addiontaly, renounceRole is disabled for the admin role.

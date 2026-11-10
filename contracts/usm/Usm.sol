@@ -14,7 +14,6 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 
 /**
  * @title Usm
- * @author GPM
  * @author Adapted from Aave (https://github.com/aave/gho-core/)
  * @custom:contact security@altofoundation.org
  * @notice Universal Stability Module. It provides buy/sell facilities to go to/from an underlying asset to/from stability token.

@@ -6,7 +6,6 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {IMarketRegistry} from "./interfaces/IMarketRegistry.sol";
 
 /// @title MarketRegistry
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Main registry of mint and borrow market contracts
 contract MarketRegistry is AltoOwnable2Step, IMarketRegistry {

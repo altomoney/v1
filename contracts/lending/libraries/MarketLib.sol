@@ -24,7 +24,6 @@ struct Market {
 }
 
 /// @title MarketLib
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Library to fetch market state for Alto markets.
 library MarketLib {

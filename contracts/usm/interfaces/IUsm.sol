@@ -14,7 +14,6 @@ enum AccessMode {
 
 /**
  * @title IUsm
- * @author GPM
  * @author Adapted from Aave (https://github.com/aave/gho-core/)
  * @custom:contact security@altofoundation.org
  * @notice Defines the behaviour of a Universal Stability Module

@@ -18,7 +18,6 @@ import {
 } from "@alto/oracles/interfaces/IAltoChainlinkERC4626RatioMultiplierOracle.sol";
 
 /// @title AltoChainlinkERC4626RatioMultiplierOracle
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Oracle that pipelines three modules in sequence:
 ///         1. Chainlink  - converts 1 unit of input into an intermediate price

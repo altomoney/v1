@@ -6,7 +6,6 @@ import {MerkleRootManager} from "@alto/utils/MerkleRootManager.sol";
 import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 
 /// @title AltoReferralWhitelistAdapter
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice A contract that allows users to set their referral address and receive rewards
 /// this allows referrees to receive bonus discount and referrers to receive payment token share

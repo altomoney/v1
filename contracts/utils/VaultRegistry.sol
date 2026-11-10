@@ -6,7 +6,6 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {IVaultRegistry} from "./interfaces/IVaultRegistry.sol";
 
 /// @title VaultRegistry
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Main registry of vault contracts
 contract VaultRegistry is AltoOwnable2Step, IVaultRegistry {

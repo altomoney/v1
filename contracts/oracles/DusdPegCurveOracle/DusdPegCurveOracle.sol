@@ -17,7 +17,6 @@ import {IDusdPegOracle} from "@alto/oracles/interfaces/IDusdPegOracle.sol";
 import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 
 /// @title DUSD/quoteToken Curve Peg Oracle
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Supplies the DUSD peg-responsive interest-rate model with the EMA
 /// price of DUSD quoted in the deployment-approved reference token.

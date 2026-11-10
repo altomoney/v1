@@ -6,7 +6,6 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 uint256 constant MATH_PRECISION = 1e18;
 
 /// @title FixedPointMath
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Library for fixed point arithmetic.
 library FixedPointMath {

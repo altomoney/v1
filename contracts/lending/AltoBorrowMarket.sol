@@ -11,7 +11,6 @@ import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IAltoLiquidationEngine} from "./interfaces/IAltoLiquidationEngine.sol";
 
 /// @title Alto Borrow Market
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice An Isolated Borrow Market
 contract AltoBorrowMarket is AltoBaseMarket {

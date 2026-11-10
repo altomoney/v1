@@ -15,7 +15,6 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 
 /**
  * @title AdvancedPermissionsUsm
- * @author GPM
  * @author Adapted from Aave (https://github.com/aave/gho-core/)
  * @custom:contact security@altofoundation.org
  * @notice Universal Stability Module with independent buy and sell access control.

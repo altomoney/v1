@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 /// @title IVaultRegistry
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Interface for the VaultRegistry contract
 interface IVaultRegistry {

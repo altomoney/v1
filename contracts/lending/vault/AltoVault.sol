@@ -37,7 +37,6 @@ import {
 import {UtilsLib} from "@bundler3/lib/morpho-blue/src/libraries/UtilsLib.sol";
 
 /// @title AltoVault
-/// @author GPM
 /// @author Adapted from Morpho Labs' MetaMorphoV1.1 (https://github.com/morpho-org/metamorpho-v1.1/blob/main/src/MetaMorphoV1_1.sol)
 /// @custom:contact security@altofoundation.org
 /// @notice ERC4626 compliant vault allowing users to deposit assets to AltoBorrowMarkets

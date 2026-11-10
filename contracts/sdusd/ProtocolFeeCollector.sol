@@ -31,7 +31,6 @@ import {
 } from "./interfaces/IProtocolFeeCollector.sol";
 
 /// @title ProtocolFeeCollector
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Collects DUSD protocol fees from borrow/mint markets, vaults, USMs and the flash minter, then splits
 ///         the collected DUSD between the treasury and the sDUSD vault. Liquidation fee collateral is

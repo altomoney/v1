@@ -21,7 +21,6 @@ import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
 /// @title Alto Convex Credit Line Market
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice A single-account revolving DUSD credit line backed by Curve LP staked through Convex
 /// @dev `totalSupply.assets` is the credit capacity shared by active debt and unsettled bad debt.

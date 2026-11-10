@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 /**
  * @title IAdvancedPermissionsUsmFeeStrategy
- * @author GPM
  * @custom:contact security@altofoundation.org
  * @notice Defines the behaviour of Advanced Permissions USM Fee Strategies
  * @dev Functions' logic must be invertible, being possible to calculate the fee amount based on the gross amount, and

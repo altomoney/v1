@@ -6,7 +6,6 @@ import {OracleMath} from "./OracleMath.sol";
 import {UniswapNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 /// @title ModuleUniswap
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Utility contract used to read from Uniswap V3 pools
 contract ModuleUniswap is OracleMath {
