@@ -24,7 +24,7 @@ import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConver
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
-import {SwapperSimpleMock} from "@alto/deployments/testnet/contracts/SwapperSimpleMock.sol";
+import {SwapperSimpleMock} from "@alto-test/helpers/SwapperSimpleMock.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";

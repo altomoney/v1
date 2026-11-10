@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {OracleMock} from "@alto-test/helpers/OracleMock.sol";
-import {SwapperSimpleMock} from "@alto/deployments/testnet/contracts/SwapperSimpleMock.sol";
+import {SwapperSimpleMock} from "@alto-test/helpers/SwapperSimpleMock.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
