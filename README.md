@@ -31,7 +31,6 @@ deposited into a vault that supplies those markets.
 - `contracts/`: the protocol. `lending/` holds the markets, interest rate models, leverage, liquidation and the vault; `oracles/`, `usm/` (stability modules), `sdusd/`, `tokens/` (DUSD and ALTO), `staking/`, `rewards/`, `vesting/` and `positions/` (Curve Convex positions) are the other modules; `utils/` holds the adapter, registries, authorization and the emergency controller; `deployments/` holds the mainnet deployment library and the recorded addresses.
 - `test/`: Foundry tests, mostly Branching Tree Technique suites with a `.tree` file next to each test, plus fork tests that need `ALCHEMY_KEY`.
 - `script/`: the mainnet deployment script with its shell wrappers, run with `pnpm deploy:mainnet` and `pnpm verify:mainnet`.
-- `tools/emergency-controller/`: the static page for the emergency controller, published to IPFS with `pnpm upload:emergency-controller`.
 
 ## Deployments
 

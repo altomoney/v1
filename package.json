@@ -8,7 +8,6 @@
     "clean": "forge clean",
     "test": "forge test",
     "test:simulations": "FOUNDRY_PROFILE=simulations forge test -vvv",
-    "upload:emergency-controller": "node tools/emergency-controller/upload.mjs",
     "deploy:mainnet": "./script/deploy-mainnet.sh",
     "verify:mainnet": "./script/verify-mainnet.sh"
   },
