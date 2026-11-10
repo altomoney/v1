@@ -13,3 +13,7 @@ broadcast
 # coverage
 /coverage
 lcov.info
+# generated deployment output
+contracts/deployments/testnet/output/
+contracts/deployments/ethereum-mainnet/output/*.json
+contracts/deployments/ethereum-mainnet/output/*.zip
