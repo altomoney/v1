@@ -18,7 +18,7 @@ Yearn reward withdrawal defaults to `false` and must be explicitly approved and 
 
 ```bash
 LIQUIDITY_PHASE=claims \
-forge script script/liquidity-incentives/GenerateLiquidityIncentivesTransactions.s.sol:GenerateLiquidityIncentivesTransactionsScript \
+forge script --ffi script/liquidity-incentives/GenerateLiquidityIncentivesTransactions.s.sol:GenerateLiquidityIncentivesTransactionsScript \
   --rpc-url ethereum -vvvv
 ```
 
@@ -30,7 +30,7 @@ CLAIM_YEARN_REWARDS=true \
 YEARN_RETAINED_PRINCIPAL_LP=<raw-LP-principal> \
 YEARN_MAX_LOSS_BPS=<0-to-100> \
 LIQUIDITY_PHASE=claims \
-forge script script/liquidity-incentives/GenerateLiquidityIncentivesTransactions.s.sol:GenerateLiquidityIncentivesTransactionsScript \
+forge script --ffi script/liquidity-incentives/GenerateLiquidityIncentivesTransactions.s.sol:GenerateLiquidityIncentivesTransactionsScript \
   --rpc-url ethereum -vvvv
 ```
 
@@ -59,7 +59,7 @@ The script calculates proportional expected outputs from current pool balances a
 LIQUIDITY_PHASE=curve-withdrawal \
 CURVE_LP_AMOUNT=<exact-LP-received-from-Yearn> \
 CURVE_WITHDRAWAL_SLIPPAGE_BPS=<approved-0-to-100> \
-forge script script/liquidity-incentives/GenerateLiquidityIncentivesTransactions.s.sol:GenerateLiquidityIncentivesTransactionsScript \
+forge script --ffi script/liquidity-incentives/GenerateLiquidityIncentivesTransactions.s.sol:GenerateLiquidityIncentivesTransactionsScript \
   --rpc-url ethereum -vvvv
 ```
 
@@ -111,7 +111,7 @@ CONSOLIDATE_DUSD_AMOUNT=<selected-DUSD> \
 COW_SLIPPAGE_BPS=<approved-slippage-bps> \
 COW_ORDER_VALIDITY_SECONDS=<approved-validity-seconds> \
 COW_SUBMIT_ORDERS=true \
-forge script script/liquidity-incentives/GenerateLiquidityIncentivesTransactions.s.sol:GenerateLiquidityIncentivesTransactionsScript \
+forge script --ffi script/liquidity-incentives/GenerateLiquidityIncentivesTransactions.s.sol:GenerateLiquidityIncentivesTransactionsScript \
   --rpc-url ethereum -vvvv
 ```
 
@@ -149,7 +149,7 @@ First generate a read-only allocation plan:
 ```bash
 LIQUIDITY_PHASE=votium-plan \
 LIQUIDITY_CRVUSD_PROCEEDS_AMOUNT=<this-run-settled-crvUSD> \
-forge script script/liquidity-incentives/GenerateLiquidityIncentivesTransactions.s.sol:GenerateLiquidityIncentivesTransactionsScript \
+forge script --ffi script/liquidity-incentives/GenerateLiquidityIncentivesTransactions.s.sol:GenerateLiquidityIncentivesTransactionsScript \
   --rpc-url ethereum -vvvv
 ```
 
@@ -160,7 +160,7 @@ Review the gross deposit and retained surplus. Then generate the executable batc
 ```bash
 LIQUIDITY_PHASE=votium \
 LIQUIDITY_CRVUSD_PROCEEDS_AMOUNT=<this-run-settled-crvUSD> \
-forge script script/liquidity-incentives/GenerateLiquidityIncentivesTransactions.s.sol:GenerateLiquidityIncentivesTransactionsScript \
+forge script --ffi script/liquidity-incentives/GenerateLiquidityIncentivesTransactions.s.sol:GenerateLiquidityIncentivesTransactionsScript \
   --rpc-url ethereum -vvvv
 ```
 
