@@ -54,9 +54,5 @@ exclude_lints = [
 ethereum = "https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}"
 arbitrum = "https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}"
 
-[profile.market]
-src = 'contracts'
-test = "test/lending"
-
 [profile.deployment]
 optimizer_runs = 100
