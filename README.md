@@ -52,3 +52,7 @@ forge clean && forge build && VERIFY_PROXY=true forge test --ffi
 ## Security
 
 To report a vulnerability, email security@altofoundation.org. Audit reports, the commits they covered and the bug bounty terms are published in [security-review-engagements](https://github.com/altomoney/security-review-engagements). See [SECURITY.md](SECURITY.md) for details.
+
+## License
+
+Alto v1 is licensed under the GNU General Public License v3.0 or later, see [LICENSE](LICENSE). Interfaces under `*/interfaces/` are MIT so integrators can import them freely. Files adapted from third-party code keep their original license and attribution, stated in each file's SPDX header and NatSpec.

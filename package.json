@@ -1,6 +1,6 @@
 {
   "name": "alto-v1",
-  "license": "BUSL-1.1",
+  "license": "GPL-3.0-or-later",
   "packageManager": "pnpm@11.11.0",
   "scripts": {
     "prepare": "husky",

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.22;
 
 import {AltoChainlinkERC4626RatioMultiplierOracleCommon} from "./AltoChainlinkERC4626RatioMultiplierOracleCommon.t.sol";

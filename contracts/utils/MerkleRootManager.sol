@@ -10,6 +10,7 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 
 /// @title Merkle Root Manager
 /// @author GPM
+/// @author Adapted from Morpho Labs' Universal Rewards Distributor (https://github.com/morpho-org/universal-rewards-distributor).
 /// @custom:contact security@altofoundation.org
 /// @notice An abstract contract for managing merkle roots with timelock functionality
 abstract contract MerkleRootManager is IMerkleRootManagerStaticTypes {
