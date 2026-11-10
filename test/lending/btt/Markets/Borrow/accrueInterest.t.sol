@@ -115,10 +115,10 @@ contract AccrueInterestTestBorrow is MarketCommon {
         uint256 expectedBorrowRate;
 
         vm.startPrank(address(market));
-        uint256 snapshot = vm.snapshot();
+        uint256 snapshot = vm.snapshotState();
         (expectedInterest, expectedBorrowRate) =
             IIrm(market.irm()).updateInterestRate(totalSupplyAssetsBefore, totalBorrowedBefore);
-        vm.revertTo(snapshot);
+        vm.revertToState(snapshot);
         vm.stopPrank();
 
         vm.expectEmit();
@@ -158,10 +158,10 @@ contract AccrueInterestTestBorrow is MarketCommon {
         uint256 expectedBorrowRate;
 
         vm.startPrank(address(market));
-        uint256 snapshot = vm.snapshot();
+        uint256 snapshot = vm.snapshotState();
         (expectedInterest, expectedBorrowRate) =
             IIrm(market.irm()).updateInterestRate(totalSupplyAssetsBefore, totalBorrowedBefore);
-        vm.revertTo(snapshot);
+        vm.revertToState(snapshot);
         vm.stopPrank();
 
         // Calculate expected feeAmount and feeShares

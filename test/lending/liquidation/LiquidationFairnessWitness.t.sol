@@ -3,9 +3,10 @@ pragma solidity ^0.8.28;
 
 import {Fork} from "@alto-test/helpers/Fork.sol";
 
-/// @notice Witnesses the DLB/DCF liquidation formula tradeoff: the fee is charged on
-/// total collateral before the close factor determines how much debt is repaid.
-/// This can make liquidator gain exceed a fee computed only on repaid debt.
+/// @notice Witnesses the accepted DLB/DCF fee model: the liquidation fee is charged on the
+/// position's total collateral before the close factor sets how much debt is repaid, so a
+/// liquidator's gain can exceed a fee computed on the repaid debt alone. The audit reports
+/// document this and the team accepts it by design; these tests pin the behavior down.
 import {Test} from "forge-std/Test.sol";
 import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
@@ -90,7 +91,7 @@ contract LiquidationFairnessWitnessTest is Test {
         input.collateralPrice = price;
     }
 
-    function test_fairness_Witness() public {
+    function test_feeOnTotalCollateral_Witness() public {
         _deploy();
 
         uint128 collateral = 10e18;
@@ -104,21 +105,21 @@ contract LiquidationFairnessWitnessTest is Test {
         uint256 seizedValue = (r.seizedCollateralAssets * price) / ORACLE_PREC;
         uint256 repaidValue = r.repaidBorrowAmount;
         uint256 gross = seizedValue - repaidValue;
-        uint256 fairCap = (repaidValue * MAX_FEE) / WAD;
+        uint256 repaidFeeCap = (repaidValue * MAX_FEE) / WAD;
         uint256 actualFee = collateralValue == 0 ? 0 : (gross * WAD) / collateralValue;
-        uint256 fairPenalty = (repaidValue * actualFee) / WAD;
-        uint256 bugExcess = gross > fairPenalty ? gross - fairPenalty : 0;
+        uint256 feeOnRepaid = (repaidValue * actualFee) / WAD;
+        uint256 excessOverRepaidFee = gross > feeOnRepaid ? gross - feeOnRepaid : 0;
 
         _log("collateralValue", collateralValue);
         _log("repaidValue", repaidValue);
         _log("seizedValue", seizedValue);
-        _log("grossLossAboveRepaid (before split)", gross);
-        _log("fairPenalty (repaid*actualFee, legitimate)", fairPenalty);
-        _log("bugExcess (over-charge, HEADLINE impact)", bugExcess);
-        _log("fairCap (repaid*MAX_FEE, loosest bound)", fairCap);
+        _log("grossGainAboveRepaid (before split)", gross);
+        _log("feeOnRepaid (repaid*actualFee)", feeOnRepaid);
+        _log("excessOverRepaidFee (fee on total collateral minus fee on repaid)", excessOverRepaidFee);
+        _log("repaidFeeCap (repaid*MAX_FEE)", repaidFeeCap);
 
-        assert(gross > fairCap);
-        assert(bugExcess > 0);
+        assert(gross > repaidFeeCap);
+        assert(excessOverRepaidFee > 0);
     }
 
     function test_liveDeployedWethEngine_Witness() public {
@@ -137,20 +138,20 @@ contract LiquidationFairnessWitnessTest is Test {
         uint256 seizedValue = (r.seizedCollateralAssets * LIVE_WETH_PRICE) / ORACLE_PREC;
         uint256 repaidValue = r.repaidBorrowAmount;
         uint256 gross = seizedValue - repaidValue;
-        uint256 fairCap = (repaidValue * MAX_FEE) / WAD;
+        uint256 repaidFeeCap = (repaidValue * MAX_FEE) / WAD;
         uint256 actualFee = collateralValue == 0 ? 0 : (gross * WAD) / collateralValue;
-        uint256 fairPenalty = (repaidValue * actualFee) / WAD;
-        uint256 bugExcess = gross > fairPenalty ? gross - fairPenalty : 0;
+        uint256 feeOnRepaid = (repaidValue * actualFee) / WAD;
+        uint256 excessOverRepaidFee = gross > feeOnRepaid ? gross - feeOnRepaid : 0;
 
         _log("live.repaidValue", repaidValue);
         _log("live.seizedValue", seizedValue);
-        _log("live.grossLossAboveRepaid (before split)", gross);
-        _log("live.fairPenalty (legitimate)", fairPenalty);
-        _log("live.bugExcess (over-charge, HEADLINE)", bugExcess);
-        _log("live.fairCap", fairCap);
+        _log("live.grossGainAboveRepaid (before split)", gross);
+        _log("live.feeOnRepaid", feeOnRepaid);
+        _log("live.excessOverRepaidFee", excessOverRepaidFee);
+        _log("live.repaidFeeCap", repaidFeeCap);
 
-        assert(gross > fairCap);
-        assert(bugExcess > 0);
+        assert(gross > repaidFeeCap);
+        assert(excessOverRepaidFee > 0);
     }
 
     function testFuzz_liquidatorGainExceedsFeeOnRepaidForPartialLiquidations(
@@ -172,13 +173,13 @@ contract LiquidationFairnessWitnessTest is Test {
 
         uint256 seizedValue = (r.seizedCollateralAssets * price) / ORACLE_PREC;
         uint256 gain = seizedValue - r.repaidBorrowAmount;
-        uint256 fairCap = (r.repaidBorrowAmount * MAX_FEE) / WAD;
+        uint256 repaidFeeCap = (r.repaidBorrowAmount * MAX_FEE) / WAD;
 
         assertGt(r.repaidBorrowAmount, 0);
-        assertGt(gain, fairCap);
+        assertGt(gain, repaidFeeCap);
     }
 
-    function test_feeForNothing_Witness() public {
+    function test_feeWithoutRepayment_Witness() public {
         _deploy();
 
         uint128 collateral = 2000;
@@ -194,7 +195,7 @@ contract LiquidationFairnessWitnessTest is Test {
         assert(r.seizedCollateralAssets > 0);
     }
 
-    function test_coveredPositionWiped_Witness() public {
+    function test_fullSeizureAboveCompleteLiquidationLtv_Witness() public {
         _deploy();
 
         uint128 collateral = 10e18;

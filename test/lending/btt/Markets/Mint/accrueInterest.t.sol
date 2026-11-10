@@ -99,10 +99,10 @@ contract AccrueInterestTestMint is MarketCommon {
         uint256 expectedBorrowRate;
 
         vm.startPrank(address(market));
-        uint256 snapshot = vm.snapshot();
+        uint256 snapshot = vm.snapshotState();
         (expectedInterest, expectedBorrowRate) =
             IIrm(market.irm()).updateInterestRate(totalSupplyBefore, totalBorrowedBefore);
-        vm.revertTo(snapshot);
+        vm.revertToState(snapshot);
         vm.stopPrank();
 
         // it should emit AccrueInterest event

@@ -75,11 +75,11 @@ contract AltoMarketPause is MarketCommon {
     function test_WhenMarketIsUnpaused() external setUpMarket {
         // get accrued amounts if market was not paused
         uint256 TIME_TO_ACCRUE = 50 days;
-        uint256 snapshot = vm.snapshot();
+        uint256 snapshot = vm.snapshotState();
         vm.warp(block.timestamp + TIME_TO_ACCRUE);
         Balance memory totalBorrowedBeforeAccrued = market.totalBorrowed();
         Balance memory totalSupplyBeforeAccrued = market.totalSupply();
-        vm.revertTo(snapshot);
+        vm.revertToState(snapshot);
 
         vm.startPrank(PAUSER);
 
