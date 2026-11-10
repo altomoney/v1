@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {Vm} from "forge-std/Vm.sol";
 
 /// @notice Creates Ethereum mainnet forks for tests.
-/// @dev `forge test` runs offline by default. When `ALCHEMY_KEY` is unset, the calling test or suite is skipped
+/// @dev `forge test` runs offline by default. When `ALCHEMY_KEY` is unset or empty, the calling test or suite is skipped
 /// instead of failing, so fork tests only run when an RPC key is configured.
 library Fork {
     Vm private constant VM = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
@@ -26,6 +26,6 @@ library Fork {
     }
 
     function _skipWithoutRpcKey() private {
-        if (!VM.envExists(RPC_KEY_ENV)) VM.skip(true);
+        if (bytes(VM.envOr(RPC_KEY_ENV, string(""))).length == 0) VM.skip(true);
     }
 }
