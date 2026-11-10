@@ -1,5 +1,7 @@
 # Alto v1
 
+[![CI](https://github.com/altomoney/v1/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/altomoney/v1/actions/workflows/ci.yml)
+
 Alto v1 is a lending and stablecoin protocol built around DUSD.
 
 ## How it works
