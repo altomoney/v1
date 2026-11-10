@@ -43,8 +43,8 @@ forge test
 
 Fork tests run against Ethereum mainnet and are skipped unless `ALCHEMY_KEY` is set. Copy `.env.example` to `.env` or export the variable to include them.
 
-For proxy upgrade validation, rebuild the artifacts first:
+Proxy upgrade validation runs OpenZeppelin's upgrade checks through `ffi`, which is disabled by default. Rebuild the artifacts first:
 
 ```bash
-forge clean && forge build && VERIFY_PROXY=true forge test
+forge clean && forge build && VERIFY_PROXY=true forge test --ffi
 ```
