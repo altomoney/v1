@@ -1108,11 +1108,6 @@ contract TestUsm is TestDusdBase {
         uint256 seizedAmount = DUSD_USM.seize();
         assertEq(seizedAmount, DEFAULT_USM_USDC_AMOUNT, "Unexpected seized amount");
 
-        // TODO: This should be probably handled on DUSD
-        // vm.expectRevert("FACILITATOR_BUCKET_LEVEL_NOT_ZERO");
-        // DUSD_TOKEN.setMinterStatus(address(DUSD_USM), false);
-        // DUSD_TOKEN.setBurnerStatus(address(DUSD_USM), false);
-
         dusdFaucet(address(DUSD_USM_LAST_RESORT_LIQUIDATOR), DEFAULT_USM_DUSD_AMOUNT);
         vm.startPrank(address(DUSD_USM_LAST_RESORT_LIQUIDATOR));
         DUSD_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_DUSD_AMOUNT);
