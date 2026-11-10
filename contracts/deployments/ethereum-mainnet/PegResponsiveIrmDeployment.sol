@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
+import {BytecodeLib} from "@alto/deployments/ethereum-mainnet/BytecodeLib.sol";
+
 import {
     AltoEthereumMainnetInput,
     MarketContracts
@@ -9,6 +11,7 @@ import {
     CURVE_STABLESWAP_NG_FACTORY_MAINNET,
     FRXUSD_DUSD_CURVE_POOL_IMPLEMENTATION_MAINNET,
     FRXUSD_DUSD_CURVE_POOL_MAINNET,
+    OWNER_PEG_RESPONSIVE_IRM_FACTORY_CODEHASH_MAINNET,
     FRXUSD_MAINNET
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {
@@ -160,7 +163,11 @@ library PegResponsiveIrmDeployment {
         address oracleAddress = input.contracts.dusdPegCurveOracle;
 
         require(
-            factoryAddress.codehash == keccak256(type(OwnerPegResponsiveExponentialIrmFactory).runtimeCode),
+            BytecodeLib.matchesKnownOrCompiled(
+                factoryAddress,
+                OWNER_PEG_RESPONSIVE_IRM_FACTORY_CODEHASH_MAINNET,
+                type(OwnerPegResponsiveExponentialIrmFactory).runtimeCode
+            ),
             "Wrong factory code"
         );
         require(Ownable(factoryAddress).owner() == timelock, "Wrong factory owner");
@@ -237,7 +244,9 @@ library PegResponsiveIrmDeployment {
         PegResponsiveExponentialIrmConfig memory irmConfig
     ) private view {
         require(IMarketBase(market).irm() == expectedIrm, "Wrong market IRM");
-        require(expectedIrm.codehash == keccak256(type(PegResponsiveExponentialIrm).runtimeCode), "Wrong IRM code");
+        require(
+            BytecodeLib.matchesDeployed(expectedIrm, type(PegResponsiveExponentialIrm).runtimeCode), "Wrong IRM code"
+        );
         require(Ownable(expectedIrm).owner() == input.contracts.timelock, "Wrong IRM owner");
         require(AltoOwnable2Step(expectedIrm).pendingOwner() == address(0), "Unexpected pending IRM owner");
         require(IIrm(expectedIrm).IRM_TYPE() == IRMType.PEG_RESPONSIVE_EXPONENTIAL, "Wrong IRM type");

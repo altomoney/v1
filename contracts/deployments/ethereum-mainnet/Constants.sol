@@ -104,3 +104,11 @@ function getMulticallOwnerAddresses() pure returns (address[] memory) {
     addresses[1] = 0xFC3567948D827F928a82cF1263c5851a74BD90C9;
     return addresses;
 }
+
+/// @dev keccak256 of the runtime code deployed at the mainnet IRM factories, recorded at deployment time and verified on
+/// Etherscan. The factories embed the IRM creation code including its compiler metadata, so a fresh compile only matches
+/// while every source file is byte-identical.
+bytes32 constant OWNER_PEG_RESPONSIVE_IRM_FACTORY_CODEHASH_MAINNET =
+    0x5014f78c563691af81779822cf6b0fc663ca18a4666377a6c8a035ae84f4d11f;
+bytes32 constant OWNER_FIXED_RATE_IRM_FACTORY_CODEHASH_MAINNET =
+    0x464337bbcb57333a9a5b6dc5de919e414f4228eafa8d3f54909ae0a19ed41d59;
