@@ -24,6 +24,17 @@ Alto v1 is a lending and stablecoin protocol built around DUSD.
 DUSD minted against collateral can be supplied directly to borrow markets or
 deposited into a vault that supplies those markets.
 
+## Layout
+
+- `contracts/`: the protocol. `lending/` holds the markets, interest rate models, leverage, liquidation and the vault; `oracles/`, `usm/` (stability modules), `sdusd/`, `tokens/` (DUSD and ALTO), `staking/`, `rewards/`, `vesting/` and `positions/` (Curve Convex positions) are the other modules; `utils/` holds the adapter, registries, authorization and the emergency controller; `deployments/` holds the mainnet deployment library and the recorded addresses.
+- `test/`: Foundry tests, mostly Branching Tree Technique suites with a `.tree` file next to each test, plus fork tests that need `ALCHEMY_KEY`.
+- `script/` and `_scripts/`: the mainnet deployment script and its shell wrappers.
+- `tools/emergency-controller/`: the static page for the emergency controller, published to IPFS with `pnpm upload:emergency-controller`.
+
+## Deployments
+
+Mainnet addresses are recorded in [`contracts/deployments/ethereum-mainnet/output/ethereum-mainnet-1-1765364975/addresses.json`](contracts/deployments/ethereum-mainnet/output/ethereum-mainnet-1-1765364975/addresses.json). The deployed contracts in scope of the bug bounty are listed in [security-review-engagements](https://github.com/altomoney/security-review-engagements/blob/main/deployments/mainnet.md).
+
 ## Development
 
 Use the VS Code devcontainer for automatic tool and dependency setup.
@@ -33,6 +44,14 @@ For a local setup, install and activate [mise](https://mise.jdx.dev/getting-star
 ```bash
 mise install
 mise run setup
+```
+
+Without mise, install [Foundry](https://getfoundry.sh) 1.7.1 and pnpm 11, then run:
+
+```bash
+git submodule update --init --recursive
+pnpm install --frozen-lockfile
+forge build
 ```
 
 ### Tests
@@ -55,4 +74,4 @@ To report a vulnerability, email security@altofoundation.org. Audit reports, the
 
 ## License
 
-Alto v1 is licensed under the GNU General Public License v3.0 or later, see [LICENSE](LICENSE). Interfaces under `*/interfaces/` are MIT so integrators can import them freely. Files adapted from third-party code keep their original license and attribution, stated in each file's SPDX header and NatSpec.
+Alto v1 is licensed under the GNU General Public License v3.0 or later, see [LICENSE](LICENSE). Alto's interfaces under `*/interfaces/` are MIT so integrators can import them freely; interfaces adapted from third-party code keep their original license. Files adapted from third-party code keep their original license and attribution, stated in each file's SPDX header and NatSpec.
