@@ -1158,7 +1158,7 @@ contract DeployConvexCreditLineMarketPhaseTest is DeployMarketPhaseTestBase {
 }
 
 contract DeployPegResponsiveIrmMigrationPhaseTest is DeployAltoEthereumMainnetTestBase {
-    uint256 internal constant FORK_BLOCK = 25_988_862;
+    uint256 internal constant FORK_BLOCK = 26_379_000;
     uint256 internal constant IRM_VERSION = 1;
     uint256 internal constant TEST_PEG_PRICE = 0.99e18;
     string internal constant SCHEDULE_JSON =
