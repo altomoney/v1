@@ -48,3 +48,7 @@ Proxy upgrade validation runs OpenZeppelin's upgrade checks through `ffi`, which
 ```bash
 forge clean && forge build && VERIFY_PROXY=true forge test --ffi
 ```
+
+## Security
+
+To report a vulnerability, email security@altofoundation.org. Audit reports, the commits they covered and the bug bounty terms are published in [security-review-engagements](https://github.com/altomoney/security-review-engagements). See [SECURITY.md](SECURITY.md) for details.
