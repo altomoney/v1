@@ -35,15 +35,13 @@ mise install
 mise run setup
 ```
 
-Copy `.env.example` to `.env` and set `ALCHEMY_KEY` for fork tests.
-
 ### Tests
-
-Run the test suite:
 
 ```bash
 forge test
 ```
+
+Fork tests run against Ethereum mainnet and are skipped unless `ALCHEMY_KEY` is set. Copy `.env.example` to `.env` or export the variable to include them.
 
 For proxy upgrade validation, rebuild the artifacts first:
 

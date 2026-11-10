@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.28;
 
+import {Fork} from "@alto-test/helpers/Fork.sol";
+
 import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MintCurveConvexPositionFactory} from "@alto/positions/MintCurveConvexPositionFactory.sol";
@@ -40,7 +42,7 @@ abstract contract MintCurveConvexPositionForkCommon is Test {
     MintCurveConvexPosition internal position;
 
     function setUp() public virtual {
-        vm.createSelectFork(vm.rpcUrl("ethereum"), FORK_BLOCK);
+        Fork.selectEthereum(FORK_BLOCK);
 
         user = makeAddr("User");
         _deployPositionInfrastructure();

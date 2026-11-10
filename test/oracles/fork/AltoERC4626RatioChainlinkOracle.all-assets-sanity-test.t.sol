@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
+import {Fork} from "@alto-test/helpers/Fork.sol";
+
 import {Test} from "forge-std/Test.sol";
 import {EthereumMainnetOracleDeployer} from "@alto/deployments/EthereumMainnetOracleDeployer.sol";
 import {ILendingOracle} from "@alto/oracles/interfaces/IOracle.sol";
@@ -8,10 +10,8 @@ import {ILendingOracle} from "@alto/oracles/interfaces/IOracle.sol";
 contract AltoERC4626RatioChainlinkOracleGetPriceForkTest is Test {
     address internal OWNER = makeAddr("Alto-multisig");
 
-    string internal rpcUrl = vm.rpcUrl("ethereum");
-
     function test_GetPrice_Reth() public {
-        vm.createSelectFork(rpcUrl, 23532976);
+        Fork.selectEthereum(23532976);
 
         ILendingOracle oracle = ILendingOracle(EthereumMainnetOracleDeployer.deployRethOracle(OWNER));
         uint256 price = oracle.getPrice();
@@ -20,7 +20,7 @@ contract AltoERC4626RatioChainlinkOracleGetPriceForkTest is Test {
     }
 
     function test_GetPrice_Susde() public {
-        vm.createSelectFork(rpcUrl, 23490557);
+        Fork.selectEthereum(23490557);
 
         ILendingOracle oracle = ILendingOracle(EthereumMainnetOracleDeployer.deploySusdeOracle(OWNER));
         uint256 price = oracle.getPrice();
@@ -29,7 +29,7 @@ contract AltoERC4626RatioChainlinkOracleGetPriceForkTest is Test {
     }
 
     function test_GetPrice_WstEth() public {
-        vm.createSelectFork(rpcUrl, 23483134);
+        Fork.selectEthereum(23483134);
 
         ILendingOracle oracle = ILendingOracle(EthereumMainnetOracleDeployer.deployWstEthOracle(OWNER));
         uint256 price = oracle.getPrice();
@@ -38,7 +38,7 @@ contract AltoERC4626RatioChainlinkOracleGetPriceForkTest is Test {
     }
 
     function test_GetPrice_SyrupUsdc() public {
-        vm.createSelectFork(rpcUrl, 24197555);
+        Fork.selectEthereum(24197555);
 
         ILendingOracle oracle = ILendingOracle(EthereumMainnetOracleDeployer.deploySyrupUsdcOracle(OWNER));
         uint256 price = oracle.getPrice();

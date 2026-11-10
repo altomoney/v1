@@ -2,6 +2,8 @@
 
 pragma solidity 0.8.28;
 
+import {Fork} from "@alto-test/helpers/Fork.sol";
+
 import {Test} from "forge-std/Test.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -76,7 +78,7 @@ contract DusdPegOracleForkTest is Test {
     PoolSnapshot internal poolSnapshot;
 
     function setUp() public {
-        vm.createSelectFork(vm.rpcUrl("ethereum"), FORK_BLOCK);
+        Fork.selectEthereum(FORK_BLOCK);
         poolSnapshot = _readPoolSnapshot();
 
         string memory addressesJson = vm.readFile(MAINNET_ADDRESSES_PATH);

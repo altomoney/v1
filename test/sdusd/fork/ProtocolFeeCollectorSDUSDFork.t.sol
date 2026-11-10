@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {Fork} from "@alto-test/helpers/Fork.sol";
+
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -80,7 +82,7 @@ contract ProtocolFeeCollectorSDUSDForkTest is Test {
     uint256 internal initialUserShares;
 
     function setUp() public {
-        vm.createSelectFork(vm.rpcUrl("ethereum"), 25688451);
+        Fork.selectEthereum(25688451);
 
         dusd = IDUSD(DUSD_MAINNET);
         marketRegistry = IMarketRegistry(MARKET_REGISTRY_MAINNET);

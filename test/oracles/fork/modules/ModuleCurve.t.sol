@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
+import {Fork} from "@alto-test/helpers/Fork.sol";
+
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 import {ModuleCurve} from "@alto/oracles/modules/ModuleCurve.sol";
@@ -17,8 +19,7 @@ contract ModuleCurveTest is Test {
     address constant STETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
 
     function setUp() public {
-        string memory rpcUrl = vm.rpcUrl("ethereum");
-        vm.createSelectFork(rpcUrl, 23466674);
+        Fork.selectEthereum(23466674);
         moduleCurve = new ModuleCurve();
     }
 

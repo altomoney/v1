@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
+import {Fork} from "@alto-test/helpers/Fork.sol";
+
 /// @notice Witnesses the DLB/DCF liquidation formula tradeoff: the fee is charged on
 /// total collateral before the close factor determines how much debt is repaid.
 /// This can make liquidator gain exceed a fee computed only on repaid debt.
@@ -122,7 +124,7 @@ contract LiquidationFairnessWitnessTest is Test {
     function test_liveDeployedWethEngine_Witness() public {
         if (!vm.envOr("RUN_LIVE_FORK", false)) return;
 
-        vm.createSelectFork(vm.rpcUrl("ethereum"));
+        Fork.selectEthereum();
 
         uint128 collateral = 10e18;
         uint256 collateralValue = (uint256(collateral) * LIVE_WETH_PRICE) / ORACLE_PREC;

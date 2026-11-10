@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {Fork} from "@alto-test/helpers/Fork.sol";
+
 import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
@@ -338,7 +340,7 @@ contract GenerateLiquidityIncentivesTransactionsForkTest is Test {
     GenerateLiquidityIncentivesTransactionsScript internal generator;
 
     function setUp() public {
-        vm.createSelectFork(vm.rpcUrl("ethereum"), FORK_BLOCK);
+        Fork.selectEthereum(FORK_BLOCK);
         generator = new GenerateLiquidityIncentivesTransactionsScript();
     }
 
@@ -364,7 +366,7 @@ contract GenerateLiquidityIncentivesTransactionsForkTest is Test {
     }
 
     function test_Fork_optionalStakeDaoCrvClaimExecutesOnCurrentMainnet() public {
-        vm.createSelectFork(vm.rpcUrl("ethereum"));
+        Fork.selectEthereum();
         generator = new GenerateLiquidityIncentivesTransactionsScript();
 
         StakeDaoClaimData memory claimData = _claimData();
