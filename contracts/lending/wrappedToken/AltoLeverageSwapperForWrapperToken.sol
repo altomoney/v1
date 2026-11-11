@@ -125,7 +125,7 @@ contract AltoLeverageSwapperForWrapperToken is IAltoLeverageSwapperForWrapperTok
 
         // transfer any leftover sell tokens to the sender
         if (sellTokenBalanceLeftover > 0) {
-            IERC20(sellToken).safeTransfer(msg.sender, sellTokenBalanceLeftover);
+            _refundLeftover(sellToken, collateralTokenOfMarket, sellTokenBalanceLeftover);
         }
 
         uint256 returnAmount = buyTokenBalanceReceived;
@@ -143,5 +143,21 @@ contract AltoLeverageSwapperForWrapperToken is IAltoLeverageSwapperForWrapperTok
         emit Swap(params.swapTarget, sellToken, buyToken, amountIn, buyTokenBalanceReceived, sellTokenBalanceLeftover);
 
         return returnAmount;
+    }
+
+    /// @dev Rewraps unspent underlying, left when collateral was unwrapped and sold, so the sender gets back the
+    /// collateral token it sold.
+    function _refundLeftover(address sellToken, address collateralToken, uint256 leftover) private {
+        if (
+            sellToken == IWrapperToken(collateralToken).underlyingToken()
+                && IWrapperToken(collateralToken).previewWrap(leftover) > 0
+        ) {
+            IERC20(sellToken).forceApprove(collateralToken, leftover);
+            uint256 wrappedLeftover = IWrapperToken(collateralToken).wrap(leftover);
+            IERC20(sellToken).forceApprove(collateralToken, 0);
+            IERC20(collateralToken).safeTransfer(msg.sender, wrappedLeftover);
+        } else {
+            IERC20(sellToken).safeTransfer(msg.sender, leftover);
+        }
     }
 }

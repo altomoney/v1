@@ -46,7 +46,7 @@ AltoLeverageSwapperForWrapperToken::swap
     │       ├── it should execute swap via swapTarget
     │       ├── it should reset swapTarget approval to zero
     │       ├── when swap leaves sell token balance
-    │       │   └── it should transfer leftover sell tokens to caller
+    │       │   └── it should rewrap the leftover underlying PT and transfer it to caller as collateral token
     │       ├── it should transfer buy tokens to caller
     │       ├── it should leave zero sellToken balance on contract
     │       ├── it should leave zero buyToken balance on contract

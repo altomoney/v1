@@ -189,6 +189,8 @@ contract SwapTest is AltoLeverageSwapperForWrapperTokenCommon {
         _fundCallerWithCollateral(WRAPPED_COLLATERAL_IN);
 
         uint256 callerPtBefore = underlyingPt.balanceOf(caller);
+        uint256 callerCollateralBefore = collateralWrapper.balanceOf(caller);
+        uint256 expectedWrappedLeftover = collateralWrapper.previewWrap(leftover);
 
         vm.prank(caller);
         vm.expectEmit(true, true, true, true, address(swapper));
@@ -197,7 +199,13 @@ contract SwapTest is AltoLeverageSwapperForWrapperTokenCommon {
         );
         swapper.swap(_collateralToken(), address(otherToken), WRAPPED_COLLATERAL_IN, swapParams);
 
-        assertEq(underlyingPt.balanceOf(caller), callerPtBefore + leftover);
+        // The unspent PT comes back wrapped, because AltoLeverage only forwards the collateral token it sold.
+        assertGt(expectedWrappedLeftover, 0);
+        assertEq(underlyingPt.balanceOf(caller), callerPtBefore);
+        assertEq(
+            collateralWrapper.balanceOf(caller),
+            callerCollateralBefore - WRAPPED_COLLATERAL_IN + expectedWrappedLeftover
+        );
         _assertZeroResidualBalances();
     }
 
