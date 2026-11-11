@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.22;
 
+import {Fork} from "@alto-test/helpers/Fork.sol";
 import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
@@ -63,7 +64,7 @@ contract WrapperTokenLeverageTest is Test {
     address internal oracle;
 
     function setUp() public {
-        vm.createSelectFork(vm.rpcUrl("ethereum"), 25230280);
+        Fork.selectEthereum(25230280);
 
         supplier = makeAddr("supplier");
         user = makeAddr("user");
