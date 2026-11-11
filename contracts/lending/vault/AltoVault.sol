@@ -10,7 +10,7 @@ import {
     IAltoVaultStaticTypes
 } from "@alto/lending/interfaces/IAltoVault.sol";
 import {Market, MarketLib} from "@alto/lending/libraries/MarketLib.sol";
-import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
 import {IAltoBorrowMarket} from "@alto/lending/interfaces/IAltoBorrowMarket.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
@@ -350,7 +350,14 @@ contract AltoVault is ERC4626, ERC20Permit, AltoOwnable2Step, Multicall, IAltoVa
         if (length > ConstantsLib.MAX_QUEUE_LENGTH) revert MaxQueueLengthExceeded();
 
         for (uint256 i; i < length; ++i) {
-            if (config[newSupplyQueue[i]].cap == 0) revert UnauthorizedMarket(newSupplyQueue[i]);
+            address market = newSupplyQueue[i];
+
+            if (config[market].cap == 0) revert UnauthorizedMarket(market);
+
+            // A market listed twice would have its capacity counted twice in `maxDeposit` and `maxMint`.
+            for (uint256 j; j < i; ++j) {
+                if (newSupplyQueue[j] == market) revert DuplicateMarket(market);
+            }
         }
 
         supplyQueue = newSupplyQueue;
@@ -549,13 +556,13 @@ contract AltoVault is ERC4626, ERC20Permit, AltoOwnable2Step, Multicall, IAltoVa
     }
 
     /// @inheritdoc IERC4626
-    /// @dev Warning: May be higher than the actual max deposit due to duplicate markets in the supplyQueue.
+    /// @dev Paused and frozen markets in the supplyQueue are not counted because they cannot accept supply.
     function maxDeposit(address) public view override returns (uint256) {
         return _maxDeposit();
     }
 
     /// @inheritdoc IERC4626
-    /// @dev Warning: May be higher than the actual max mint due to duplicate markets in the supplyQueue.
+    /// @dev Paused and frozen markets in the supplyQueue are not counted because they cannot accept supply.
     function maxMint(address) public view override returns (uint256) {
         uint256 suppliable = _maxDeposit();
 
@@ -653,12 +660,16 @@ contract AltoVault is ERC4626, ERC20Permit, AltoOwnable2Step, Multicall, IAltoVa
     }
 
     /// @dev Returns the maximum amount of assets that the vault can supply on AltoBorrowMarkets.
+    /// @dev Each market contributes the room left under both the vault's cap and the market's own supply cap.
     function _maxDeposit() internal view returns (uint256 totalSuppliable) {
         for (uint256 i; i < supplyQueue.length; ++i) {
             address market = supplyQueue[i];
 
             uint256 supplyCap = config[market].cap;
             if (supplyCap == 0) continue;
+
+            // A paused or frozen market cannot accept supply, so `_supplyToMarkets` skips it.
+            if (IPausable(market).paused(PAUSE_TYPE) || IPausable(market).paused(FROZEN_TYPE)) continue;
 
             uint128 supplyShares = market.userSupplyShares(address(this));
             (uint256 totalSupplyAssets, uint256 totalSupplyShares,,) = market.expectedMarketBalances();

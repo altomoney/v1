@@ -54,7 +54,7 @@ interface IAltoVaultErrors {
     /// @notice Thrown when submitting a market removal for a market with a non zero cap.
     error NonZeroCap();
 
-    /// @notice Thrown when market is a duplicate in the new withdraw queue to set.
+    /// @notice Thrown when market is a duplicate in the new supply or withdraw queue to set.
     error DuplicateMarket(address market);
 
     /// @notice Thrown when market is missing in the updated withdraw queue and the market has a non-zero cap set.
@@ -342,11 +342,9 @@ interface IAltoVaultBase is IAltoVaultErrors, IAltoVaultEvents {
     function setSkimRecipient(address newSkimRecipient) external;
 
     /// @notice Sets `supplyQueue` to `newSupplyQueue`.
-    /// @dev Paused or frozen markets cannot accept supply and are not filtered onchain when calculating `maxDeposit`
-    /// or `maxMint`. Allocators must monitor market status offchain and ensure paused or frozen markets are not present
-    /// in `newSupplyQueue`.
-    /// @param newSupplyQueue is an array of enabled markets, and can contain duplicate markets, but it would only
-    /// increase the cost of depositing to the vault.
+    /// @dev Paused or frozen markets can stay in the queue. They are skipped on deposit and are not counted in
+    /// `maxDeposit` or `maxMint`.
+    /// @param newSupplyQueue is an array of enabled markets, without duplicate.
     function setSupplyQueue(address[] calldata newSupplyQueue) external;
 
     /// @notice Updates the withdraw queue. Some markets can be removed, but no market can be added.

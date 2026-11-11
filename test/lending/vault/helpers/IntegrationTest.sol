@@ -128,7 +128,8 @@ contract IntegrationTest is BaseTest {
         assertEq(vault.config(market).cap, newCap, "_setCap");
 
         if (newCap > 0) {
-            if (!isEnabled) {
+            // A market that was removed and enabled again is still in the supply queue.
+            if (!isEnabled && !_isInSupplyQueue(market)) {
                 address[] memory newSupplyQueue = new address[](vault.supplyQueueLength() + 1);
                 for (uint256 k; k < vault.supplyQueueLength(); k++) {
                     newSupplyQueue[k] = vault.supplyQueue(k);
@@ -138,6 +139,13 @@ contract IntegrationTest is BaseTest {
                 vault.setSupplyQueue(newSupplyQueue);
             }
         }
+    }
+
+    function _isInSupplyQueue(address market) internal view returns (bool) {
+        for (uint256 k; k < vault.supplyQueueLength(); k++) {
+            if (vault.supplyQueue(k) == market) return true;
+        }
+        return false;
     }
 
     function _sortSupplyQueueIdleLast() internal {

@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import {IMarket} from "./IMarket.sol";
 
 /// @title Alto Borrow Market Interface
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Interface for an isolated Alto borrow market
 interface IAltoBorrowMarket is IMarket {

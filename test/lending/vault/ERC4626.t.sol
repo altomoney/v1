@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./helpers/IntegrationTest.sol";
-import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {IAltoBorrowMarket} from "@alto/lending/interfaces/IAltoBorrowMarket.sol";
 
 contract ERC4626Test is IntegrationTest {
@@ -429,6 +429,160 @@ contract ERC4626Test is IntegrationTest {
         assertEq(shares, previewedShares, "received shares differ from previewDeposit");
         assertEq(allMarkets[0].expectedSupplyAssets(address(erc4626Vault)), vaultSupplyCap, "incorrect market supply");
         assertEq(erc4626Vault.maxDeposit(SUPPLIER), 0, "vault supply capacity remains");
+    }
+
+    function testMaxDepositAndDepositFillMarketsUpToTheirSupplyCaps() public {
+        uint256 firstMarketSupplyCap = 1 ether;
+        uint256 secondMarketSupplyCap = 3 ether;
+        uint256 otherSupplierAssets = 0.4 ether;
+
+        _setCap(allMarkets[1], CAP);
+        _setSupplyQueue(allMarkets[0], allMarkets[1]);
+
+        vm.startPrank(MARKET_OWNER);
+        IAltoBorrowMarket(allMarkets[0]).setSupplyCap(uint128(firstMarketSupplyCap));
+        IAltoBorrowMarket(allMarkets[1]).setSupplyCap(uint128(secondMarketSupplyCap));
+        vm.stopPrank();
+
+        // Supply from outside the vault uses up part of the first market's supply cap.
+        loanToken.setBalance(SUPPLIER, otherSupplierAssets);
+        vm.prank(SUPPLIER);
+        IMarket(allMarkets[0]).addSupply(otherSupplierAssets, 0, SUPPLIER);
+
+        uint256 firstMarketRoom = firstMarketSupplyCap - otherSupplierAssets;
+        uint256 expectedMaxDeposit = firstMarketRoom + secondMarketSupplyCap;
+
+        assertEq(erc4626Vault.maxDeposit(SUPPLIER), expectedMaxDeposit, "incorrect max deposit");
+
+        loanToken.setBalance(SUPPLIER, expectedMaxDeposit + 1);
+
+        vm.expectRevert(IAltoVaultErrors.AllCapsReached.selector);
+        vm.prank(SUPPLIER);
+        erc4626Vault.deposit(expectedMaxDeposit + 1, ONBEHALF);
+
+        vm.prank(SUPPLIER);
+        erc4626Vault.deposit(expectedMaxDeposit, ONBEHALF);
+
+        // The first market is filled up to its supply cap and the remainder goes to the second market.
+        assertEq(allMarkets[0].expectedSupplyAssets(address(erc4626Vault)), firstMarketRoom, "first market supply");
+        assertEq(
+            allMarkets[1].expectedSupplyAssets(address(erc4626Vault)), secondMarketSupplyCap, "second market supply"
+        );
+        assertEq(erc4626Vault.maxDeposit(SUPPLIER), 0, "market supply capacity remains");
+    }
+
+    function testMaxDepositIsZeroWhenMarketSupplyCapIsBelowTotalSupply() public {
+        _setSupplyQueue(allMarkets[0]);
+
+        loanToken.setBalance(SUPPLIER, 2 ether + 1);
+        vm.prank(SUPPLIER);
+        IMarket(allMarkets[0]).addSupply(2 ether, 0, SUPPLIER);
+
+        vm.prank(MARKET_OWNER);
+        IAltoBorrowMarket(allMarkets[0]).setSupplyCap(1 ether);
+
+        assertEq(erc4626Vault.maxDeposit(SUPPLIER), 0, "incorrect max deposit");
+        assertEq(erc4626Vault.maxMint(SUPPLIER), 0, "incorrect max mint");
+
+        vm.expectRevert(IAltoVaultErrors.AllCapsReached.selector);
+        vm.prank(SUPPLIER);
+        erc4626Vault.deposit(1, ONBEHALF);
+    }
+
+    function testMaxMintAndMintRespectMarketSupplyCap() public {
+        uint256 marketSupplyCap = 1 ether;
+
+        vm.prank(MARKET_OWNER);
+        IAltoBorrowMarket(allMarkets[0]).setSupplyCap(uint128(marketSupplyCap));
+
+        _setSupplyQueue(allMarkets[0]);
+
+        uint256 maxShares = erc4626Vault.maxMint(SUPPLIER);
+
+        assertEq(maxShares, erc4626Vault.convertToShares(marketSupplyCap), "incorrect max mint");
+
+        loanToken.setBalance(SUPPLIER, erc4626Vault.previewMint(maxShares + 1));
+
+        vm.expectRevert(IAltoVaultErrors.AllCapsReached.selector);
+        vm.prank(SUPPLIER);
+        erc4626Vault.mint(maxShares + 1, ONBEHALF);
+
+        uint256 previewedAssets = erc4626Vault.previewMint(maxShares);
+        vm.prank(SUPPLIER);
+        uint256 assets = erc4626Vault.mint(maxShares, ONBEHALF);
+
+        assertEq(assets, previewedAssets, "paid assets differ from previewMint");
+        assertEq(allMarkets[0].expectedSupplyAssets(address(erc4626Vault)), assets, "incorrect market supply");
+        assertEq(erc4626Vault.maxMint(SUPPLIER), 0, "market supply capacity remains");
+    }
+
+    function testMaxDepositAndMaxMintExcludePausedMarket() public {
+        _testMaxDepositAndMaxMintExcludeMarket(PAUSE_TYPE);
+    }
+
+    function testMaxDepositAndMaxMintExcludeFrozenMarket() public {
+        _testMaxDepositAndMaxMintExcludeMarket(FROZEN_TYPE);
+    }
+
+    /// @dev A market paused with `pauseType` cannot accept supply, so its capacity must not be quoted.
+    function _testMaxDepositAndMaxMintExcludeMarket(bytes32 pauseType) internal {
+        uint256 firstMarketCap = 1 ether;
+        uint256 secondMarketCap = 2 ether;
+
+        _setCap(allMarkets[0], firstMarketCap);
+        _setCap(allMarkets[1], secondMarketCap);
+        _setSupplyQueue(allMarkets[0], allMarkets[1]);
+
+        assertEq(erc4626Vault.maxDeposit(SUPPLIER), firstMarketCap + secondMarketCap, "max deposit before pause");
+
+        vm.prank(MARKET_OWNER);
+        IMarket(allMarkets[0]).pause(pauseType, true);
+
+        assertEq(erc4626Vault.maxDeposit(SUPPLIER), secondMarketCap, "max deposit with one market paused");
+        assertEq(
+            erc4626Vault.maxMint(SUPPLIER),
+            erc4626Vault.convertToShares(secondMarketCap),
+            "max mint with one market paused"
+        );
+
+        loanToken.setBalance(SUPPLIER, secondMarketCap + 1);
+
+        vm.expectRevert(IAltoVaultErrors.AllCapsReached.selector);
+        vm.prank(SUPPLIER);
+        erc4626Vault.deposit(secondMarketCap + 1, ONBEHALF);
+
+        vm.prank(SUPPLIER);
+        erc4626Vault.deposit(secondMarketCap / 2, ONBEHALF);
+
+        assertEq(allMarkets[0].expectedSupplyAssets(address(erc4626Vault)), 0, "paused market supply");
+        assertEq(erc4626Vault.maxDeposit(SUPPLIER), secondMarketCap / 2, "max deposit after deposit");
+
+        vm.prank(MARKET_OWNER);
+        IMarket(allMarkets[1]).pause(pauseType, true);
+
+        assertEq(erc4626Vault.maxDeposit(SUPPLIER), 0, "max deposit with all markets paused");
+        assertEq(erc4626Vault.maxMint(SUPPLIER), 0, "max mint with all markets paused");
+
+        vm.expectRevert(IAltoVaultErrors.AllCapsReached.selector);
+        vm.prank(SUPPLIER);
+        erc4626Vault.deposit(1, ONBEHALF);
+    }
+
+    function _setSupplyQueue(address market) internal {
+        address[] memory supplyQueue = new address[](1);
+        supplyQueue[0] = market;
+
+        vm.prank(ALLOCATOR);
+        vault.setSupplyQueue(supplyQueue);
+    }
+
+    function _setSupplyQueue(address firstMarket, address secondMarket) internal {
+        address[] memory supplyQueue = new address[](2);
+        supplyQueue[0] = firstMarket;
+        supplyQueue[1] = secondMarket;
+
+        vm.prank(ALLOCATOR);
+        vault.setSupplyQueue(supplyQueue);
     }
 
     function testDepositSkipsPausedMarketAndFallsBackToNextMarket(uint256 assets) public {

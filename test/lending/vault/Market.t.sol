@@ -148,6 +148,17 @@ contract MarketTest is IntegrationTest {
         vault.setSupplyQueue(supplyQueue);
     }
 
+    function testSetSupplyQueueDuplicateMarket() public {
+        address[] memory supplyQueue = new address[](3);
+        supplyQueue[0] = allMarkets[1];
+        supplyQueue[1] = allMarkets[2];
+        supplyQueue[2] = allMarkets[1];
+
+        vm.prank(ALLOCATOR);
+        vm.expectRevert(abi.encodeWithSelector(IAltoVaultErrors.DuplicateMarket.selector, allMarkets[1]));
+        vault.setSupplyQueue(supplyQueue);
+    }
+
     function testUpdateWithdrawQueue() public {
         uint256[] memory indexes = new uint256[](4);
         indexes[0] = 1;
