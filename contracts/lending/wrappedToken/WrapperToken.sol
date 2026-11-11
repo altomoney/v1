@@ -133,6 +133,8 @@ contract WrapperToken is AltoOwnable2Step, Pausable, ERC20, IWrapperTokenStaticT
         if (IERC20Metadata(newUnderlyingToken).decimals() != DECIMALS) revert InvalidInput();
         if (swapTarget == address(0) || !swapTargetToApproveTarget[swapTarget].isValid) revert InvalidInput();
         if (minAmountOut == 0 || amountIn == 0) revert InvalidInput();
+        // The swap must cover every underlying token the wrapped supply can claim. Donated surplus may stay behind.
+        if (amountIn < totalSupply().divideWithRounding(exchangeRate, 10 ** DECIMALS, true)) revert InvalidInput();
 
         address sellToken = underlyingToken;
         address approveTarget = swapTargetToApproveTarget[swapTarget].approveTarget;

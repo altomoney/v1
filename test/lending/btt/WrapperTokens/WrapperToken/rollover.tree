@@ -21,6 +21,8 @@ WrapperToken::rollover
         │   └── it should revert with InvalidInput
         ├── when amountIn is zero
         │   └── it should revert with InvalidInput
+        ├── when amountIn is less than the underlying backing the wrapped supply
+        │   └── it should revert with InvalidInput
         ├── when contract underlying balance is zero
         │   └── it should revert
         ├── when swap call fails

@@ -191,6 +191,29 @@ contract RolloverTest is WrapperTokenCommon {
         wrapper.rollover(address(newUnderlyingToken), AMOUNT_IN, 0, address(swapTarget), _rolloverData(BUY_AMOUNT_OUT));
     }
 
+    function test_RevertWhen_AmountInIsLessThanTheUnderlyingBackingTheWrappedSupply() public {
+        _unpauseWrapper();
+        _fundAndApproveUser(AMOUNT_IN);
+        vm.prank(user);
+        wrapper.wrap(AMOUNT_IN);
+        _pauseWrapper();
+
+        uint256 amountIn = AMOUNT_IN - 1;
+        newUnderlyingToken.mint(address(swapTarget), BUY_AMOUNT_OUT);
+
+        vm.prank(rollOverBot);
+        vm.expectRevert(IWrapperTokenErrors.InvalidInput.selector);
+        wrapper.rollover(
+            address(newUnderlyingToken),
+            amountIn,
+            MIN_AMOUNT_OUT,
+            address(swapTarget),
+            _buildSwapData(
+                address(swapTarget), address(underlyingPt), address(newUnderlyingToken), amountIn, BUY_AMOUNT_OUT
+            )
+        );
+    }
+
     function test_RevertWhen_AmountInIsZero() public {
         newUnderlyingToken.mint(address(swapTarget), BUY_AMOUNT_OUT);
 
