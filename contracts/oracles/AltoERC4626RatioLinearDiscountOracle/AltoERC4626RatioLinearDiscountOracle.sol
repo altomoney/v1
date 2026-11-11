@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.7;
 
 import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
@@ -12,7 +12,6 @@ import {
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 
 /// @title AltoERC4626RatioLinearDiscountOracle
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Abstract oracle that prices PT (Principal Token) positions backed by a yield-bearing asset.
 /// @notice Combines two modules in sequence:

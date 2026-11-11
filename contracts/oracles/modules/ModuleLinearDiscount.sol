@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.7;
 
 import {LinearDiscountNode} from "@alto/oracles/interfaces/IModuleNode.sol";
@@ -12,7 +12,6 @@ interface IPTToken {
 uint256 constant SECONDS_PER_YEAR = 365.2425 days;
 
 /// @title ModuleLinearDiscount
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Utility contract to price PT (Principal Token) positions using a linear discount model
 /// @dev The discounted price of a PT is: quoteAmount * (1 - timeLeft * baseDiscountPerYear / SECONDS_PER_YEAR)

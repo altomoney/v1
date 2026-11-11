@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.22;
 
 import {AltoERC4626RatioLinearDiscountOracleCommon} from "./AltoERC4626RatioLinearDiscountOracleCommon.t.sol";

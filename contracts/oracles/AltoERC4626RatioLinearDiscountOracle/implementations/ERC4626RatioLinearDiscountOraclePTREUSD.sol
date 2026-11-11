@@ -1,11 +1,10 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.7;
 
 import {AltoERC4626RatioLinearDiscountOracle} from "../AltoERC4626RatioLinearDiscountOracle.sol";
 import {ERC4626RatioNode, LinearDiscountNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 /// @title ERC4626RatioLinearDiscountOraclePTREUSD
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice PT-reUSD oracle: linearly discounted 1:1 peg toward maturity, bounded by the ERC4626 ratio cap.
 /// @dev The ratio is fixed at 1e6 (matching PT-reUSD's 6 decimals). At maturity 1 PT-reUSD = 1 DUSD.
