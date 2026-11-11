@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -13,7 +13,6 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {IWrapperTokenBase, IWrapperTokenStaticTypes, SwapTargetMetadata} from "./IWrapperToken.sol";
 
 /// @title PWrapperToken
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice This contract is used to wrap and unwrap underlying token into wrapped tokens and vice versa.
 /// @notice The main usecase is to rollover PT assets to other PT assets when expired without user manually move across markets

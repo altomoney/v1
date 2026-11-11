@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.22;
 
 import {
@@ -14,7 +14,6 @@ import {IWrapperToken} from "./IWrapperToken.sol";
 import {IMarket} from "../interfaces/IMarket.sol";
 
 /// @title AltoLeverageSwapperForWrapperToken
-/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice This contract is used to swap tokens in AltoLeverage contract during levarage and deleverage
 /// @dev This contract uses whitelisted swap targets instead of a single fixed swap target
