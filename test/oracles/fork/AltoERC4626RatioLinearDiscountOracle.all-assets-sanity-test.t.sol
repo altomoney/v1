@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.22;
 
+import {Fork} from "@alto-test/helpers/Fork.sol";
 import {Test} from "forge-std/Test.sol";
 import {EthereumMainnetOracleDeployer} from "@alto/deployments/EthereumMainnetOracleDeployer.sol";
 import {ILendingOracle} from "@alto/oracles/interfaces/IOracle.sol";
@@ -14,7 +15,7 @@ contract AltoERC4626RatioLinearDiscountOracleGetPriceForkTest is Test {
     address internal OWNER = makeAddr("Alto-multisig");
 
     function test_GetPrice_PtReusd() public {
-        vm.createSelectFork(vm.rpcUrl("ethereum"), 25049751);
+        Fork.selectEthereum(25049751);
 
         uint256 price = ILendingOracle(EthereumMainnetOracleDeployer.deployPtReusdOracle(OWNER)).getPrice();
 
