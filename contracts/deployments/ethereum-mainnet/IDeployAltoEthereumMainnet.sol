@@ -35,8 +35,7 @@ enum DeploymentPhase {
     ADVANCED_PERMISSIONS_FRXUSD_USM, // Phase 26: Deploy Advanced Permissions frxUSD USM for liquidation periphery
     UPGRADE_MARKETS_LIQUIDATION_PERIPHERY, // Phase 27: Upgrade all markets and authorize liquidation periphery
     UNIVERSAL_REWARDS_DISTRIBUTOR, // Phase 28: Deploy UniversalRewardsDistributor
-    // Phase 29 was never executed and its code was removed. The phase numbers in these comments are the labels used
-    // in the deployment records, not the enum values.
+    MINT_CURVE_CONVEX_POSITION, // Phase 29: Deploy MintCurveConvexPositionFactory, PositionBeacon and setBeacon
     MINT_MARKET_FRXUSD, // Phase 30: Deploy refreshed frxUSD Mint Market
     OWNER_FIXED_RATE_IRM_FACTORY, // Phase 31: Deploy the reusable Timelock-owned FixedRateIrm factory
     MARKET_DEPRECATION_PHASE_0, // Phase 32: Freeze ten old markets and apply the T0 fixed rates
@@ -74,6 +73,13 @@ struct UsmContracts {
     address dusdUsmImplementation;
     address fixedPriceStrategy;
     address fixedFeeStrategy;
+}
+
+struct MintCurveConvexPositionContracts {
+    address factory; // MintCurveConvexPositionFactory UUPS proxy
+    address factoryImplementation; // Factory implementation behind the proxy
+    address positionImplementation; // MintCurveConvexPosition implementation (beacon implementation)
+    address positionBeacon; // PositionBeacon wired into the factory
 }
 
 struct ConvexCreditLineMarketContracts {
@@ -128,6 +134,7 @@ struct Contracts {
     address protocolFeeCollectorImplementation;
     address sdusd;
     address sdusdImplementation;
+    MintCurveConvexPositionContracts mintCurveConvexPosition;
     MarketContracts frxUsdMarket;
     MarketContracts refreshWethMarket;
     MarketContracts refreshWstethMarket;

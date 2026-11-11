@@ -1,0 +1,5 @@
+MintCurveConvexPosition::renounceOwnership()
+├── when called by the owner
+│   └── it should revert with MintCurveConvexPositionRenounceDisabled
+└── when called by a non-owner
+    └── it should revert with MintCurveConvexPositionRenounceDisabled

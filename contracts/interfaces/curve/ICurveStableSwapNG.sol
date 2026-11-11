@@ -3,7 +3,7 @@
 pragma solidity >=0.8.0;
 
 /// @title Curve StableSwap NG Pool Base Interface
-/// @notice Pool identity used by Curve oracle consumers.
+/// @notice Pool identity shared by Curve oracle and liquidity consumers.
 interface ICurveStableSwapNGBase {
     /// @notice Returns the number of coins in the pool.
     function N_COINS() external view returns (uint256 coinCount);
@@ -41,4 +41,16 @@ interface ICurveStableSwapNGOracle is ICurveStableSwapNGBase {
 
     /// @notice Returns the pool's current token balances in coin order.
     function get_balances() external view returns (uint256[] memory balances);
+}
+
+/// @title Curve StableSwap NG Liquidity Interface
+/// @notice Pool surface used by Alto's Curve liquidity positions.
+interface ICurveStableSwapNGLiquidity is ICurveStableSwapNGBase {
+    /// @notice Adds liquidity to the pool.
+    function add_liquidity(uint256[] calldata amounts, uint256 minMintAmount) external returns (uint256 lpMinted);
+
+    /// @notice Removes liquidity into a single pool coin.
+    function remove_liquidity_one_coin(uint256 burnAmount, int128 index, uint256 minReceived)
+        external
+        returns (uint256 received);
 }
