@@ -10,6 +10,7 @@ import {
 } from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {IAltoBorrowMarketErrors, IAltoBorrowMarketEvents} from "@alto/lending/interfaces/IAltoBorrowMarket.sol";
 import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 
 contract SetBorrowOpeningFeeTestBorrow is MarketCommon {
@@ -40,7 +41,7 @@ contract SetBorrowOpeningFeeTestBorrow is MarketCommon {
 
         // it should emit SetBorrowOpeningFee event
         vm.expectEmit();
-        emit AltoBorrowMarket.SetBorrowOpeningFee(oldBorrowOpeningFee, newBorrowOpeningFee);
+        emit IAltoBorrowMarketEvents.SetBorrowOpeningFee(oldBorrowOpeningFee, newBorrowOpeningFee);
 
         borrowMarket.setBorrowOpeningFee(newBorrowOpeningFee);
 
@@ -50,7 +51,7 @@ contract SetBorrowOpeningFeeTestBorrow is MarketCommon {
 
     function test_RevertWhen_BorrowOpeningFeeIsGreaterThanMATH_PRECISION() external whenCallerIsOwner {
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(AltoBorrowMarket.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IAltoBorrowMarketErrors.AltoBorrowMarketInvalidInput.selector));
         borrowMarket.setBorrowOpeningFee(MATH_PRECISION + 1);
     }
 
@@ -65,7 +66,7 @@ contract SetBorrowOpeningFeeTestBorrow is MarketCommon {
         borrowMarket.setFeeRecipient(address(0));
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(AltoBorrowMarket.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IAltoBorrowMarketErrors.AltoBorrowMarketInvalidInput.selector));
         borrowMarket.setBorrowOpeningFee(0.1 ether);
     }
 }

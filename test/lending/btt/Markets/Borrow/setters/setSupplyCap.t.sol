@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {MarketType, MarketCommon} from "../../MarketCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {IAltoBorrowMarketEvents} from "@alto/lending/interfaces/IAltoBorrowMarket.sol";
 
 contract SetSupplyCapTestBorrow is MarketCommon {
     AltoBorrowMarket public borrowMarket;
@@ -33,7 +34,7 @@ contract SetSupplyCapTestBorrow is MarketCommon {
 
         // it should emit SetSupplyCap event
         vm.expectEmit();
-        emit AltoBorrowMarket.SetSupplyCap(oldSupplyCapAssets, newSupplyCapAssets);
+        emit IAltoBorrowMarketEvents.SetSupplyCap(oldSupplyCapAssets, newSupplyCapAssets);
 
         borrowMarket.setSupplyCap(newSupplyCapAssets);
 

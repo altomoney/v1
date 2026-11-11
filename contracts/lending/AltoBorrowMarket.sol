@@ -2,7 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {AltoBaseMarket} from "./AltoBaseMarket.sol";
-import {BorrowMarketInitParams, MarketType} from "./interfaces/IMarket.sol";
+import {BorrowMarketInitParams, IMarketBase, MarketType} from "./interfaces/IMarket.sol";
+import {IAltoBorrowMarketBase, IAltoBorrowMarketStaticTypes} from "./interfaces/IAltoBorrowMarket.sol";
 import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {IIrm} from "./interfaces/IIrm.sol";
 import {Uint128Converter} from "./libraries/Uint128Converter.sol";
@@ -13,50 +14,23 @@ import {IAltoLiquidationEngine} from "./interfaces/IAltoLiquidationEngine.sol";
 /// @title Alto Borrow Market
 /// @custom:contact security@altofoundation.org
 /// @notice An Isolated Borrow Market
-contract AltoBorrowMarket is AltoBaseMarket {
+contract AltoBorrowMarket is AltoBaseMarket, IAltoBorrowMarketStaticTypes {
     using Uint128Converter for uint256;
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
 
-    /// @notice Thrown when the input is invalid
-    error AltoBorrowMarketInvalidInput();
-
-    /// @notice Thrown when the supply cap is exceeded
-    error AltoBorrowMarketSupplyCapExceeded();
-
-    /// @notice Emitted when the borrow opening fee is set
-    /// @param oldBorrowOpeningFee The old borrow opening fee
-    /// @param newBorrowOpeningFee The new borrow opening fee
-    event SetBorrowOpeningFee(uint256 oldBorrowOpeningFee, uint256 newBorrowOpeningFee);
-
-    /// @notice Emitted when the supply cap is set
-    /// @param oldSupplyCapAssets The old supply cap assets
-    /// @param newSupplyCapAssets The new supply cap assets
-    event SetSupplyCap(uint128 oldSupplyCapAssets, uint128 newSupplyCapAssets);
-
-    /// @notice Emitted when the interest fee is set
-    /// @param oldInterestFee The old interest fee
-    /// @param newInterestFee The new interest fee
-    event SetInterestFee(uint256 oldInterestFee, uint256 newInterestFee);
-
-    /// @notice Emitted when interest fee is accrued
-    /// @param recipient The recipient of the interest fee
-    /// @param interest The amount of interest accrued
-    /// @param feeShares The amount of fee shares accrued
-    event InterestFeeAccrued(address indexed recipient, uint256 interest, uint256 feeShares);
-
     /// @notice The borrow opening fee in MATH_PRECISION
     uint256 private _borrowOpeningFee;
 
-    /// @notice The maximum amount of assets that can be supplied to the market
-    uint128 public supplyCapAssets;
+    /// @inheritdoc IAltoBorrowMarketBase
+    uint128 public override supplyCapAssets;
 
     /// @notice The interest fee in MATH_PRECISION charged on accrued interest
     /// @dev For borrow market we would be mixing borrow opening fee accumulated shares with shares accumulated from interest
     /// and that's totally fine and this would be our limitation.
     /// If we'd still want to be so precise and split borrow opening fees and interest
     /// we can still use offchain indexer to get the event data.
-    uint256 public interestFee;
+    uint256 public override interestFee;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -92,7 +66,7 @@ contract AltoBorrowMarket is AltoBaseMarket {
 
     /// @notice Getter of the borrow opening fee
     /// @return The borrow opening fee
-    function borrowOpeningFee() public view override returns (uint256) {
+    function borrowOpeningFee() public view override(AltoBaseMarket, IMarketBase) returns (uint256) {
         return _borrowOpeningFee;
     }
 
@@ -135,7 +109,7 @@ contract AltoBorrowMarket is AltoBaseMarket {
 
     /// @notice Setter of the borrow opening fee
     /// @param _newBorrowOpeningFee The new borrow opening fee
-    function setBorrowOpeningFee(uint256 _newBorrowOpeningFee) external onlyOwner {
+    function setBorrowOpeningFee(uint256 _newBorrowOpeningFee) external override onlyOwner {
         if (_newBorrowOpeningFee > MATH_PRECISION) {
             revert AltoBorrowMarketInvalidInput();
         }
@@ -165,7 +139,7 @@ contract AltoBorrowMarket is AltoBaseMarket {
     /// @notice Setter of the interest fee
     /// @param _newInterestFee The new interest fee
     /// @param _skipAccrueInterest Whether to skip accruing interest
-    function setInterestFee(uint256 _newInterestFee, bool _skipAccrueInterest) external onlyOwner {
+    function setInterestFee(uint256 _newInterestFee, bool _skipAccrueInterest) external override onlyOwner {
         if (_newInterestFee > MATH_PRECISION) {
             revert AltoBorrowMarketInvalidInput();
         }
@@ -182,7 +156,8 @@ contract AltoBorrowMarket is AltoBaseMarket {
         interestFee = _newInterestFee;
     }
 
-    function setSupplyCap(uint128 _newSupplyCapAssets) external onlyOwner {
+    /// @inheritdoc IAltoBorrowMarketBase
+    function setSupplyCap(uint128 _newSupplyCapAssets) external override onlyOwner {
         emit SetSupplyCap(supplyCapAssets, _newSupplyCapAssets);
         supplyCapAssets = _newSupplyCapAssets;
     }

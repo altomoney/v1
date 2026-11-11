@@ -8,6 +8,7 @@ import {Vm} from "forge-std/Vm.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {IAltoBorrowMarketEvents} from "@alto/lending/interfaces/IAltoBorrowMarket.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
@@ -171,7 +172,7 @@ contract AccrueInterestTestBorrow is MarketCommon {
         );
 
         vm.expectEmit(true, true, true, true);
-        emit AltoBorrowMarket.InterestFeeAccrued(FEE_RECIPIENT, expectedInterest, expectedFeeShares);
+        emit IAltoBorrowMarketEvents.InterestFeeAccrued(FEE_RECIPIENT, expectedInterest, expectedFeeShares);
 
         vm.expectEmit();
         emit IMarketEvents.AccrueInterest(

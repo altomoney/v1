@@ -8,6 +8,7 @@ import {IMarketErrors, Position, IMarketEvents} from "@alto/lending/interfaces/I
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {IAltoBorrowMarketErrors} from "@alto/lending/interfaces/IAltoBorrowMarket.sol";
 
 contract AltoBorrowMarketAddSupply is MarketCommon {
     using AssetShareConversionMath for uint256;
@@ -203,7 +204,7 @@ contract AltoBorrowMarketAddSupply is MarketCommon {
         vm.startPrank(USER);
         borrowToken.approve(address(market), excessAmount);
         // it should revert
-        vm.expectRevert(AltoBorrowMarket.AltoBorrowMarketSupplyCapExceeded.selector);
+        vm.expectRevert(IAltoBorrowMarketErrors.AltoBorrowMarketSupplyCapExceeded.selector);
         market.addSupply(excessAmount, 0, USER);
         vm.stopPrank();
     }

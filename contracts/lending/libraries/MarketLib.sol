@@ -2,13 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {IMarketStaticTypes, IMarket} from "@alto/lending/interfaces/IMarket.sol";
-
-/// @title IInterestFeeMarket
-/// @notice Interface for market-specific functionality that returns the interest fee.
-interface IInterestFeeMarket {
-    /// @notice The interest fee in MATH_PRECISION charged on accrued interest.
-    function interestFee() external view returns (uint256);
-}
+import {IAltoBorrowMarket} from "@alto/lending/interfaces/IAltoBorrowMarket.sol";
 
 /// @dev Snapshot of market state. Totals do not include interest accrued after `lastUpdate`.
 /// @dev Warning: `totalSupplyAssets` and `totalBorrowAssets` do not contain interest since the last accrual.
@@ -64,7 +58,7 @@ library MarketLib {
         (uint128 totalSupplyAssets, uint128 totalSupplyShares) = totalSupply(market);
         (uint128 totalBorrowAssets, uint128 totalBorrowShares) = totalBorrowed(market);
 
-        uint128 fee = uint128(IInterestFeeMarket(market).interestFee());
+        uint128 fee = uint128(IAltoBorrowMarket(market).interestFee());
 
         marketState = Market({
             totalSupplyAssets: totalSupplyAssets,

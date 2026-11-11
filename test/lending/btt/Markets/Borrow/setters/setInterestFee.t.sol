@@ -5,6 +5,7 @@ import {MarketType, MarketCommon} from "../../MarketCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {IAltoBorrowMarketErrors, IAltoBorrowMarketEvents} from "@alto/lending/interfaces/IAltoBorrowMarket.sol";
 import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
@@ -43,7 +44,7 @@ contract SetInterestFeeTestBorrow is MarketCommon {
 
         // it should emit SetInterestFee event
         vm.expectEmit();
-        emit AltoBorrowMarket.SetInterestFee(oldInterestFee, newInterestFee);
+        emit IAltoBorrowMarketEvents.SetInterestFee(oldInterestFee, newInterestFee);
 
         borrowMarket.setInterestFee(newInterestFee, false);
 
@@ -57,7 +58,7 @@ contract SetInterestFeeTestBorrow is MarketCommon {
 
         // it should emit SetInterestFee event
         vm.expectEmit();
-        emit AltoBorrowMarket.SetInterestFee(oldInterestFee, newInterestFee);
+        emit IAltoBorrowMarketEvents.SetInterestFee(oldInterestFee, newInterestFee);
 
         vm.recordLogs();
         borrowMarket.setInterestFee(newInterestFee, false);
@@ -78,7 +79,7 @@ contract SetInterestFeeTestBorrow is MarketCommon {
 
         // it should emit SetInterestFee event
         vm.expectEmit();
-        emit AltoBorrowMarket.SetInterestFee(oldInterestFee, newInterestFee);
+        emit IAltoBorrowMarketEvents.SetInterestFee(oldInterestFee, newInterestFee);
 
         vm.recordLogs();
         borrowMarket.setInterestFee(newInterestFee, true);
@@ -102,7 +103,7 @@ contract SetInterestFeeTestBorrow is MarketCommon {
         uint256 newInterestFee = oldInterestFee + 1;
 
         vm.expectEmit();
-        emit AltoBorrowMarket.SetInterestFee(oldInterestFee, newInterestFee);
+        emit IAltoBorrowMarketEvents.SetInterestFee(oldInterestFee, newInterestFee);
 
         vm.recordLogs();
         borrowMarket.setInterestFee(newInterestFee, true);
@@ -119,7 +120,7 @@ contract SetInterestFeeTestBorrow is MarketCommon {
 
     function test_RevertWhen_InterestFeeIsGreaterThanMATH_PRECISION() external whenCallerIsOwner {
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(AltoBorrowMarket.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IAltoBorrowMarketErrors.AltoBorrowMarketInvalidInput.selector));
         borrowMarket.setInterestFee(MATH_PRECISION + 1, false);
     }
 }

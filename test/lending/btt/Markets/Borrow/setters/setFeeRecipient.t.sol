@@ -5,6 +5,7 @@ import {MarketType, MarketCommon} from "../../MarketCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {IAltoBorrowMarketErrors} from "@alto/lending/interfaces/IAltoBorrowMarket.sol";
 import {IAltoLiquidationEngine} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
 
 contract SetFeeRecipientTestBorrow is MarketCommon {
@@ -49,7 +50,7 @@ contract SetFeeRecipientTestBorrow is MarketCommon {
     {
         borrowMarket.setBorrowOpeningFee(1);
 
-        vm.expectRevert(abi.encodeWithSelector(AltoBorrowMarket.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IAltoBorrowMarketErrors.AltoBorrowMarketInvalidInput.selector));
         borrowMarket.setFeeRecipient(address(0));
     }
 
@@ -66,14 +67,14 @@ contract SetFeeRecipientTestBorrow is MarketCommon {
         assertGt(protocolFeePercentage, 0, "protocolFeePercentage should be greater than 0");
 
         // it should revert (default protocol fee percentage is 0.075 ether in tests)
-        vm.expectRevert(abi.encodeWithSelector(AltoBorrowMarket.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IAltoBorrowMarketErrors.AltoBorrowMarketInvalidInput.selector));
         borrowMarket.setFeeRecipient(address(0));
     }
 
     function test_RevertWhen_FeeRecipientIsZeroAddressAndInterestFeeIsGreaterThanZero() external whenCallerIsOwner {
         borrowMarket.setInterestFee(0.01 ether, true);
 
-        vm.expectRevert(abi.encodeWithSelector(AltoBorrowMarket.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IAltoBorrowMarketErrors.AltoBorrowMarketInvalidInput.selector));
         borrowMarket.setFeeRecipient(address(0));
     }
 }
