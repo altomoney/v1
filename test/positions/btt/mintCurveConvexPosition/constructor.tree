@@ -1,7 +1,0 @@
-MintCurveConvexPosition::constructor()
-├── when the implementation is deployed
-│   ├── it should leave owner and pendingOwner at zero
-│   └── it should emit only Initialized with version type(uint64).max from the implementation
-└── given the implementation has been deployed
-    └── when the deployer or another account calls initialize directly
-        └── it should revert with InvalidInitialization
