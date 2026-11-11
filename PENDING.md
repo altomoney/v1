@@ -12,6 +12,7 @@ Features that are not on `dev` and are kept on their own branch until work on th
 
 ## Pending fixes
 
-Fixes that are not on `dev` and are kept on their own branch until the contract they change is deployed again.
+Fixes that are not on `dev` and are kept on their own branch until the contract they change is deployed again or upgraded.
 
 - [`09-24-fix_altovault_maxdeposit_and_deposit_to_consider_borrow_market_s_supply_cap`](https://github.com/altomoney/v1/tree/09-24-fix_altovault_maxdeposit_and_deposit_to_consider_borrow_market_s_supply_cap): keeps `AltoVault.maxDeposit` and `maxMint` within what `deposit` and `mint` accept, from PR #663. The branch limits each market's room to the smaller of the vault's cap and the market's own supply cap, leaves paused and frozen markets out of the quote and rejects duplicate markets in the supply queue. The deployed vault is not upgradeable, so the branch must be applied before a new vault is deployed.
+- [`10-20-fix_guard_unpause_when_market_has_no_irm`](https://github.com/altomoney/v1/tree/10-20-fix_guard_unpause_when_market_has_no_irm): lets a market without an IRM be unpaused, from PR #681. On `dev`, `AltoBaseMarket` notifies the IRM on every unpause, so a market whose `irm` is the zero address can be paused but not unpaused. The branch skips the notification when no IRM is set. The branch must be applied before new markets are deployed or before the next upgrade of the existing markets, whichever comes first.
