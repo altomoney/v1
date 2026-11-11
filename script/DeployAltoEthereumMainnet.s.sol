@@ -17,7 +17,7 @@ import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 import {USDC_MAINNET, FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
-DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.SDUSD;
+DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.UPGRADE_CONVEX_CREDIT_LINE_MARKET;
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployAltoEthereumMainnetScript is Script {
@@ -112,7 +112,10 @@ contract DeployAltoEthereumMainnetScript is Script {
             Options memory opts;
             Upgrades.validateImplementation("ProtocolFeeCollector.sol:ProtocolFeeCollector", opts);
             Upgrades.validateImplementation("SDUSD.sol:SDUSD", opts);
-        } else if (phase == DeploymentPhase.CONVEX_CREDIT_LINE_MARKET) {
+        } else if (
+            phase == DeploymentPhase.CONVEX_CREDIT_LINE_MARKET
+                || phase == DeploymentPhase.UPGRADE_CONVEX_CREDIT_LINE_MARKET
+        ) {
             Options memory opts;
             opts.unsafeAllow = "external-library-linking";
             Upgrades.validateImplementation("AltoConvexCreditLineMarket.sol:AltoConvexCreditLineMarket", opts);
@@ -349,6 +352,9 @@ contract DeployAltoEthereumMainnetScript is Script {
             input.contracts.convexCreditLineMarket.marketImplementation
         );
         contractsJson = vm.serializeAddress(
+            "contracts", "convexCreditLineMarketLib", input.contracts.convexCreditLineMarket.marketLib
+        );
+        contractsJson = vm.serializeAddress(
             "contracts", "convexCreditLineMarketIrm", input.contracts.convexCreditLineMarket.marketIrm
         );
         contractsJson = vm.serializeAddress(
@@ -436,6 +442,8 @@ contract DeployAltoEthereumMainnetScript is Script {
             _tryParseAddress(json, ".contracts.convexCreditLineMarket");
         loadedInput.contracts.convexCreditLineMarket.marketImplementation =
             _tryParseAddress(json, ".contracts.convexCreditLineMarketImplementation");
+        loadedInput.contracts.convexCreditLineMarket.marketLib =
+            _tryParseAddress(json, ".contracts.convexCreditLineMarketLib");
         loadedInput.contracts.convexCreditLineMarket.marketIrm =
             _tryParseAddress(json, ".contracts.convexCreditLineMarketIrm");
         loadedInput.contracts.convexCreditLineMarket.marketOracle =
@@ -625,6 +633,8 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("AltoConvexCreditLineMarket", abiFolder);
             _extractContractABI("FixedRateIrm", abiFolder);
             _extractContractABI("AltoCreditMarketLpOracle", abiFolder);
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.UPGRADE_CONVEX_CREDIT_LINE_MARKET) {
+            _extractContractABI("AltoConvexCreditLineMarket", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.OWNER_FIXED_RATE_IRM_FACTORY) {
             _extractContractABI("OwnerFixedRateIrmFactory", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.MARKET_DEPRECATION_PHASE_0) {

@@ -43,7 +43,8 @@ enum DeploymentPhase {
     MINT_MARKET_PEG_RESPONSIVE_IRM, // Phase 34: Migrate active mint markets to peg-responsive IRMs
     UPGRADE_ALL_MINT_BORROW_MARKETS, // Phase 35: Upgrade every registered AltoMintMarket and AltoBorrowMarket
     SDUSD, // Phase 36: Deploy ProtocolFeeCollector and sDUSD, then seed sDUSD with 1 DUSD from the deployer
-    SDUSD_ACTIVATION // Phase 37: Generate the timelock Safe batch that wires and activates all fee sources
+    SDUSD_ACTIVATION, // Phase 37: Generate the timelock Safe batch that wires and activates all fee sources
+    UPGRADE_CONVEX_CREDIT_LINE_MARKET // Phase 38: Upgrade the Convex credit line and configure its treasury split
 }
 
 enum UsmFinalizeMode {
@@ -85,6 +86,7 @@ struct MintCurveConvexPositionContracts {
 struct ConvexCreditLineMarketContracts {
     address market;
     address marketImplementation;
+    address marketLib;
     address marketIrm;
     address marketOracle;
 }
