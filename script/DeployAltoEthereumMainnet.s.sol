@@ -88,11 +88,7 @@ contract DeployAltoEthereumMainnetScript is Script {
     /// @dev Upgrade-safety validation uses Foundry cheatcodes and must run outside the broadcasted
     ///      batch constructor. The batch can then deploy the implementation and proxy on-chain.
     function _validateImplementations(DeploymentPhase phase, AltoEthereumMainnetInput memory deploymentInput) internal {
-        if (phase == DeploymentPhase.MINT_CURVE_CONVEX_POSITION) {
-            Options memory opts;
-            Upgrades.validateImplementation("MintCurveConvexPositionFactory.sol:MintCurveConvexPositionFactory", opts);
-            Upgrades.validateImplementation("MintCurveConvexPosition.sol:MintCurveConvexPosition", opts);
-        } else if (phase == DeploymentPhase.PERMISSIONED_USM || phase == DeploymentPhase.PERMISSIONLESS_USM) {
+        if (phase == DeploymentPhase.PERMISSIONED_USM || phase == DeploymentPhase.PERMISSIONLESS_USM) {
             _validateUsmImplementation("DUSDUsm.sol:DUSDUsm", deploymentInput.contracts.dusd, USDC_MAINNET);
         } else if (
             phase == DeploymentPhase.PERMISSIONED_FRXUSD_USM || phase == DeploymentPhase.PERMISSIONLESS_FRXUSD_USM
@@ -307,24 +303,6 @@ contract DeployAltoEthereumMainnetScript is Script {
                 "contracts", "universalRewardsDistributor", input.contracts.universalRewardsDistributor
             );
         }
-        if (input.contracts.mintCurveConvexPosition.factory != address(0)) {
-            contractsJson = vm.serializeAddress(
-                "contracts", "mintCurveConvexPositionFactory", input.contracts.mintCurveConvexPosition.factory
-            );
-            contractsJson = vm.serializeAddress(
-                "contracts",
-                "mintCurveConvexPositionFactoryImplementation",
-                input.contracts.mintCurveConvexPosition.factoryImplementation
-            );
-            contractsJson = vm.serializeAddress(
-                "contracts",
-                "mintCurveConvexPositionImplementation",
-                input.contracts.mintCurveConvexPosition.positionImplementation
-            );
-            contractsJson = vm.serializeAddress(
-                "contracts", "mintCurveConvexPositionBeacon", input.contracts.mintCurveConvexPosition.positionBeacon
-            );
-        }
 
         // Build final JSON and write to file
         string memory json = vm.serializeString("", "contracts", contractsJson);
@@ -485,14 +463,6 @@ contract DeployAltoEthereumMainnetScript is Script {
             _tryParseAddress(json, ".contracts.advancedPermissionsFrxusdUsmFeeStrategy");
         loadedInput.contracts.universalRewardsDistributor =
             _tryParseAddress(json, ".contracts.universalRewardsDistributor");
-        loadedInput.contracts.mintCurveConvexPosition.factory =
-            _tryParseAddress(json, ".contracts.mintCurveConvexPositionFactory");
-        loadedInput.contracts.mintCurveConvexPosition.factoryImplementation =
-            _tryParseAddress(json, ".contracts.mintCurveConvexPositionFactoryImplementation");
-        loadedInput.contracts.mintCurveConvexPosition.positionImplementation =
-            _tryParseAddress(json, ".contracts.mintCurveConvexPositionImplementation");
-        loadedInput.contracts.mintCurveConvexPosition.positionBeacon =
-            _tryParseAddress(json, ".contracts.mintCurveConvexPositionBeacon");
 
         input = loadedInput;
     }
@@ -617,10 +587,6 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("AltoBorrowMarket", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.UNIVERSAL_REWARDS_DISTRIBUTOR) {
             _extractContractABI("UniversalRewardsDistributor", abiFolder);
-        } else if (PHASE_TO_DEPLOY == DeploymentPhase.MINT_CURVE_CONVEX_POSITION) {
-            _extractContractABI("MintCurveConvexPositionFactory", abiFolder);
-            _extractContractABI("MintCurveConvexPosition", abiFolder);
-            _extractContractABI("PositionBeacon", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.CONVEX_CREDIT_LINE_MARKET) {
             _extractContractABI("AltoConvexCreditLineMarket", abiFolder);
             _extractContractABI("FixedRateIrm", abiFolder);

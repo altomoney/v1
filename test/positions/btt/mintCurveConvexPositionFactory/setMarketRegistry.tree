@@ -1,9 +1,0 @@
-MintCurveConvexPositionFactory::setMarketRegistry(address)
-├── given caller is not owner
-│   └── it should revert with OwnableUnauthorizedAccount
-└── given caller is owner
-    ├── when _marketRegistry is zero address
-    │   └── it should revert with MintCurveConvexPositionFactoryZeroAddress
-    └── when _marketRegistry is valid
-        ├── it should set marketRegistry
-        └── it should emit MarketRegistrySet
