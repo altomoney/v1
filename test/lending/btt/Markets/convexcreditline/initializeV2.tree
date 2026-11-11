@@ -1,0 +1,18 @@
+AltoConvexCreditLineMarket::initializeV2(uint256)
+├── given a proxy initialized only through initialize
+│   └── it should have zero treasury share and use basis-point precision
+├── when called on the implementation directly
+│   └── it should revert with InvalidInitialization
+├── when caller is not owner
+│   ├── it should revert with OwnableUnauthorizedAccount and preserve the current share
+│   └── it should leave the reinitializer available to the owner
+├── when the treasury share exceeds the full allocation
+│   ├── it should revert with AltoCreditMarketInvalidInput and preserve the current share
+│   └── it should permit retrying with a valid share
+├── when the owner initializes a valid share
+│   ├── it should set treasuryInterestBps and emit SetTreasuryInterestBps and Initialized version 2
+│   ├── it should accept zero and full treasury allocations
+│   └── it should reject a second initialization even when the first share was zero
+└── when fees accrued before initialization
+    ├── it should preserve market accounting and balances without accruing interest or claiming fees
+    └── it should apply the configured split when those fees are subsequently claimed

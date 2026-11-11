@@ -4,9 +4,9 @@ AltoConvexCreditLineMarket::claimInterest()
 ├── when fee recipient is zero address
 │   └── it should revert with AltoCreditMarketZeroAddress before the amount check
 ├── when caller is neither owner nor fee recipient
-│   ├── it should allow partial claims and mint only to the fee recipient
+│   ├── it should allow partial claims and mint only to the configured fee and reward recipients
 │   ├── it should allow claiming all remaining fees with zero amount
-│   └── it should emit and return zero without minting when no fees are available
+│   └── it should return zero without minting or emitting when no fees are available
 ├── when any caller requests more than claimableFeesAssets
 │   ├── when interest fits in uint128
 │   │   └── it should revert with AltoCreditMarketInvalidInput without minting or changing accounting
@@ -15,7 +15,7 @@ AltoConvexCreditLineMarket::claimInterest()
 ├── given caller is owner
 │   ├── when interest is zero
 │   │   ├── it should claim all available fees
-│   │   └── it should emit and return zero without minting when no fees are available
+│   │   └── it should return zero without minting or emitting when no fees are available
 │   └── when interest is nonzero and at most claimable fees
 │       ├── when interest is less than claimable fees
 │       │   └── it should perform a partial claim and preserve the remainder
@@ -24,19 +24,32 @@ AltoConvexCreditLineMarket::claimInterest()
 ├── given caller is fee recipient
 │   ├── when interest is zero
 │   │   ├── it should claim all available fees
-│   │   └── it should emit and return zero without minting when no fees are available
+│   │   └── it should return zero without minting or emitting when no fees are available
 │   └── when interest is nonzero and at most claimable fees
 │       ├── when interest is less than claimable fees
 │       │   └── it should perform a partial claim and preserve the remainder
 │       └── when interest equals claimable fees
 │           └── it should claim the full balance and set claimableFeesAssets to zero
-└── given a successful claim
-    ├── it should decrease claimableFeesAssets by the claimed amount
-    ├── it should mint the claimed amount only to fee recipient
-    ├── it should not change debt supply collateral or share accounting
-    ├── it should not accrue interest or call the IRM oracle or Convex contracts
-    ├── it should claim opening fees and accrued interest from the same balance
-    ├── it should remain claimable after governance foreclosure leaves recorded fees outstanding
-    ├── it should not reduce badDebtAssets when fees from foreclosed debt are claimed
-    ├── it should emit InterestClaimed with recipient and claimed amount
-    └── it should return the claimed amount
+├── given a successful claim
+│   ├── it should decrease claimableFeesAssets by the claimed amount
+│   ├── it should mint the configured treasury share to rewardRecipient and the remainder to feeRecipient
+│   ├── it should mint exactly the claimed amount across both recipients
+│   ├── it should not change debt supply collateral or share accounting
+│   ├── it should not accrue interest or call the IRM oracle or Convex contracts
+│   ├── it should split opening fees and accrued interest from the same balance
+│   ├── it should remain claimable after governance foreclosure leaves recorded fees outstanding
+│   ├── it should not reduce badDebtAssets when fees from foreclosed debt are claimed
+│   ├── it should emit InterestClaimed for each nonzero share with its recipient and actual amount
+│   └── it should return the total claimed across both recipients
+├── given the treasury share is zero
+│   └── it should mint and emit only for feeRecipient
+├── given the full claim is allocated to treasury
+│   └── it should mint and emit only for rewardRecipient
+├── when calculating the treasury share produces a fractional token unit
+│   ├── it should round the treasury share up and leave the remainder to feeRecipient
+│   └── when rounding leaves no fee recipient share
+│       └── it should mint and emit only for rewardRecipient without calling a zero mint
+├── given both recipients are the same address
+│   └── it should mint exactly the total claim and emit each nonzero share
+└── when either recipient mint fails
+    └── it should roll back both balances total supply the minter bucket and claimable fees

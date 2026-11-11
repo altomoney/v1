@@ -15,6 +15,7 @@ AltoConvexCreditLineMarket::setRewardRecipient()
 │   └── when new recipient is nonzero
 │       ├── it should update rewardRecipient
 │       ├── it should emit SetRewardRecipient with old and new recipients
-│       └── it should forward all configured rewards to the new recipient on later claims
+│       ├── it should forward all configured rewards to the new recipient on later claims
+│       └── it should redirect the treasury share of outstanding fees while preserving the fee recipient share
 └── when market is paused frozen or Convex inactive
     └── it should remain callable by creditAccount

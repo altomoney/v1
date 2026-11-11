@@ -460,6 +460,8 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
     }
 
     function test_InitializesAllBaseCreditAndConvexState() external {
+        assertEq(market.treasuryInterestBps(), TREASURY_INTEREST_BPS);
+        assertEq(market.PERCENTAGE_PRECISION(), 10_000);
         assertEq(uint256(market.MARKET_TYPE()), uint256(MarketType.CREDIT_MINT));
         assertEq(market.borrowToken(), address(borrowToken));
         assertEq(market.collateralToken(), address(collateralToken));

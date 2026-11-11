@@ -49,6 +49,7 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
     uint256 internal constant FORECLOSURE_LTV = 0.9 ether;
     uint256 internal constant CREDIT_LIMIT = 1_000_000 ether;
     uint256 internal constant BORROW_RATE = 0.04 ether / uint256(365 days);
+    uint256 internal constant TREASURY_INTEREST_BPS = 3_000;
 
     address internal OWNER = makeAddr("Owner");
     address internal CREDIT_ACCOUNT = makeAddr("CreditAccount");
@@ -98,8 +99,7 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
         booster = new ConvexBoosterMock(address(collateralToken), address(depositToken), GAUGE, address(rewardPool));
         rewardPool.setPoolMetadata(POOL_ID, address(booster), address(depositToken), address(primaryRewardToken));
 
-        market = _newUninitializedMarket();
-        market.initialize(_validInitParams());
+        market = _initialize(_validInitParams());
 
         vm.startPrank(OWNER);
         borrowToken.setMinterStatus(address(market), true);
@@ -155,6 +155,8 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
     {
         instance = _newUninitializedMarket();
         instance.initialize(params);
+        vm.prank(params.creditMarketInitParams.baseMarketInitParams.owner);
+        instance.initializeV2(TREASURY_INTEREST_BPS);
     }
 
     function _newFixedRateIrm() internal returns (FixedRateIrm) {

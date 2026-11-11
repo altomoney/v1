@@ -27,6 +27,7 @@ contract AltoConvexCreditLineMarketSetFeeRecipientTest is ConvexCreditLineCommon
         emit IMarketEvents.SetFeeRecipient(FEE_RECIPIENT, RECEIVER);
         vm.prank(OWNER);
         market.setFeeRecipient(RECEIVER);
+        assertEq(market.feeRecipient(), RECEIVER);
 
         vm.expectEmit(address(market));
         emit IMarketEvents.SetFeeRecipient(RECEIVER, RECEIVER);
@@ -39,15 +40,23 @@ contract AltoConvexCreditLineMarketSetFeeRecipientTest is ConvexCreditLineCommon
         _setOpeningFee(0.1 ether);
         _openPosition(1_000 ether, 100 ether);
         uint256 fees = market.claimableFeesAssets();
+        AccountingState memory beforeState = _state();
+        uint256 supplyBefore = borrowToken.totalSupply();
+        _mockIrmUpdateRevert();
+        vm.mockCallRevert(address(borrowToken), borrowToken.mint.selector, "MUST_NOT_MINT");
 
         vm.prank(OWNER);
         market.setFeeRecipient(RECEIVER);
+        _assertUnchanged(beforeState);
+        assertEq(borrowToken.totalSupply(), supplyBefore);
+        vm.clearMockedCalls();
 
         vm.prank(FEE_RECIPIENT);
         uint256 claimed = market.claimInterest(0);
 
         assertEq(claimed, fees);
-        assertEq(borrowToken.balanceOf(RECEIVER), fees);
+        assertEq(borrowToken.balanceOf(RECEIVER), 7 ether);
+        assertEq(borrowToken.balanceOf(REWARD_RECIPIENT), 3 ether);
         assertEq(borrowToken.balanceOf(FEE_RECIPIENT), 0);
         assertEq(market.claimableFeesAssets(), 0);
     }
@@ -56,6 +65,7 @@ contract AltoConvexCreditLineMarketSetFeeRecipientTest is ConvexCreditLineCommon
         _pause(PAUSE_TYPE);
         vm.prank(OWNER);
         market.setFeeRecipient(RECEIVER);
+        assertEq(market.feeRecipient(), RECEIVER);
         _unpause(PAUSE_TYPE);
         _pause(FROZEN_TYPE);
         vm.prank(OWNER);
