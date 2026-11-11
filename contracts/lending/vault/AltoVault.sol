@@ -557,12 +557,16 @@ contract AltoVault is ERC4626, ERC20Permit, AltoOwnable2Step, Multicall, IAltoVa
 
     /// @inheritdoc IERC4626
     /// @dev Paused and frozen markets in the supplyQueue are not counted because they cannot accept supply.
+    /// @dev Warning: May be higher than the actual max deposit if the vault is the fee recipient of a market in the
+    /// supplyQueue.
     function maxDeposit(address) public view override returns (uint256) {
         return _maxDeposit();
     }
 
     /// @inheritdoc IERC4626
     /// @dev Paused and frozen markets in the supplyQueue are not counted because they cannot accept supply.
+    /// @dev Warning: May be higher than the actual max mint if the vault is the fee recipient of a market in the
+    /// supplyQueue.
     function maxMint(address) public view override returns (uint256) {
         uint256 suppliable = _maxDeposit();
 
