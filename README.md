@@ -36,6 +36,8 @@ deposited into a vault that supplies those markets.
 
 Mainnet addresses are recorded in [`contracts/deployments/ethereum-mainnet/output/ethereum-mainnet-1-1765364975/addresses.json`](contracts/deployments/ethereum-mainnet/output/ethereum-mainnet-1-1765364975/addresses.json). The deployed contracts in scope of the bug bounty are listed in [security-review-engagements](https://github.com/altomoney/security-review-engagements/blob/main/deployments/mainnet.md).
 
+Work that is not on mainnet, such as parked feature branches, is listed in [`PENDING.md`](PENDING.md).
+
 ## Development
 
 Use the VS Code devcontainer for automatic tool and dependency setup.
