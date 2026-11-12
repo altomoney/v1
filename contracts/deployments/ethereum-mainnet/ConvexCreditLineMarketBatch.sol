@@ -27,6 +27,7 @@ struct ConvexCreditLineMarketBatchParams {
     uint256 creditLimit;
     uint256 foreclosureLtv;
     uint256 initialBorrowOpeningFee;
+    uint256 treasuryInterestBps;
     address convexBooster;
     uint256 convexPoolId;
     address rewardRecipient;
@@ -36,7 +37,7 @@ struct ConvexCreditLineMarketBatchParams {
 }
 
 /// @notice Deploys and initializes the frxUSD/DUSD Convex credit-line market components atomically.
-/// @dev The batch temporarily owns the market only while emergency-controller permissions are configured.
+/// @dev The batch temporarily owns the market while the interest split and emergency-controller permissions are configured.
 contract ConvexCreditLineMarketBatch {
     ConvexCreditLineMarketContracts private report;
 
@@ -72,6 +73,7 @@ contract ConvexCreditLineMarketBatch {
                 }))
         );
         address market = UnsafeUpgrades.deployUUPSProxy(marketImplementation, initData);
+        AltoConvexCreditLineMarket(market).setTreasuryInterestBps(params.treasuryInterestBps);
 
         IPausable(market).setPauser(params.emergencyController, PAUSE_TYPE, true);
         IPausable(market).setPauser(params.emergencyController, FROZEN_TYPE, true);

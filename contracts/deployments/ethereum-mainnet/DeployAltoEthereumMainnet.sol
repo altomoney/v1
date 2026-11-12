@@ -783,6 +783,8 @@ library DeployAltoEthereumMainnet {
                     creditLimit: 1_000_000 ether, // 1,000,000 DUSD
                     foreclosureLtv: 0.9 ether, // 90%
                     initialBorrowOpeningFee: 0,
+                    // TODO: Placeholder treasury share. Update this value before mainnet deployment.
+                    treasuryInterestBps: 3_000,
                     convexBooster: CONVEX_BOOSTER_MAINNET,
                     convexPoolId: POOL_ID_FRXUSD_DUSD_CURVE_POOL_MAINNET,
                     rewardRecipient: params.treasuryMultisig,
@@ -1081,6 +1083,7 @@ library DeployAltoEthereumMainnet {
                 creditLimit: marketParams.creditLimit,
                 foreclosureLtv: marketParams.foreclosureLtv,
                 initialBorrowOpeningFee: marketParams.initialBorrowOpeningFee,
+                treasuryInterestBps: marketParams.treasuryInterestBps,
                 convexBooster: marketParams.convexBooster,
                 convexPoolId: marketParams.convexPoolId,
                 rewardRecipient: marketParams.rewardRecipient,

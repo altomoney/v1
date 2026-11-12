@@ -234,6 +234,7 @@ struct DeployConvexCreditLineMarketParams {
     uint256 creditLimit;
     uint256 foreclosureLtv;
     uint256 initialBorrowOpeningFee;
+    uint256 treasuryInterestBps;
     address convexBooster;
     uint256 convexPoolId;
     address rewardRecipient;
