@@ -72,6 +72,7 @@ import {
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {IMarketRegistry, MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {
     FRXUSD_MAINNET,
     WETH_MAINNET,
@@ -1063,6 +1064,7 @@ contract DeployConvexCreditLineMarketPhaseTest is DeployMarketPhaseTestBase {
         assertEq(market.borrowOpeningFee(), 0, "borrow opening fee");
         assertEq(market.creditAccount(), TREASURY_MULTISIG, "credit account");
         assertEq(market.feeRecipient(), input.contracts.protocolFeeCollector, "fee recipient");
+        assertEq(market.treasuryInterestBps(), 3_000, "treasury split");
 
         Balance memory supply = IMarket(address(market)).totalSupply();
         Balance memory borrowed = IMarket(address(market)).totalBorrowed();
@@ -1135,6 +1137,7 @@ contract DeployConvexCreditLineMarketPhaseTest is DeployMarketPhaseTestBase {
         vm.stopPrank();
 
         AltoConvexCreditLineMarket market = AltoConvexCreditLineMarket(input.contracts.convexCreditLineMarket.market);
+        assertEq(market.treasuryInterestBps(), 3_000, "treasury split");
         _assertCreditMarketGovernance(address(market), true);
         _assertFullyDrawnMarketCanRepayAfterInterest(market);
     }
@@ -1243,12 +1246,24 @@ contract DeployConvexCreditLineMarketPhaseTest is DeployMarketPhaseTestBase {
 
         IERC20Metadata dusd = IERC20Metadata(input.contracts.dusd);
         uint256 recipientBalanceBefore = dusd.balanceOf(market.feeRecipient());
+        uint256 treasuryBalanceBefore = dusd.balanceOf(market.rewardRecipient());
+        uint256 treasuryAmount =
+            Math.mulDiv(interest, market.treasuryInterestBps(), market.PERCENTAGE_PRECISION(), Math.Rounding.Ceil);
         vm.prank(TREASURY_MULTISIG);
         (uint256 repaidAssets,) = market.repay(1 ether, 0, TREASURY_MULTISIG);
 
         assertEq(repaidAssets, 1 ether, "repayment succeeds while debt exceeds credit limit");
         assertEq(market.claimableFeesAssets(), 0, "repayment claims interest");
-        assertEq(dusd.balanceOf(market.feeRecipient()), recipientBalanceBefore + interest, "interest minted");
+        assertEq(
+            dusd.balanceOf(market.feeRecipient()),
+            recipientBalanceBefore + interest - treasuryAmount,
+            "collector interest minted"
+        );
+        assertEq(
+            dusd.balanceOf(market.rewardRecipient()),
+            treasuryBalanceBefore + treasuryAmount - repaidAssets,
+            "treasury interest minted less repayment"
+        );
         (uint256 minted,) = IDUSD(input.contracts.dusd).minterConfig(address(market));
         assertEq(minted, creditLimit + interest - repaidAssets, "minted debt after repayment");
     }
