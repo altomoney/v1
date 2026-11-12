@@ -87,13 +87,6 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
         _initializeConvex(_initParams);
     }
 
-    /// @notice Initializes the treasury share of claimed interest and opening fees
-    /// @dev Call through upgradeToAndCall when upgrading an existing proxy.
-    /// @param _treasuryInterestBps The treasury share in basis points, from zero to PERCENTAGE_PRECISION
-    function initializeV2(uint256 _treasuryInterestBps) external reinitializer(2) onlyOwner {
-        _setTreasuryInterestBps(_treasuryInterestBps);
-    }
-
     /// @inheritdoc AltoBaseMarket
     function borrowOpeningFee() public view override(AltoBaseMarket, IMarketBase) returns (uint256) {
         return _borrowOpeningFee;

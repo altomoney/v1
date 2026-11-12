@@ -156,7 +156,7 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
         instance = _newUninitializedMarket();
         instance.initialize(params);
         vm.prank(params.creditMarketInitParams.baseMarketInitParams.owner);
-        instance.initializeV2(TREASURY_INTEREST_BPS);
+        instance.setTreasuryInterestBps(TREASURY_INTEREST_BPS);
     }
 
     function _newFixedRateIrm() internal returns (FixedRateIrm) {
