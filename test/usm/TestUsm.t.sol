@@ -20,6 +20,7 @@ import {IAuth, Authorization, Signature} from "@alto/utils/interfaces/IAuth.sol"
 import {SigUtils} from "@alto-test/helpers/SigUtils.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
+import {UsmType} from "@alto/usm/interfaces/IUsmCommon.sol";
 
 contract TestUsm is TestDusdBase {
     using PercentageMath for uint256;
@@ -37,6 +38,7 @@ contract TestUsm is TestDusdBase {
         assertEq(usm.STABLE_TOKEN(), address(DUSD_TOKEN), "Unexpected DUSD token address");
         assertEq(usm.UNDERLYING_ASSET(), address(USDC_TOKEN), "Unexpected underlying asset address");
         assertEq(usm.getExposureCap(), 0, "Unexpected exposure capacity");
+        assertEq(uint8(usm.USM_TYPE()), uint8(UsmType.STANDARD));
     }
 
     function testRevertInitializeOnImplementation() public {

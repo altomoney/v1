@@ -6,6 +6,7 @@ import {IStableTokenFacilitator} from "./interfaces/IStableTokenFacilitator.sol"
 import {IUsmPriceStrategy} from "./interfaces/IUsmPriceStrategy.sol";
 import {IUsmFeeStrategy} from "./interfaces/IUsmFeeStrategy.sol";
 import {IUsm, AccessMode} from "./interfaces/IUsm.sol";
+import {UsmType} from "./interfaces/IUsmCommon.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -44,6 +45,9 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     /// @inheritdoc IUsm
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable UNDERLYING_ASSET;
+
+    /// @inheritdoc IUsm
+    UsmType public constant USM_TYPE = UsmType.STANDARD;
 
     /// @inheritdoc IUsm
     address public priceStrategy;

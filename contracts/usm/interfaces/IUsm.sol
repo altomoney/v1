@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {IStableTokenFacilitator} from "./IStableTokenFacilitator.sol";
+import {UsmType} from "./IUsmCommon.sol";
 
 /// @notice The access mode of the USM
 /// @dev Anyone can swap if the access mode is PERMISSIONLESS
@@ -333,6 +334,12 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
      * @return The address of the underlying asset
      */
     function UNDERLYING_ASSET() external view returns (address);
+
+    /**
+     * @notice Returns the USM implementation type
+     * @return The USM implementation type
+     */
+    function USM_TYPE() external view returns (UsmType);
 
     /**
      * @notice Returns the price strategy of the USM
