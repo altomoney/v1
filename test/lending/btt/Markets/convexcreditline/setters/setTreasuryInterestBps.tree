@@ -1,0 +1,15 @@
+AltoConvexCreditLineMarket::setTreasuryInterestBps(uint256)
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount and preserve the current share
+├── when the new share exceeds the full allocation
+│   └── it should revert with AltoCreditMarketInvalidInput and preserve the current share
+├── when the new share is within the allowed range
+│   ├── it should update treasuryInterestBps and emit SetTreasuryInterestBps with old and new values
+│   ├── it should allow zero and full treasury allocations
+│   ├── when the new share equals the current share
+│   │   └── it should still emit SetTreasuryInterestBps
+│   └── when fees are already outstanding
+│       ├── it should not accrue interest mint tokens or change market accounting
+│       └── it should apply the new share when those fees are subsequently claimed
+└── when the market is paused or frozen
+    └── it should remain callable by the owner

@@ -1,0 +1,14 @@
+AltoConvexCreditLineMarket::ProtocolFeeCollector integration
+├── given a registered credit market that splits fees between treasury and the collector
+│   ├── when part of the fees is claimed directly before harvesting
+│   │   ├── it should return the gross amount while the collector receives only its share
+│   │   └── it should emit Harvested for only the collector balance increase from the remaining fees
+│   └── when distributing after automatic harvesting
+│       ├── it should pay the market treasury share directly to rewardRecipient
+│       └── it should distribute only the collector balance and report that amount in Distributed
+├── given a full treasury share
+│   └── it should successfully harvest all fees and emit Harvested with zero received by the collector
+└── when the treasury mint fails after the collector mint
+    ├── it should emit HarvestingFailed without retaining either payment or the interest accrual
+    ├── it should preserve total supply the market minter bucket and claimable fees
+    └── it should permit a later successful retry that records only the collector share

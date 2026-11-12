@@ -25,7 +25,7 @@ struct ConvexCreditLineInitParams {
     address convexBooster;
     /// @notice The Convex pool identifier.
     uint256 convexPoolId;
-    /// @notice The account that receives Convex rewards.
+    /// @notice The account that receives Convex rewards and the treasury share of claimed fees.
     address rewardRecipient;
     /// @notice The initial list of reward tokens to forward.
     address[] rewardTokens;
@@ -90,7 +90,12 @@ interface IAltoConvexCreditLineMarketEvents {
     /// @param newBorrowOpeningFee The new borrow opening fee
     event SetBorrowOpeningFee(uint256 oldBorrowOpeningFee, uint256 newBorrowOpeningFee);
 
-    /// @notice Emitted when interest and fees are claimed
+    /// @notice Emitted when the treasury share of claimed interest and opening fees is set
+    /// @param oldTreasuryInterestBps The previous treasury share in basis points
+    /// @param newTreasuryInterestBps The new treasury share in basis points
+    event SetTreasuryInterestBps(uint256 oldTreasuryInterestBps, uint256 newTreasuryInterestBps);
+
+    /// @notice Emitted for each nonzero payment when interest and fees are claimed
     /// @param recipient The account that received the borrow tokens
     /// @param amount The amount of borrow tokens minted
     event InterestClaimed(address indexed recipient, uint256 amount);
@@ -108,7 +113,7 @@ interface IAltoConvexCreditLineMarketEvents {
     /// @param poolId The Convex pool identifier
     /// @param rewardPool The address of the Convex reward pool
     /// @param depositToken The address of the Convex deposit token
-    /// @param rewardRecipient The account that receives Convex rewards
+    /// @param rewardRecipient The account that receives Convex rewards and the treasury share of claimed fees
     event ConvexConfigured(
         address indexed booster,
         uint256 indexed poolId,
@@ -156,6 +161,10 @@ interface IAltoConvexCreditLineMarketEvents {
 /// IAltoConvexCreditLineMarket.
 /// @dev Consider using the IAltoConvexCreditLineMarket interface instead of this one.
 interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, IAltoConvexCreditLineMarketEvents {
+    /// @notice The basis-point precision used for the treasury share
+    /// @return The precision, equal to 10,000
+    function PERCENTAGE_PRECISION() external view returns (uint256);
+
     /// @notice The sole account permitted to own market collateral and debt
     /// @return The configured credit-account address
     function creditAccount() external view returns (address);
@@ -171,6 +180,10 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     /// @notice The debt written off during foreclosures that has not been settled
     /// @return The unsettled bad debt in borrow-token assets
     function badDebtAssets() external view returns (uint256);
+
+    /// @notice The share of claimed interest and opening fees sent to rewardRecipient, in basis points
+    /// @dev Defaults to zero, sending all claimed fees to feeRecipient until configured.
+    function treasuryInterestBps() external view returns (uint256);
 
     /// @notice Sets the credit account when the current account has no debt or collateral
     /// @dev Only the owner may change the account. The reward recipient and account-specific authorizations
@@ -191,9 +204,16 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     /// @param newBorrowOpeningFee The new borrow opening fee
     function setBorrowOpeningFee(uint256 newBorrowOpeningFee) external;
 
-    /// @notice Claims interest and fees for the fee recipient
+    /// @notice Sets the treasury share of claimed interest and opening fees
+    /// @dev Only the owner may change the share. Applies to all subsequent claims, including previously accrued fees,
+    /// without accruing interest or claiming fees.
+    /// @param newTreasuryInterestBps The treasury share in basis points, from zero to PERCENTAGE_PRECISION
+    function setTreasuryInterestBps(uint256 newTreasuryInterestBps) external;
+
+    /// @notice Claims interest and fees for the treasury and fee recipient
+    /// @dev The treasury share is minted to rewardRecipient and rounds up; the remainder is minted to feeRecipient.
     /// @param interest The amount to claim, or zero to claim all
-    /// @return claimed The amount minted to the fee recipient
+    /// @return claimed The total amount minted across both recipients
     function claimInterest(uint256 interest) external returns (uint256 claimed);
 
     /// @notice Burns recovered borrow tokens from the owner and reduces recorded bad debt
@@ -211,7 +231,7 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     /// @notice The Convex reward pool holding the market staked position
     function convexRewardPool() external view returns (address);
 
-    /// @notice The account that receives claimed Convex rewards
+    /// @notice The account that receives claimed Convex rewards and the treasury share of claimed fees
     function rewardRecipient() external view returns (address);
 
     /// @notice Whether the Convex strategy is active for collateral deposits and withdrawals
@@ -232,7 +252,8 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     /// @return claimedAmounts The amount forwarded for each configured reward token
     function claimRewards() external returns (uint256[] memory claimedAmounts);
 
-    /// @notice Sets the account that receives future reward claims
+    /// @notice Sets the account that receives future Convex rewards and treasury shares of claimed fees
+    /// @dev Only the credit account may change the recipient, including for previously accrued fees.
     /// @param newRecipient The new reward recipient
     function setRewardRecipient(address newRecipient) external;
 

@@ -89,6 +89,9 @@ contract AltoConvexCreditLineMarketSettleBadDebtTest is ConvexCreditLineCommon {
 
     function test_PartialAndFullSettlementBurnOwnerTokensEmitAndPreserveOtherState() external {
         _createBadDebtAndFundOwner(100 ether);
+        oracle.setPrice(LENDING_ORACLE_PRICE_PRECISION);
+        _setOpeningFee(0.1 ether);
+        _openPosition(500 ether, 50 ether);
         AccountingState memory expected = _state();
         uint256 supplyBefore = borrowToken.totalSupply();
         assertEq(borrowToken.allowance(OWNER, address(market)), 0);
@@ -225,8 +228,12 @@ contract AltoConvexCreditLineMarketSettleBadDebtTest is ConvexCreditLineCommon {
 
         vm.prank(FEE_RECIPIENT);
         dusdMarket.claimInterest(10 ether);
+        assertEq(dusd.balanceOf(FEE_RECIPIENT), 7 ether);
+        assertEq(dusd.balanceOf(REWARD_RECIPIENT), 3 ether);
         vm.prank(FEE_RECIPIENT);
-        dusd.transfer(OWNER, 10 ether);
+        dusd.transfer(OWNER, 7 ether);
+        vm.prank(REWARD_RECIPIENT);
+        dusd.transfer(OWNER, 3 ether);
         vm.prank(OWNER);
         dusdMarket.settleBadDebt(10 ether);
 

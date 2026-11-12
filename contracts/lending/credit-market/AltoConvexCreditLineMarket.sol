@@ -24,13 +24,17 @@ import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/inte
 /// @custom:contact security@altofoundation.org
 /// @notice A single-account revolving DUSD credit line backed by Curve LP staked through Convex
 /// @dev `totalSupply.assets` is the credit capacity shared by active debt and unsettled bad debt.
-/// Supply shares stay zero. Interest and opening fees accrue to `claimableFeesAssets`.
+/// Supply shares stay zero. Interest and opening fees accrue to `claimableFeesAssets` and are split on claim
+/// between `rewardRecipient` and `feeRecipient` using `treasuryInterestBps`.
 /// DUSD is intentionally unsupported as a reward token. This integration must not use DUSD reward incentives.
 /// Any DUSD rewards received remain in the market, which exposes no DUSD reward-forwarding or sweep function.
 contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMarketStaticTypes {
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
     using Uint128Converter for uint256;
+
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
+    uint256 public constant PERCENTAGE_PRECISION = 10_000;
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
     address public creditAccount;
@@ -67,6 +71,9 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
     uint256 public badDebtAssets;
+
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
+    uint256 public treasuryInterestBps;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -130,6 +137,11 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
         emit SetBorrowOpeningFee(_borrowOpeningFee, _newBorrowOpeningFee);
         _borrowOpeningFee = _newBorrowOpeningFee;
+    }
+
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
+    function setTreasuryInterestBps(uint256 _newTreasuryInterestBps) external onlyOwner {
+        _setTreasuryInterestBps(_newTreasuryInterestBps);
     }
 
     /// @inheritdoc IMarketBase
@@ -276,6 +288,16 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
         emit SetBorrowOpeningFee(0, _initParams.initialBorrowOpeningFee);
     }
 
+    /// @dev Sets the treasury share applied to subsequent claims, including previously accrued fees.
+    function _setTreasuryInterestBps(uint256 _newTreasuryInterestBps) internal {
+        if (_newTreasuryInterestBps > PERCENTAGE_PRECISION) {
+            revert AltoCreditMarketInvalidInput();
+        }
+
+        emit SetTreasuryInterestBps(treasuryInterestBps, _newTreasuryInterestBps);
+        treasuryInterestBps = _newTreasuryInterestBps;
+    }
+
     /// @inheritdoc AltoBaseMarket
     /// @dev Unlike `AltoBaseMarket`, the IRM must be nonzero.
     function _setIrm(address _irm, bool _skipAccrueInterest) internal override {
@@ -415,18 +437,26 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
         return super._repay(assets, shares, onBehalf);
     }
 
-    /// @dev Claims interest and fees by minting borrow tokens to the fee recipient.
+    /// @dev Claims interest and fees by minting borrow tokens to the treasury and fee recipient.
+    /// The treasury share rounds up, leaving the remainder for the fee recipient.
     function _claimInterest(uint256 interest) internal returns (uint256) {
         if (interest == 0) {
             interest = claimableFeesAssets;
         }
 
         claimableFeesAssets -= interest.toUint128();
-        if (interest != 0) {
-            _sendBorrowToken(address(this), feeRecipient, interest);
+        uint256 treasuryAmount = interest.divideWithRounding(treasuryInterestBps, PERCENTAGE_PRECISION, true);
+        uint256 feeRecipientAmount = interest - treasuryAmount;
+
+        if (feeRecipientAmount != 0) {
+            _sendBorrowToken(address(this), feeRecipient, feeRecipientAmount);
+            emit InterestClaimed(feeRecipient, feeRecipientAmount);
         }
 
-        emit InterestClaimed(feeRecipient, interest);
+        if (treasuryAmount != 0) {
+            _sendBorrowToken(address(this), rewardRecipient, treasuryAmount);
+            emit InterestClaimed(rewardRecipient, treasuryAmount);
+        }
 
         return interest;
     }
