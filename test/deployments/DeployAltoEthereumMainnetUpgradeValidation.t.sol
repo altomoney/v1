@@ -46,6 +46,7 @@ contract DeployAltoEthereumMainnetUpgradeValidationTest is Test {
     function test_ConvexCreditLineMarketPassesUpgradeSafetyValidation() public {
         if (!_shouldVerifyProxy()) return;
         validator.validateImplementations(DeploymentPhase.CONVEX_CREDIT_LINE_MARKET, address(0));
+        validator.validateImplementations(DeploymentPhase.UPGRADE_CONVEX_CREDIT_LINE_MARKET, address(0));
     }
 
     function test_SDUSDPhaseImplementationsPassUpgradeSafetyValidation() public {

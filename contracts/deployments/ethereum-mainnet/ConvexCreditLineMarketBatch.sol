@@ -2,6 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
+import {AltoConvexCreditLineLib} from "@alto/lending/credit-market/AltoConvexCreditLineLib.sol";
 import {
     CreditMarketInitParams,
     ConvexCreditLineInitParams
@@ -77,7 +78,11 @@ contract ConvexCreditLineMarketBatch {
         AltoOwnable2StepUpgradeable(market).transferOwnershipSkip2Step(params.owner);
 
         report = ConvexCreditLineMarketContracts({
-            market: market, marketImplementation: marketImplementation, marketIrm: marketIrm, marketOracle: marketOracle
+            market: market,
+            marketImplementation: marketImplementation,
+            marketLib: address(AltoConvexCreditLineLib),
+            marketIrm: marketIrm,
+            marketOracle: marketOracle
         });
     }
 

@@ -36,6 +36,7 @@ import {
 } from "@alto/lending/interfaces/IPegResponsiveExponentialIrm.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
+import {AltoConvexCreditLineLib} from "@alto/lending/credit-market/AltoConvexCreditLineLib.sol";
 import {AltoCreditMarketLpOracle} from "@alto/oracles/AltoCreditMarketLpOracle/AltoCreditMarketLpOracle.sol";
 import {
     ERC4626RatioChainlinkOracleRETH,
@@ -267,6 +268,8 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         loaded.contracts.convexCreditLineMarket.market = _tryParseAddress(json, ".contracts.convexCreditLineMarket");
         loaded.contracts.convexCreditLineMarket.marketImplementation =
             _tryParseAddress(json, ".contracts.convexCreditLineMarketImplementation");
+        loaded.contracts.convexCreditLineMarket.marketLib =
+            _tryParseAddress(json, ".contracts.convexCreditLineMarketLib");
         loaded.contracts.convexCreditLineMarket.marketIrm =
             _tryParseAddress(json, ".contracts.convexCreditLineMarketIrm");
         loaded.contracts.convexCreditLineMarket.marketOracle =
@@ -1009,10 +1012,27 @@ contract DeployFrxUsdMintMarketPhaseTest is DeployMarketPhaseTestBase {
 }
 
 contract DeployConvexCreditLineMarketPhaseTest is DeployMarketPhaseTestBase {
+    struct CreditLineStateSnapshot {
+        address owner;
+        address creditAccount;
+        address rewardRecipient;
+        address irm;
+        address oracle;
+        Balance totalSupply;
+        Balance totalBorrowed;
+        Position creditPosition;
+        uint256 claimableFees;
+        uint256 badDebt;
+    }
+
     string internal constant SCHEDULE_JSON =
         "contracts/deployments/ethereum-mainnet/output/safe-tx-frxusd-dusd-convex-credit-line-market-registry-schedule.json";
     string internal constant EXECUTE_JSON =
         "contracts/deployments/ethereum-mainnet/output/safe-tx-frxusd-dusd-convex-credit-line-market-registry-execute.json";
+    string internal constant UPGRADE_SCHEDULE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-convex-credit-line-market-upgrade-schedule.json";
+    string internal constant UPGRADE_EXECUTE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-convex-credit-line-market-upgrade-execute.json";
 
     function test_deployConvexCreditLineMarketAndExecuteTimelockTransactions() public {
         _deployMarket(DeploymentPhase.CONVEX_CREDIT_LINE_MARKET);
@@ -1025,6 +1045,7 @@ contract DeployConvexCreditLineMarketPhaseTest is DeployMarketPhaseTestBase {
         assertTrue(marketImplementation.code.length > 0, "implementation");
         assertNotEq(address(market), marketImplementation, "proxy and implementation");
         assertEq(Upgrades.getImplementationAddress(address(market)), marketImplementation, "proxy implementation");
+        assertEq(input.contracts.convexCreditLineMarket.marketLib, address(AltoConvexCreditLineLib), "linked library");
         address marketOracle = input.contracts.convexCreditLineMarket.marketOracle;
         assertTrue(marketOracle.code.length > 0, "oracle");
         assertEq(
@@ -1116,6 +1137,92 @@ contract DeployConvexCreditLineMarketPhaseTest is DeployMarketPhaseTestBase {
         AltoConvexCreditLineMarket market = AltoConvexCreditLineMarket(input.contracts.convexCreditLineMarket.market);
         _assertCreditMarketGovernance(address(market), true);
         _assertFullyDrawnMarketCanRepayAfterInterest(market);
+    }
+
+    function test_upgradeConvexCreditLineMarketAndExecuteTimelockTransactions() public {
+        AltoConvexCreditLineMarket market = AltoConvexCreditLineMarket(input.contracts.convexCreditLineMarket.market);
+        address originalImplementation = Upgrades.getImplementationAddress(address(market));
+        address originalFeeRecipient = market.feeRecipient();
+        CreditLineStateSnapshot memory originalState = CreditLineStateSnapshot({
+            owner: market.owner(),
+            creditAccount: market.creditAccount(),
+            rewardRecipient: market.rewardRecipient(),
+            irm: market.irm(),
+            oracle: market.oracle(),
+            totalSupply: IMarket(address(market)).totalSupply(),
+            totalBorrowed: IMarket(address(market)).totalBorrowed(),
+            creditPosition: IMarket(address(market)).position(market.creditAccount()),
+            claimableFees: market.claimableFeesAssets(),
+            badDebt: market.badDebtAssets()
+        });
+        AltoEthereumMainnetInput memory expectedInput = input;
+        bool scheduleJsonExisted = vm.exists(UPGRADE_SCHEDULE_JSON);
+        bool executeJsonExisted = vm.exists(UPGRADE_EXECUTE_JSON);
+        string memory scheduleJsonBefore = scheduleJsonExisted ? vm.readFile(UPGRADE_SCHEDULE_JSON) : "";
+        string memory executeJsonBefore = executeJsonExisted ? vm.readFile(UPGRADE_EXECUTE_JSON) : "";
+
+        params.phase = DeploymentPhase.UPGRADE_CONVEX_CREDIT_LINE_MARKET;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        address newImplementation = input.contracts.convexCreditLineMarket.marketImplementation;
+        assertGt(newImplementation.code.length, 0, "new implementation deployed");
+        assertNotEq(newImplementation, originalImplementation, "implementation must be new");
+        expectedInput.contracts.convexCreditLineMarket.marketImplementation = newImplementation;
+        expectedInput.contracts.convexCreditLineMarket.marketLib = address(AltoConvexCreditLineLib);
+        assertEq(abi.encode(input), abi.encode(expectedInput), "only recorded implementation and library should change");
+        assertEq(
+            Upgrades.getImplementationAddress(address(market)),
+            originalImplementation,
+            "proxy upgraded before execution"
+        );
+        assertEq(market.feeRecipient(), originalFeeRecipient, "recipient changed before execution");
+        _assertCreditLineState(market, originalState);
+
+        _assertSafeJson(UPGRADE_SCHEDULE_JSON, TimelockController.scheduleBatch.selector);
+        _assertSafeJson(UPGRADE_EXECUTE_JSON, TimelockController.executeBatch.selector);
+        _executeSafeTimelockBatch(UPGRADE_SCHEDULE_JSON, UPGRADE_EXECUTE_JSON);
+
+        assertEq(Upgrades.getImplementationAddress(address(market)), newImplementation, "proxy implementation");
+        assertEq(market.treasuryInterestBps(), 3_000, "treasury split initialized");
+        assertEq(market.feeRecipient(), input.contracts.protocolFeeCollector, "collector fee recipient");
+        _assertCreditLineState(market, originalState);
+
+        if (scheduleJsonExisted) {
+            vm.writeFile(UPGRADE_SCHEDULE_JSON, scheduleJsonBefore);
+        } else {
+            vm.removeFile(UPGRADE_SCHEDULE_JSON);
+        }
+        if (executeJsonExisted) {
+            vm.writeFile(UPGRADE_EXECUTE_JSON, executeJsonBefore);
+        } else {
+            vm.removeFile(UPGRADE_EXECUTE_JSON);
+        }
+    }
+
+    function _assertCreditLineState(AltoConvexCreditLineMarket market, CreditLineStateSnapshot memory expected)
+        private
+        view
+    {
+        assertEq(market.owner(), expected.owner, "market owner");
+        assertEq(market.creditAccount(), expected.creditAccount, "credit account");
+        assertEq(market.rewardRecipient(), expected.rewardRecipient, "reward recipient");
+        assertEq(market.irm(), expected.irm, "IRM");
+        assertEq(market.oracle(), expected.oracle, "oracle");
+
+        Balance memory supply = IMarket(address(market)).totalSupply();
+        assertEq(supply.assets, expected.totalSupply.assets, "total supply assets");
+        assertEq(supply.shares, expected.totalSupply.shares, "total supply shares");
+
+        Balance memory borrowed = IMarket(address(market)).totalBorrowed();
+        assertEq(borrowed.assets, expected.totalBorrowed.assets, "total borrowed assets");
+        assertEq(borrowed.shares, expected.totalBorrowed.shares, "total borrowed shares");
+
+        Position memory creditPosition = IMarket(address(market)).position(expected.creditAccount);
+        assertEq(creditPosition.supplyShares, expected.creditPosition.supplyShares, "credit-account supply shares");
+        assertEq(creditPosition.borrowShares, expected.creditPosition.borrowShares, "credit-account borrow shares");
+        assertEq(creditPosition.collateralAssets, expected.creditPosition.collateralAssets, "credit-account collateral");
+        assertEq(market.claimableFeesAssets(), expected.claimableFees, "claimable fees");
+        assertEq(market.badDebtAssets(), expected.badDebt, "bad debt");
     }
 
     function _assertFullyDrawnMarketCanRepayAfterInterest(AltoConvexCreditLineMarket market) private {

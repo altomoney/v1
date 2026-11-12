@@ -58,6 +58,8 @@ import {
     ConvexCreditLineMarketBatch,
     ConvexCreditLineMarketBatchParams
 } from "@alto/deployments/ethereum-mainnet/ConvexCreditLineMarketBatch.sol";
+import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
+import {AltoConvexCreditLineLib} from "@alto/lending/credit-market/AltoConvexCreditLineLib.sol";
 import {
     LeverageSwapperMultiTargetBatch,
     LeverageSwapperMultiTargetBatchParams
@@ -713,6 +715,8 @@ library DeployAltoEthereumMainnet {
             input = _upgradeMarketsForLiquidationPeriphery(input);
         } else if (params.phase == DeploymentPhase.UPGRADE_ALL_MINT_BORROW_MARKETS) {
             input = _upgradeAllMintBorrowMarkets(input);
+        } else if (params.phase == DeploymentPhase.UPGRADE_CONVEX_CREDIT_LINE_MARKET) {
+            input = _upgradeConvexCreditLineMarket(params, input);
         } else if (params.phase == DeploymentPhase.UNIVERSAL_REWARDS_DISTRIBUTOR) {
             input = _deployUniversalRewardsDistributor(params, input);
         } else if (params.phase == DeploymentPhase.MINT_CURVE_CONVEX_POSITION) {
@@ -1812,6 +1816,51 @@ library DeployAltoEthereumMainnet {
             MarketUpgradeBatchReport({markets: markets, implementations: implementations});
         input = _updateMarketImplementations(input, report);
         _logMarketUpgradeTimelockBatch(input, report, "all-mint-borrow-markets-upgrade");
+        return input;
+    }
+
+    /// @dev Deploys an implementation and writes the atomic upgrade, split configuration and
+    ///      collector-routing batch; the proxy is only changed when governance executes the timelock operation.
+    function _upgradeConvexCreditLineMarket(
+        AltoEthereumMainnetParams memory params,
+        AltoEthereumMainnetInput memory input
+    ) internal returns (AltoEthereumMainnetInput memory) {
+        address timelock = input.contracts.timelock;
+        address marketAddress = input.contracts.convexCreditLineMarket.market;
+        address collector = input.contracts.protocolFeeCollector;
+        require(timelock.code.length > 0, "Timelock not deployed");
+        require(marketAddress.code.length > 0, "Convex credit line market not deployed");
+        require(collector.code.length > 0, "ProtocolFeeCollector not deployed");
+
+        AltoConvexCreditLineMarket market = AltoConvexCreditLineMarket(marketAddress);
+        require(market.MARKET_TYPE() == MarketType.CREDIT_MINT, "Unsupported market type");
+        require(market.owner() == timelock, "Credit line market owner is not timelock");
+        require(market.rewardRecipient() == params.treasuryMultisig, "Credit line reward recipient is not treasury");
+        uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
+
+        // TODO: Placeholder treasury share. Update this value before mainnet deployment.
+        uint256 treasuryInterestBps = 3_000;
+        address marketImplementation = address(new AltoConvexCreditLineMarket());
+
+        address[] memory targets = new address[](2);
+        uint256[] memory values = new uint256[](2);
+        bytes[] memory payloads = new bytes[](2);
+        targets[0] = marketAddress;
+        payloads[0] = abi.encodeCall(
+            UUPSUpgradeable.upgradeToAndCall,
+            (
+                marketImplementation,
+                abi.encodeCall(AltoConvexCreditLineMarket.setTreasuryInterestBps, (treasuryInterestBps))
+            )
+        );
+        targets[1] = marketAddress;
+        payloads[1] = abi.encodeCall(IMarketBase.setFeeRecipient, (collector));
+
+        SafeTransactionBuilder.writeTimelockBatch(
+            "convex-credit-line-market-upgrade", timelock, targets, values, payloads, minDelay
+        );
+        input.contracts.convexCreditLineMarket.marketImplementation = marketImplementation;
+        input.contracts.convexCreditLineMarket.marketLib = address(AltoConvexCreditLineLib);
         return input;
     }
 
